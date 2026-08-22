@@ -1,24 +1,19 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>POS Login</title>
-</head>
-<body>
-    <h2>Employee Login</h2>
+@extends('layouts.app')
 
-    @if ($errors->any())
-        <p>{{ $errors->first() }}</p>
-    @endif
+@section('title', 'Login')
 
-    <form method="POST" action="{{ route('login') }}">
-        @csrf
-        <label>Username</label>
-        <input type="text" name="username" value="{{ old('username') }}" required autofocus>
-        <br><br>
-        <label>Password</label>
-        <input type="password" name="password" required>
-        <br><br>
-        <button type="submit">Login</button>
-    </form>
-</body>
-</html>
+@section('content')
+    <div class="card" style="max-width: 420px; margin: 4rem auto;">
+        <h1>Employee Login</h1>
+        <p class="muted">Sign in with your POS username.</p>
+        @include('partials.errors')
+        <form method="POST" action="{{ route('login') }}">
+            @csrf
+            <label for="username">Username</label>
+            <input id="username" type="text" name="username" value="{{ old('username') }}" required autofocus>
+            <label for="password">Password</label>
+            <input id="password" type="password" name="password" required>
+            <button type="submit">Login</button>
+        </form>
+    </div>
+@endsection

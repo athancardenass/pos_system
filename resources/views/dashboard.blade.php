@@ -1,17 +1,15 @@
-<p>Logged in as {{ $employee->username }} ({{ $employee->role->role_name ?? 'none' }})</p>
+@extends('layouts.app')
 
-<p>Allowed modules:</p>
-<ul>
-    @foreach ($modules as $name)
-        @if ($name === 'dashboard')
-            <li>dashboard</li>
-        @else
-            <li><a href="{{ route($name) }}">{{ $name }}</a></li>
-        @endif
-    @endforeach
-</ul>
+@section('title', 'Dashboard')
 
-<form method="POST" action="{{ route('logout') }}">
-    @csrf
-    <button type="submit">Logout</button>
-</form>
+@section('content')
+    <div class="page-head">
+        <div>
+            <h1>Dashboard</h1>
+            <p class="muted">Logged in as {{ $employee->username }} ({{ $employee->role->role_name ?? 'none' }})</p>
+        </div>
+    </div>
+    <div class="card">
+        <p>Open a module from the navigation bar. Cashiers can ring up sales and manage customers; managers handle catalog and stock; admins also manage employees and audit logs.</p>
+    </div>
+@endsection

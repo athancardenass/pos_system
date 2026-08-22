@@ -18,4 +18,18 @@ return [
         'employees.index' => ['Admin'],
         'audit-logs.index' => ['Admin'],
     ],
+
+    'labels' => [
+        'dashboard' => 'Dashboard',
+        'pos.index' => 'POS',
+        'customers.index' => 'Customers',
+        'categories.index' => 'Categories',
+        'products.index' => 'Products',
+        'inventory.index' => 'Inventory',
+        'suppliers.index' => 'Suppliers',
+        'purchase-orders.index' => 'Purchase Orders',
+        'discounts.index' => 'Discounts',
+        'employees.index' => 'Employees',
+        'audit-logs.index' => 'Audit Logs',
+    ],
 ];
