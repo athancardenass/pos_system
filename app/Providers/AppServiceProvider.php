@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +20,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        View::composer('layouts.app', function ($view): void {
+            $employee = auth()->user();
+            $employee?->loadMissing('role');
+
+            $view->with([
+                'navEmployee' => $employee,
+                'navModules' => $employee?->allowedModules() ?? [],
+            ]);
+        });
     }
 }

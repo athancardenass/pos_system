@@ -24,8 +24,21 @@ class Customer extends Model
         'customer_status',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'date_of_birth' => 'date',
+            'total_purchases' => 'decimal:2',
+        ];
+    }
+
     public function saleTransactions()
     {
         return $this->hasMany(SaleTransaction::class, 'customer_id', 'customer_id');
+    }
+
+    public function fullName(): string
+    {
+        return trim($this->first_name.' '.$this->last_name);
     }
 }
