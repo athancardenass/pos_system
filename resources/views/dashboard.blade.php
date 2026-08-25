@@ -63,15 +63,29 @@
                 <h2 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem; color: var(--muted);">Sales This Week</h2>
                 <div style="display: flex; gap: 0.5rem; align-items: flex-end; height: 120px;">
                     @php($maxRevenue = max($stats['weekly_trend']->pluck('revenue')->max(), 1))
+                    @php($baseline = $stats['daily_baseline'] ?? 0)
+                    {{-- Color bands vs previous-week daily average: green >= 110%, orange within ±10%, red < 90% --}}
+                    @php($greenAt = $baseline * 1.10)
+                    @php($orangeFrom = $baseline * 0.90)
                     @foreach ($stats['weekly_trend'] as $day)
+                        @php($barColor = $baseline > 0 && $day->revenue >= $greenAt ? 'var(--success)' : ($baseline > 0 && $day->revenue < $orangeFrom ? 'var(--danger)' : ($baseline > 0 ? '#C4956A' : 'var(--accent)')))
                         <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">
                             <span style="font-size: 0.65rem; font-weight: 600;">₱{{ number_format($day->revenue, 0) }}</span>
-                            <div style="width: 100%; max-width: 40px; background: var(--accent); min-height: 4px; height: {{ max(4, ($day->revenue / $maxRevenue) * 80) }}px;"></div>
+                            <div style="width: 100%; max-width: 40px; background: {{ $barColor }}; min-height: 4px; height: {{ max(4, ($day->revenue / $maxRevenue) * 80) }}px;"></div>
                             <span style="font-size: 0.6rem; color: var(--muted);">{{ \Carbon\Carbon::parse($day->date)->format('D') }}</span>
                         </div>
                     @endforeach
                 </div>
             </div>
+
+            {{-- Chart legend (only when there is a baseline to compare against) --}}
+            @if (($stats['daily_baseline'] ?? 0) > 0)
+                <div style="display: flex; gap: 1.25rem; margin-top: -0.75rem; margin-bottom: 1.5rem; padding-left: 1.25rem; font-size: 0.7rem; color: var(--muted); flex-wrap: wrap;">
+                    <span><span style="display:inline-block;width:10px;height:10px;background:var(--success);margin-right:0.3rem;"></span>High ≥ ₱{{ number_format($greenAt, 0) }}</span>
+                    <span><span style="display:inline-block;width:10px;height:10px;background:#C4956A;margin-right:0.3rem;"></span>Average ₱{{ number_format($orangeFrom, 0) }}–{{ number_format($greenAt, 0) }}</span>
+                    <span><span style="display:inline-block;width:10px;height:10px;background:var(--danger);margin-right:0.3rem;"></span>Low &lt; ₱{{ number_format($orangeFrom, 0) }}</span>
+                </div>
+            @endif
         @endif
 
         {{-- Two-column layout: Top Products + Payment Methods --}}

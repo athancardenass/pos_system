@@ -47,6 +47,15 @@ class DashboardController extends Controller
                 ->orderBy('date')
                 ->get();
 
+            // Performance baseline for the weekly chart: average DAILY revenue of
+            // the previous week (days 13–7 ago). Tune the color bands in
+            // dashboard.blade.php ("Sales This Week" section).
+            $prevWeekRevenue = SaleTransaction::whereBetween('transaction_date', [
+                Carbon::now()->subDays(13)->startOfDay(),
+                Carbon::now()->subDays(7)->endOfDay(),
+            ])->sum('total_amount');
+            $stats['daily_baseline'] = $prevWeekRevenue / 7;
+
             // Payment method breakdown (today)
             $stats['payment_methods'] = SaleTransaction::select('payment_method', DB::raw('COUNT(*) as count'), DB::raw('SUM(total_amount) as total'))
                 ->whereDate('transaction_date', $today)
