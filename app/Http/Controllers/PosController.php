@@ -34,7 +34,15 @@ class PosController extends Controller
             ->filter(fn (Discount $discount) => $discount->isActive())
             ->values();
 
-        return view('pos.index', compact('products', 'customers', 'discounts'));
+        $productsJson = $products->map(fn ($p) => [
+            'id' => $p->product_id,
+            'name' => $p->product_name,
+            'price' => (float) $p->unit_price,
+            'stock' => $p->stockQuantity(),
+            'barcode' => $p->barcode,
+        ]);
+
+        return view('pos.index', compact('products', 'customers', 'discounts', 'productsJson'));
     }
 
     public function store(Request $request): RedirectResponse

@@ -23,7 +23,7 @@
                 </div>
                 <div>
                     <label for="order_date">Order date</label>
-                    <input id="order_date" type="date" name="order_date" value="{{ old('order_date', now()->toDateString()) }}" required>
+                    <input id="order_date" type="date" name="order_date" value="{{ old('order_date', now()->toDateString()) }}" max="{{ now()->addDays(30)->toDateString() }}" min="{{ now()->subDays(7)->toDateString() }}" required>
                 </div>
             </div>
             <h2>Line items</h2>

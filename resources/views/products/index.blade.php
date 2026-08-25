@@ -25,15 +25,16 @@
                 <tbody>
                     @foreach ($products as $product)
                         <tr>
-                            <td>{{ $product->product_name }}</td>
-                            <td>{{ $product->barcode }}</td>
+                            <td style="font-weight: 700;">{{ $product->product_name }}</td>
+                            <td><code style="font-size: 0.82rem; background: rgba(32,60,61,0.05); padding: 0.15rem 0.4rem;">{{ $product->barcode }}</code></td>
                             <td class="muted">{{ $product->category->category_name ?? '—' }}</td>
-                            <td>{{ number_format($product->unit_price, 2) }}</td>
+                            <td style="font-weight: 700;">₱{{ number_format($product->unit_price, 2) }}</td>
                             <td class="{{ $product->stockQuantity() <= $product->reorder_level ? 'warn' : '' }}">
                                 {{ $product->stockQuantity() }}
                             </td>
                             <td class="actions">
-                                <a href="{{ route('products.edit', $product) }}">Edit</a>
+                                <a class="btn-ghost" href="{{ route('products.edit', $product) }}">Edit</a>
+                                <button type="button" class="btn-ghost print-barcode-btn" data-id="{{ $product->product_id }}" data-name="{{ $product->product_name }}" data-barcode="{{ $product->barcode }}" data-price="{{ number_format($product->unit_price, 2) }}">Print Label</button>
                                 <form class="inline-form" method="POST" action="{{ route('products.destroy', $product) }}" onsubmit="return confirm('Delete this product?')">
                                     @csrf
                                     @method('DELETE')
@@ -44,7 +45,41 @@
                     @endforeach
                 </tbody>
             </table>
-            <div class="pagination">{{ $products->links() }}</div>
+            {{ $products->links('partials.pagination') }}
         @endif
     </div>
 @endsection
+
+@push('styles')
+<style>
+    @media print {
+        body * { visibility: hidden; }
+        .barcode-label, .barcode-label * { visibility: visible; }
+        .barcode-label { position: absolute; left: 0; top: 0; width: 58mm; padding: 3mm; border: 1px solid #000; font-family: monospace; }
+        .barcode-label .bl-name { font-size: 7pt; font-weight: bold; margin-bottom: 1mm; }
+        .barcode-label .bl-code { font-size: 6pt; color: #333; margin-bottom: 1mm; }
+        .barcode-label .bl-price { font-size: 9pt; font-weight: bold; margin-top: 1mm; }
+        .barcode-label svg { width: 100%; height: auto; }
+    }
+</style>
+@endpush
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<script>
+    document.querySelectorAll('.print-barcode-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const name = this.dataset.name;
+            const barcode = this.dataset.barcode;
+            const price = this.dataset.price;
+            const label = document.createElement('div');
+            label.className = 'barcode-label';
+            label.innerHTML = `<div class="bl-name">${name}</div><div class="bl-code">SKU: ${barcode}</div><svg class="bl-barcode"></svg><div class="bl-price">₱${price}</div>`;
+            document.body.appendChild(label);
+            JsBarcode(label.querySelector('.bl-barcode'), barcode, { format: 'EAN13', width: 1.5, height: 30, displayValue: false, margin: 0 });
+            window.print();
+            setTimeout(() => label.remove(), 100);
+        });
+    });
+</script>
+@endpush

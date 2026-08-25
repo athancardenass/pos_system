@@ -16,10 +16,10 @@
     </div>
     <div>
         <label for="start_date">Start date</label>
-        <input id="start_date" type="date" name="start_date" value="{{ old('start_date', optional($discount?->start_date)->format('Y-m-d')) }}">
+        <input id="start_date" type="date" name="start_date" value="{{ old('start_date', optional($discount?->start_date)->format('Y-m-d') ?? now()->toDateString()) }}" min="2020-01-01">
     </div>
     <div>
         <label for="end_date">End date</label>
-        <input id="end_date" type="date" name="end_date" value="{{ old('end_date', optional($discount?->end_date)->format('Y-m-d')) }}">
+        <input id="end_date" type="date" name="end_date" value="{{ old('end_date', optional($discount?->end_date)->format('Y-m-d')) }}" min="2020-01-01">
     </div>
 </div>

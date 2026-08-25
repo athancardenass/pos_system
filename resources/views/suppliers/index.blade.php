@@ -23,11 +23,11 @@
                 <tbody>
                     @foreach ($suppliers as $supplier)
                         <tr>
-                            <td>{{ $supplier->supplier_name }}</td>
+                            <td style="font-weight: 700;">{{ $supplier->supplier_name }}</td>
                             <td>{{ $supplier->contact_number }}</td>
                             <td class="muted">{{ $supplier->email }}</td>
                             <td class="actions">
-                                <a href="{{ route('suppliers.edit', $supplier) }}">Edit</a>
+                                <a class="btn-ghost" href="{{ route('suppliers.edit', $supplier) }}">Edit</a>
                                 <form class="inline-form" method="POST" action="{{ route('suppliers.destroy', $supplier) }}" onsubmit="return confirm('Delete this supplier?')">
                                     @csrf
                                     @method('DELETE')
@@ -38,7 +38,7 @@
                     @endforeach
                 </tbody>
             </table>
-            <div class="pagination">{{ $suppliers->links() }}</div>
+            {{ $suppliers->links('partials.pagination') }}
         @endif
     </div>
 @endsection

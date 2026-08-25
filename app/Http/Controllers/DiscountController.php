@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Discount;
 use App\Services\AuditLogger;
+use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -65,7 +66,18 @@ class DiscountController extends Controller
         return $request->validate([
             'discount_name' => 'required|string|max:100',
             'discount_type' => 'required|in:percentage,fixed',
-            'discount_value' => 'required|numeric|min:0',
+            'discount_value' => [
+                'required',
+                'numeric',
+                'min:0',
+                fn (string $attribute, mixed $value, Closure $fail) => match ($request->input('discount_type')) {
+                    'percentage' => $value > 100
+                        ? $fail('A percentage discount cannot exceed 100%.')
+                        : null,
+                    'fixed' => null,
+                    default => null,
+                },
+            ],
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
         ]);

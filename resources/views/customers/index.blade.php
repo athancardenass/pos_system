@@ -24,12 +24,12 @@
                 <tbody>
                     @foreach ($customers as $customer)
                         <tr>
-                            <td>{{ $customer->fullName() }}</td>
+                            <td style="font-weight: 700;">{{ $customer->fullName() }}</td>
                             <td class="muted">{{ $customer->contact_number ?: $customer->email }}</td>
                             <td>{{ $customer->loyalty_points }}</td>
-                            <td><span class="badge">{{ $customer->customer_status }}</span></td>
+                            <td><span class="badge {{ $customer->customer_status === 'active' ? 'badge-active' : 'badge-inactive' }}">{{ $customer->customer_status }}</span></td>
                             <td class="actions">
-                                <a href="{{ route('customers.edit', $customer) }}">Edit</a>
+                                <a class="btn-ghost" href="{{ route('customers.edit', $customer) }}">Edit</a>
                                 <form class="inline-form" method="POST" action="{{ route('customers.destroy', $customer) }}" onsubmit="return confirm('Delete this customer?')">
                                     @csrf
                                     @method('DELETE')
@@ -40,7 +40,7 @@
                     @endforeach
                 </tbody>
             </table>
-            <div class="pagination">{{ $customers->links() }}</div>
+            {{ $customers->links('partials.pagination') }}
         @endif
     </div>
 @endsection

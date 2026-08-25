@@ -10,7 +10,7 @@
     <div class="card">
         <p>Supplier: {{ $order->supplier->supplier_name ?? '—' }}</p>
         <p>Ordered by: {{ $order->employee->username ?? '—' }} on {{ optional($order->order_date)->format('Y-m-d') }}</p>
-        <p>Status: <span class="badge">{{ $order->status }}</span></p>
+        <p>Status: <span class="badge {{ $order->status === 'pending' ? 'badge-pending' : ($order->status === 'received' ? 'badge-active' : 'badge-inactive') }}">{{ $order->status }}</span></p>
         <table>
             <thead>
                 <tr>
