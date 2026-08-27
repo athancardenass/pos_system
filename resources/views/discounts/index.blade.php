@@ -24,16 +24,16 @@
                 <tbody>
                     @foreach ($discounts as $discount)
                         <tr>
-                            <td>{{ $discount->discount_name }}</td>
+                            <td style="font-weight: 700;">{{ $discount->discount_name }}</td>
                             <td>{{ $discount->discount_type }}</td>
-                            <td>{{ $discount->discount_type === 'percentage' ? $discount->discount_value.'%' : number_format($discount->discount_value, 2) }}</td>
+                            <td style="font-weight: 700;">{{ $discount->discount_type === 'percentage' ? $discount->discount_value.'%' : number_format($discount->discount_value, 2) }}</td>
                             <td class="muted">
                                 {{ optional($discount->start_date)->format('Y-m-d') ?: '—' }}
                                 to
                                 {{ optional($discount->end_date)->format('Y-m-d') ?: '—' }}
                             </td>
                             <td class="actions">
-                                <a href="{{ route('discounts.edit', $discount) }}">Edit</a>
+                                <a class="btn-ghost" href="{{ route('discounts.edit', $discount) }}">Edit</a>
                                 <form class="inline-form" method="POST" action="{{ route('discounts.destroy', $discount) }}" onsubmit="return confirm('Delete this discount?')">
                                     @csrf
                                     @method('DELETE')
@@ -44,7 +44,7 @@
                     @endforeach
                 </tbody>
             </table>
-            <div class="pagination">{{ $discounts->links() }}</div>
+            {{ $discounts->links('partials.pagination') }}
         @endif
     </div>
 @endsection

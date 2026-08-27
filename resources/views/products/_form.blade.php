@@ -2,11 +2,7 @@
 <div class="form-grid">
     <div>
         <label for="product_name">Name</label>
-        <input id="product_name" name="product_name" value="{{ old('product_name', $product?->product_name) }}" required>
-    </div>
-    <div>
-        <label for="barcode">Barcode</label>
-        <input id="barcode" name="barcode" value="{{ old('barcode', $product?->barcode) }}" required>
+        <input id="product_name" name="product_name" class="input-lg bordered" value="{{ old('product_name', $product?->product_name) }}" required>
     </div>
     <div>
         <label for="category_id">Category</label>
@@ -39,5 +35,12 @@
         <input id="reorder_level" type="number" min="0" name="reorder_level" value="{{ old('reorder_level', $product?->reorder_level ?? 10) }}" required>
     </div>
 </div>
-<label for="description">Description</label>
-<input id="description" name="description" value="{{ old('description', $product?->description) }}">
+<div class="field-stack">
+    <label for="barcode">Barcode</label>
+    <input id="barcode" name="barcode" class="input-lg bordered" value="{{ old('barcode', $product?->barcode) }}" required>
+    <button type="button" class="btn btn-secondary" id="generate-barcode">Generate</button>
+</div>
+<div class="field-stack">
+    <label for="description">Description</label>
+    <input id="description" name="description" class="input-lg bordered" value="{{ old('description', $product?->description) }}">
+</div>

@@ -21,12 +21,12 @@
             <tbody>
                 @foreach ($employees as $employee)
                     <tr>
-                        <td>{{ $employee->first_name }} {{ $employee->last_name }}</td>
+                        <td style="font-weight: 700;">{{ $employee->first_name }} {{ $employee->last_name }}</td>
                         <td>{{ $employee->username }}</td>
                         <td>{{ $employee->role->role_name ?? '—' }}</td>
-                        <td><span class="badge">{{ $employee->status }}</span></td>
+                        <td><span class="badge {{ $employee->status === 'active' ? 'badge-active' : 'badge-inactive' }}">{{ $employee->status }}</span></td>
                         <td class="actions">
-                            <a href="{{ route('employees.edit', $employee) }}">Edit</a>
+                            <a class="btn-ghost" href="{{ route('employees.edit', $employee) }}">Edit</a>
                             <form class="inline-form" method="POST" action="{{ route('employees.destroy', $employee) }}" onsubmit="return confirm('Delete this employee?')">
                                 @csrf
                                 @method('DELETE')
@@ -37,6 +37,6 @@
                 @endforeach
             </tbody>
         </table>
-        <div class="pagination">{{ $employees->links() }}</div>
+        {{ $employees->links('partials.pagination') }}
     </div>
 @endsection

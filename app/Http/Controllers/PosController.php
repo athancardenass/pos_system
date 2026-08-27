@@ -34,7 +34,15 @@ class PosController extends Controller
             ->filter(fn (Discount $discount) => $discount->isActive())
             ->values();
 
-        return view('pos.index', compact('products', 'customers', 'discounts'));
+        $productsJson = $products->map(fn ($p) => [
+            'id' => $p->product_id,
+            'name' => $p->product_name,
+            'price' => (float) $p->unit_price,
+            'stock' => $p->stockQuantity(),
+            'barcode' => $p->barcode,
+        ]);
+
+        return view('pos.index', compact('products', 'customers', 'discounts', 'productsJson'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -151,5 +159,51 @@ class PosController extends Controller
         $saleTransaction->load(['customer', 'employee', 'discount', 'saleDetails.product', 'payment', 'receipt']);
 
         return view('pos.show', ['sale' => $saleTransaction]);
+    }
+
+    public function refund(SaleTransaction $saleTransaction): RedirectResponse
+    {
+        // Guard: only a completed sale can be refunded, and only once.
+        if ($saleTransaction->isRefunded()) {
+            return back()->with('error', 'This sale has already been refunded.');
+        }
+
+        DB::transaction(function () use ($saleTransaction): void {
+            $saleTransaction->load('saleDetails.product', 'customer', 'payment');
+
+            // 1. Return each sold item to inventory (same lock used at sale time).
+            foreach ($saleTransaction->saleDetails as $line) {
+                $product = $line->product()->lockForUpdate()->findOrFail($line->product_id);
+                $inventory = Inventory::query()->firstOrCreate(
+                    ['product_id' => $product->product_id],
+                    ['stock_quantity' => 0],
+                );
+                $inventory->stock_quantity += $line->quantity;
+                $inventory->save();
+            }
+
+            // 2. Reverse loyalty points / total purchases if it was a customer sale.
+            if ($saleTransaction->customer) {
+                $customer = $saleTransaction->customer;
+                $customer->total_purchases = max(0, (float) $customer->total_purchases - $saleTransaction->total_amount);
+                $customer->loyalty_points = max(0, (int) $customer->loyalty_points - (int) floor($saleTransaction->total_amount / 100));
+                $customer->save();
+            }
+
+            // 3. Mark the sale refunded (we keep the row for the audit trail).
+            $saleTransaction->update([
+                'status' => 'refunded',
+                'refunded_at' => now(),
+            ]);
+
+            AuditLogger::record(
+                'refund',
+                'sale_transaction',
+                $saleTransaction->transaction_id,
+                'Refunded sale #'.$saleTransaction->transaction_id,
+            );
+        });
+
+        return redirect()->route('pos.show', $saleTransaction)->with('status', 'Sale refunded and inventory restored.');
     }
 }

@@ -30,7 +30,7 @@
     </div>
     <div>
         <label for="hire_date">Hire date</label>
-        <input id="hire_date" type="date" name="hire_date" value="{{ old('hire_date', optional($employee?->hire_date)->format('Y-m-d') ?? now()->toDateString()) }}" required>
+        <input id="hire_date" type="date" name="hire_date" value="{{ old('hire_date', optional($employee?->hire_date)->format('Y-m-d') ?? now()->toDateString()) }}" max="{{ now()->toDateString() }}" min="1900-01-01" required>
     </div>
     <div>
         <label for="status">Status</label>

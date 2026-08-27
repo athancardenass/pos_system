@@ -81,6 +81,16 @@ class ProductController extends Controller
         ];
     }
 
+    /**
+     * Return a unique, EAN-13-shaped 13-digit barcode not already used.
+     * Used by the "Generate" button on the product form so staff never
+     * hand-type a barcode. Loops until the code is unique in the table.
+     */
+    public function generateBarcode(): \Illuminate\Http\JsonResponse
+    {
+        return response()->json(['barcode' => Product::generateBarcode()]);
+    }
+
     private function validated(Request $request, ?Product $product = null): array
     {
         return $request->validate([

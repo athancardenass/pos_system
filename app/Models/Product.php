@@ -69,4 +69,33 @@ class Product extends Model
     {
         return $this->saleDetails()->exists() || $this->purchaseOrderDetails()->exists();
     }
+
+    /**
+     * Generate a unique, valid EAN-13 barcode string.
+     * 12 random digits + a correct checksum digit, looped until unique.
+     * (JsBarcode in the product index rejects EAN-13 codes with a bad check digit.)
+     */
+    public static function generateBarcode(): string
+    {
+        do {
+            $digits = (string) random_int(100000000000, 999999999999); // 12 digits
+            $barcode = $digits . self::ean13Checksum($digits);
+        } while (self::query()->where('barcode', $barcode)->exists());
+
+        return $barcode;
+    }
+
+    /**
+     * Compute the EAN-13 check digit for the first 12 digits.
+     */
+    public static function ean13Checksum(string $twelveDigits): string
+    {
+        $sum = 0;
+        for ($i = 0; $i < 12; $i++) {
+            $sum += (int) $twelveDigits[$i] * ($i % 2 === 0 ? 1 : 3);
+        }
+        $check = (10 - ($sum % 10)) % 10;
+
+        return (string) $check;
+    }
 }

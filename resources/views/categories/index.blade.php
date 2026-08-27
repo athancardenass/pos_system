@@ -22,10 +22,10 @@
                 <tbody>
                     @foreach ($categories as $category)
                         <tr>
-                            <td>{{ $category->category_name }}</td>
+                            <td style="font-weight: 700;">{{ $category->category_name }}</td>
                             <td class="muted">{{ $category->description }}</td>
                             <td class="actions">
-                                <a href="{{ route('categories.edit', $category) }}">Edit</a>
+                                <a class="btn-ghost" href="{{ route('categories.edit', $category) }}">Edit</a>
                                 <form class="inline-form" method="POST" action="{{ route('categories.destroy', $category) }}" onsubmit="return confirm('Delete this category?')">
                                     @csrf
                                     @method('DELETE')
@@ -36,7 +36,7 @@
                     @endforeach
                 </tbody>
             </table>
-            <div class="pagination">{{ $categories->links() }}</div>
+            {{ $categories->links('partials.pagination') }}
         @endif
     </div>
 @endsection

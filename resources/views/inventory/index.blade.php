@@ -27,18 +27,18 @@
                 <tbody>
                     @foreach ($items as $item)
                         <tr>
-                            <td>{{ $item->product->product_name ?? 'Unknown' }}</td>
+                            <td style="font-weight: 700;">{{ $item->product->product_name ?? 'Unknown' }}</td>
                             <td class="{{ optional($item->product)->reorder_level !== null && $item->stock_quantity <= $item->product->reorder_level ? 'warn' : '' }}">
                                 {{ $item->stock_quantity }}
                             </td>
                             <td>{{ $item->product->reorder_level ?? '—' }}</td>
                             <td class="muted">{{ optional($item->last_restocked)->format('Y-m-d H:i') ?: '—' }}</td>
-                            <td><a href="{{ route('inventory.edit', $item) }}">Adjust</a></td>
+                            <td><a class="btn-ghost" href="{{ route('inventory.edit', $item) }}">Adjust</a></td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
-            <div class="pagination">{{ $items->links() }}</div>
+            {{ $items->links('partials.pagination') }}
         @endif
     </div>
 @endsection

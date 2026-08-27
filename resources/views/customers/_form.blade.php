@@ -18,7 +18,7 @@
     </div>
     <div>
         <label for="date_of_birth">Date of birth</label>
-        <input id="date_of_birth" type="date" name="date_of_birth" value="{{ old('date_of_birth', optional($customer?->date_of_birth)->format('Y-m-d')) }}">
+        <input id="date_of_birth" type="date" name="date_of_birth" value="{{ old('date_of_birth', optional($customer?->date_of_birth)->format('Y-m-d')) }}" max="{{ now()->toDateString() }}" min="1900-01-01">
     </div>
     <div>
         <label for="customer_status">Status</label>

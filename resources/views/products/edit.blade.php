@@ -17,3 +17,23 @@
         </form>
     </div>
 @endsection
+
+@push('scripts')
+<script>
+    const generateBtn = document.getElementById('generate-barcode');
+    const barcodeInput = document.getElementById('barcode');
+    if (barcodeInput && barcodeInput.value.trim() !== '') {
+        generateBtn.disabled = true;
+    }
+    generateBtn?.addEventListener('click', function () {
+        if (barcodeInput.value.trim() !== '') return;
+        fetch("{{ route('products.generate-barcode') }}")
+            .then(r => r.json())
+            .then(data => {
+                barcodeInput.value = data.barcode;
+                generateBtn.disabled = true;
+            })
+            .catch(() => alert('Could not generate a barcode. Try again.'));
+    });
+</script>
+@endpush

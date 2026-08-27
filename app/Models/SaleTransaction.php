@@ -21,7 +21,27 @@ class SaleTransaction extends Model
         'subtotal',
         'total_amount',
         'payment_method',
+        'status',
+        'refunded_at',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'transaction_date' => 'datetime',
+            'refunded_at' => 'datetime',
+        ];
+    }
+
+    public function scopeRefunded($query)
+    {
+        return $query->where('status', 'refunded');
+    }
+
+    public function isRefunded(): bool
+    {
+        return $this->status === 'refunded';
+    }
 
     public function customer()
     {

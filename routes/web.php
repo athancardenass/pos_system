@@ -34,12 +34,14 @@ Route::middleware('auth')->group(function () {
         Route::get('/pos', [PosController::class, 'index'])->name('pos.index');
         Route::post('/pos', [PosController::class, 'store'])->name('pos.store');
         Route::get('/pos/{saleTransaction}', [PosController::class, 'show'])->name('pos.show');
+        Route::post('/pos/{saleTransaction}/refund', [PosController::class, 'refund'])->name('pos.refund');
         Route::resource('customers', CustomerController::class)->except('show');
     });
 
     Route::middleware('role:Manager,Admin')->group(function () {
         Route::resource('categories', CategoryController::class)->except('show');
         Route::resource('products', ProductController::class)->except('show');
+        Route::get('/products/generate-barcode', [ProductController::class, 'generateBarcode'])->name('products.generate-barcode');
         Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
         Route::post('/inventory/sync', [InventoryController::class, 'storeMissing'])->name('inventory.sync');
         Route::get('/inventory/{inventory}/edit', [InventoryController::class, 'edit'])->name('inventory.edit');

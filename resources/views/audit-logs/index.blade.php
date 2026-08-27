@@ -34,7 +34,7 @@
                     @endforeach
                 </tbody>
             </table>
-            <div class="pagination">{{ $logs->links() }}</div>
+            {{ $logs->links('partials.pagination') }}
         @endif
     </div>
 @endsection
