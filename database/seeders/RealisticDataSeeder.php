@@ -17,6 +17,27 @@ use Illuminate\Database\Seeder;
 
 class RealisticDataSeeder extends Seeder
 {
+    /**
+     * Compute EAN-13 check digit for a 12-digit base string.
+     */
+    private function ean13CheckDigit(string $base12): int
+    {
+        $sum = 0;
+        for ($i = 0; $i < 12; $i++) {
+            $digit = (int) $base12[$i];
+            $sum += $digit * (($i % 2 === 0) ? 1 : 3);
+        }
+        return (10 - ($sum % 10)) % 10;
+    }
+
+    /**
+     * Generate a valid EAN-13 barcode from a 12-digit base.
+     */
+    private function makeEan13(string $base12): string
+    {
+        return $base12 . $this->ean13CheckDigit($base12);
+    }
+
     public function run(): void
     {
         // Categories
@@ -58,35 +79,35 @@ class RealisticDataSeeder extends Seeder
 
         // Products with barcodes
         $products = [
-            ['product_name' => 'Coca-Cola 500ml', 'barcode' => '8901234567890', 'unit_price' => 35.00, 'cost_price' => 22.00, 'reorder_level' => 24, 'category' => 0, 'supplier' => 0],
-            ['product_name' => 'Pepsi 500ml', 'barcode' => '8901234567891', 'unit_price' => 35.00, 'cost_price' => 22.00, 'reorder_level' => 24, 'category' => 0, 'supplier' => 0],
-            ['product_name' => 'Nestle Coffee 3in1 (10s)', 'barcode' => '8901234567892', 'unit_price' => 85.00, 'cost_price' => 62.00, 'reorder_level' => 12, 'category' => 0, 'supplier' => 2],
-            ['product_name' => 'Lipton Yellow Label (25s)', 'barcode' => '8901234567893', 'unit_price' => 125.00, 'cost_price' => 95.00, 'reorder_level' => 10, 'category' => 0, 'supplier' => 2],
-            ['product_name' => 'Lays Classic 100g', 'barcode' => '8901234567894', 'unit_price' => 45.00, 'cost_price' => 30.00, 'reorder_level' => 20, 'category' => 1, 'supplier' => 0],
-            ['product_name' => 'Oishi Prawn Crackers 60g', 'barcode' => '8901234567895', 'unit_price' => 25.00, 'cost_price' => 15.00, 'reorder_level' => 30, 'category' => 1, 'supplier' => 0],
-            ['product_name' => 'Snickers Bar', 'barcode' => '8901234567896', 'unit_price' => 55.00, 'cost_price' => 38.00, 'reorder_level' => 15, 'category' => 1, 'supplier' => 2],
-            ['product_name' => 'Bear Brand Milk 1L', 'barcode' => '8901234567897', 'unit_price' => 78.00, 'cost_price' => 58.00, 'reorder_level' => 12, 'category' => 2, 'supplier' => 1],
-            ['product_name' => 'Eden Cheese 160g', 'barcode' => '8901234567898', 'unit_price' => 92.00, 'cost_price' => 70.00, 'reorder_level' => 10, 'category' => 2, 'supplier' => 1],
-            ['product_name' => 'Magnolia Fresh Milk 1L', 'barcode' => '8901234567899', 'unit_price' => 82.00, 'cost_price' => 60.00, 'reorder_level' => 12, 'category' => 2, 'supplier' => 1],
-            ['product_name' => 'Gardenia Bread (Classic)', 'barcode' => '8901234567900', 'unit_price' => 62.00, 'cost_price' => 45.00, 'reorder_level' => 8, 'category' => 3, 'supplier' => 1],
-            ['product_name' => 'Egg (per piece)', 'barcode' => '8901234567901', 'unit_price' => 12.00, 'cost_price' => 8.00, 'reorder_level' => 50, 'category' => 4, 'supplier' => 1],
-            ['product_name' => 'Banana (per kg)', 'barcode' => '8901234567902', 'unit_price' => 55.00, 'cost_price' => 35.00, 'reorder_level' => 15, 'category' => 4, 'supplier' => 1],
-            ['product_name' => 'Apple Fuji (per kg)', 'barcode' => '8901234567903', 'unit_price' => 120.00, 'cost_price' => 85.00, 'reorder_level' => 10, 'category' => 4, 'supplier' => 1],
-            ['product_name' => 'Chicken Breast (per kg)', 'barcode' => '8901234567904', 'unit_price' => 185.00, 'cost_price' => 140.00, 'reorder_level' => 8, 'category' => 5, 'supplier' => 1],
-            ['product_name' => 'Pork Belly (per kg)', 'barcode' => '8901234567905', 'unit_price' => 250.00, 'cost_price' => 195.00, 'reorder_level' => 6, 'category' => 5, 'supplier' => 1],
-            ['product_name' => 'Hotdog (500g)', 'barcode' => '8901234567906', 'unit_price' => 95.00, 'cost_price' => 68.00, 'reorder_level' => 10, 'category' => 6, 'supplier' => 2],
-            ['product_name' => 'Ice Cream (1L)', 'barcode' => '8901234567907', 'unit_price' => 145.00, 'cost_price' => 105.00, 'reorder_level' => 6, 'category' => 6, 'supplier' => 2],
-            ['product_name' => 'Tide Powder 1kg', 'barcode' => '8901234567908', 'unit_price' => 115.00, 'cost_price' => 82.00, 'reorder_level' => 8, 'category' => 7, 'supplier' => 2],
-            ['product_name' => 'Colgate Toothpaste 100ml', 'barcode' => '8901234567909', 'unit_price' => 68.00, 'cost_price' => 48.00, 'reorder_level' => 12, 'category' => 8, 'supplier' => 2],
-            ['product_name' => 'Del Monte Tomato Sauce 250g', 'barcode' => '8901234567910', 'unit_price' => 32.00, 'cost_price' => 22.00, 'reorder_level' => 15, 'category' => 9, 'supplier' => 0],
-            ['product_name' => 'Century Tuna 155g', 'barcode' => '8901234567911', 'unit_price' => 48.00, 'cost_price' => 33.00, 'reorder_level' => 20, 'category' => 9, 'supplier' => 0],
-            ['product_name' => 'Lucky Me Pancit Canton', 'barcode' => '8901234567912', 'unit_price' => 14.00, 'cost_price' => 9.00, 'reorder_level' => 40, 'category' => 9, 'supplier' => 0],
-            ['product_name' => 'Sprite 1.5L', 'barcode' => '8901234567913', 'unit_price' => 48.00, 'cost_price' => 32.00, 'reorder_level' => 12, 'category' => 0, 'supplier' => 0],
+            ['product_name' => 'Coca-Cola 500ml', 'barcode' => $this->makeEan13('890123456789'), 'unit_price' => 35.00, 'cost_price' => 22.00, 'reorder_level' => 24, 'category' => 0, 'supplier' => 0],
+            ['product_name' => 'Pepsi 500ml', 'barcode' => $this->makeEan13('890123456790'), 'unit_price' => 35.00, 'cost_price' => 22.00, 'reorder_level' => 24, 'category' => 0, 'supplier' => 0],
+            ['product_name' => 'Nestle Coffee 3in1 (10s)', 'barcode' => $this->makeEan13('890123456791'), 'unit_price' => 85.00, 'cost_price' => 62.00, 'reorder_level' => 12, 'category' => 0, 'supplier' => 2],
+            ['product_name' => 'Lipton Yellow Label (25s)', 'barcode' => $this->makeEan13('890123456792'), 'unit_price' => 125.00, 'cost_price' => 95.00, 'reorder_level' => 10, 'category' => 0, 'supplier' => 2],
+            ['product_name' => 'Lays Classic 100g', 'barcode' => $this->makeEan13('890123456793'), 'unit_price' => 45.00, 'cost_price' => 30.00, 'reorder_level' => 20, 'category' => 1, 'supplier' => 0],
+            ['product_name' => 'Oishi Prawn Crackers 60g', 'barcode' => $this->makeEan13('890123456794'), 'unit_price' => 25.00, 'cost_price' => 15.00, 'reorder_level' => 30, 'category' => 1, 'supplier' => 0],
+            ['product_name' => 'Snickers Bar', 'barcode' => $this->makeEan13('890123456795'), 'unit_price' => 55.00, 'cost_price' => 38.00, 'reorder_level' => 15, 'category' => 1, 'supplier' => 2],
+            ['product_name' => 'Bear Brand Milk 1L', 'barcode' => $this->makeEan13('890123456796'), 'unit_price' => 78.00, 'cost_price' => 58.00, 'reorder_level' => 12, 'category' => 2, 'supplier' => 1],
+            ['product_name' => 'Eden Cheese 160g', 'barcode' => $this->makeEan13('890123456797'), 'unit_price' => 92.00, 'cost_price' => 70.00, 'reorder_level' => 10, 'category' => 2, 'supplier' => 1],
+            ['product_name' => 'Magnolia Fresh Milk 1L', 'barcode' => $this->makeEan13('890123456798'), 'unit_price' => 82.00, 'cost_price' => 60.00, 'reorder_level' => 12, 'category' => 2, 'supplier' => 1],
+            ['product_name' => 'Gardenia Bread (Classic)', 'barcode' => $this->makeEan13('890123456799'), 'unit_price' => 62.00, 'cost_price' => 45.00, 'reorder_level' => 8, 'category' => 3, 'supplier' => 1],
+            ['product_name' => 'Egg (per piece)', 'barcode' => $this->makeEan13('890123456800'), 'unit_price' => 12.00, 'cost_price' => 8.00, 'reorder_level' => 50, 'category' => 4, 'supplier' => 1],
+            ['product_name' => 'Banana (per kg)', 'barcode' => $this->makeEan13('890123456801'), 'unit_price' => 55.00, 'cost_price' => 35.00, 'reorder_level' => 15, 'category' => 4, 'supplier' => 1],
+            ['product_name' => 'Apple Fuji (per kg)', 'barcode' => $this->makeEan13('890123456802'), 'unit_price' => 120.00, 'cost_price' => 85.00, 'reorder_level' => 10, 'category' => 4, 'supplier' => 1],
+            ['product_name' => 'Chicken Breast (per kg)', 'barcode' => $this->makeEan13('890123456803'), 'unit_price' => 185.00, 'cost_price' => 140.00, 'reorder_level' => 8, 'category' => 5, 'supplier' => 1],
+            ['product_name' => 'Pork Belly (per kg)', 'barcode' => $this->makeEan13('890123456804'), 'unit_price' => 250.00, 'cost_price' => 195.00, 'reorder_level' => 6, 'category' => 5, 'supplier' => 1],
+            ['product_name' => 'Hotdog (500g)', 'barcode' => $this->makeEan13('890123456805'), 'unit_price' => 95.00, 'cost_price' => 68.00, 'reorder_level' => 10, 'category' => 6, 'supplier' => 2],
+            ['product_name' => 'Ice Cream (1L)', 'barcode' => $this->makeEan13('890123456806'), 'unit_price' => 145.00, 'cost_price' => 105.00, 'reorder_level' => 6, 'category' => 6, 'supplier' => 2],
+            ['product_name' => 'Tide Powder 1kg', 'barcode' => $this->makeEan13('890123456807'), 'unit_price' => 115.00, 'cost_price' => 82.00, 'reorder_level' => 8, 'category' => 7, 'supplier' => 2],
+            ['product_name' => 'Colgate Toothpaste 100ml', 'barcode' => $this->makeEan13('890123456808'), 'unit_price' => 68.00, 'cost_price' => 48.00, 'reorder_level' => 12, 'category' => 8, 'supplier' => 2],
+            ['product_name' => 'Del Monte Tomato Sauce 250g', 'barcode' => $this->makeEan13('890123456809'), 'unit_price' => 32.00, 'cost_price' => 22.00, 'reorder_level' => 15, 'category' => 9, 'supplier' => 0],
+            ['product_name' => 'Century Tuna 155g', 'barcode' => $this->makeEan13('890123456810'), 'unit_price' => 48.00, 'cost_price' => 33.00, 'reorder_level' => 20, 'category' => 9, 'supplier' => 0],
+            ['product_name' => 'Lucky Me Pancit Canton', 'barcode' => $this->makeEan13('890123456811'), 'unit_price' => 14.00, 'cost_price' => 9.00, 'reorder_level' => 40, 'category' => 9, 'supplier' => 0],
+            ['product_name' => 'Sprite 1.5L', 'barcode' => $this->makeEan13('890123456812'), 'unit_price' => 48.00, 'cost_price' => 32.00, 'reorder_level' => 12, 'category' => 0, 'supplier' => 0],
         ];
 
         $prodModels = [];
         foreach ($products as $prod) {
-            $p = Product::firstOrCreate(
+            $p = Product::updateOrCreate(
                 ['barcode' => $prod['barcode']],
                 [
                     'product_name' => $prod['product_name'],

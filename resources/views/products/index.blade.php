@@ -65,7 +65,7 @@
 @endpush
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<script src="{{ asset('js/JsBarcode.all.min.js') }}"></script>
 <script>
     document.querySelectorAll('.print-barcode-btn').forEach(btn => {
         btn.addEventListener('click', function() {
@@ -76,7 +76,19 @@
             label.className = 'barcode-label';
             label.innerHTML = `<div class="bl-name">${name}</div><div class="bl-code">SKU: ${barcode}</div><svg class="bl-barcode"></svg><div class="bl-price">₱${price}</div>`;
             document.body.appendChild(label);
-            JsBarcode(label.querySelector('.bl-barcode'), barcode, { format: 'EAN13', width: 1.5, height: 30, displayValue: false, margin: 0 });
+            JsBarcode(label.querySelector('.bl-barcode'), barcode, {
+                format: 'EAN13',
+                width: 1.5,
+                height: 30,
+                displayValue: false,
+                margin: 0,
+                valid: function(valid) {
+                    if (!valid) {
+                        label.querySelector('.bl-barcode').outerHTML = '<div class="bl-barcode" style="color:red;font-size:8pt;text-align:center;padding:2mm;">Invalid EAN-13<br>(' + barcode + ')</div>';
+                        alert('⚠️ Barcode invalid — label printed with error notice');
+                    }
+                }
+            });
             window.print();
             setTimeout(() => label.remove(), 100);
         });
