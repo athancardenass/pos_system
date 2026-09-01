@@ -29,12 +29,13 @@ class DashboardController extends Controller
         if (in_array('pos.index', $modules)) {
             $today = Carbon::today();
 
-            $stats['today_sales'] = SaleTransaction::whereDate('transaction_date', $today)->count();
-            $stats['today_revenue'] = SaleTransaction::whereDate('transaction_date', $today)->sum('total_amount');
-            $stats['avg_transaction'] = SaleTransaction::whereDate('transaction_date', $today)->avg('total_amount') ?? 0;
+            // Refunded sales are voided — exclude them from every revenue stat.
+            $stats['today_sales'] = SaleTransaction::where('status', 'completed')->whereDate('transaction_date', $today)->count();
+            $stats['today_revenue'] = SaleTransaction::where('status', 'completed')->whereDate('transaction_date', $today)->sum('total_amount');
+            $stats['avg_transaction'] = SaleTransaction::where('status', 'completed')->whereDate('transaction_date', $today)->avg('total_amount') ?? 0;
 
-            $stats['total_sales'] = SaleTransaction::count();
-            $stats['total_revenue'] = SaleTransaction::sum('total_amount');
+            $stats['total_sales'] = SaleTransaction::where('status', 'completed')->count();
+            $stats['total_revenue'] = SaleTransaction::where('status', 'completed')->sum('total_amount');
 
             // Last 7 days trend
             $stats['weekly_trend'] = SaleTransaction::select(
@@ -42,6 +43,7 @@ class DashboardController extends Controller
                 DB::raw('COUNT(*) as count'),
                 DB::raw('SUM(total_amount) as revenue')
             )
+                ->where('status', 'completed')
                 ->where('transaction_date', '>=', Carbon::now()->subDays(6)->startOfDay())
                 ->groupBy('date')
                 ->orderBy('date')
@@ -50,7 +52,7 @@ class DashboardController extends Controller
             // Performance baseline for the weekly chart: average DAILY revenue of
             // the previous week (days 13–7 ago). Tune the color bands in
             // dashboard.blade.php ("Sales This Week" section).
-            $prevWeekRevenue = SaleTransaction::whereBetween('transaction_date', [
+            $prevWeekRevenue = SaleTransaction::where('status', 'completed')->whereBetween('transaction_date', [
                 Carbon::now()->subDays(13)->startOfDay(),
                 Carbon::now()->subDays(7)->endOfDay(),
             ])->sum('total_amount');
@@ -58,21 +60,26 @@ class DashboardController extends Controller
 
             // Payment method breakdown (today)
             $stats['payment_methods'] = SaleTransaction::select('payment_method', DB::raw('COUNT(*) as count'), DB::raw('SUM(total_amount) as total'))
+                ->where('status', 'completed')
                 ->whereDate('transaction_date', $today)
                 ->groupBy('payment_method')
                 ->get();
 
-            // Top selling products (all time)
-            $stats['top_products'] = SaleDetail::select('product_id', DB::raw('SUM(quantity) as total_qty'), DB::raw('SUM(subtotal) as total_revenue'))
-                ->groupBy('product_id')
+            // Top selling products (completed sales only)
+            $stats['top_products'] = SaleDetail::join('sale_transaction', 'sale_details.transaction_id', '=', 'sale_transaction.transaction_id')
+                ->where('sale_transaction.status', 'completed')
+                ->select('sale_details.product_id', DB::raw('SUM(sale_details.quantity) as total_qty'), DB::raw('SUM(sale_details.subtotal) as total_revenue'))
+                ->groupBy('sale_details.product_id')
                 ->orderByDesc('total_qty')
                 ->limit(5)
                 ->with('product')
                 ->get();
 
-            // Top categories
-            $stats['top_categories'] = SaleDetail::join('product', 'sale_details.product_id', '=', 'product.product_id')
+            // Top categories (completed sales only)
+            $stats['top_categories'] = SaleDetail::join('sale_transaction', 'sale_details.transaction_id', '=', 'sale_transaction.transaction_id')
+                ->join('product', 'sale_details.product_id', '=', 'product.product_id')
                 ->join('category', 'product.category_id', '=', 'category.category_id')
+                ->where('sale_transaction.status', 'completed')
                 ->select('category.category_name', DB::raw('SUM(sale_details.quantity) as total_qty'), DB::raw('SUM(sale_details.subtotal) as total_revenue'))
                 ->groupBy('category.category_name')
                 ->orderByDesc('total_revenue')

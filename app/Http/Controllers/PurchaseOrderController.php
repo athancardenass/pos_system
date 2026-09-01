@@ -82,12 +82,19 @@ class PurchaseOrderController extends Controller
 
     public function receive(PurchaseOrder $purchase_order): RedirectResponse
     {
-        if (! $purchase_order->isPending()) {
-            return back()->with('error', 'Only pending orders can be received.');
-        }
-
         DB::transaction(function () use ($purchase_order): void {
-            $purchase_order->load('details');
+            // Lock the PO row so two concurrent "Receive" clicks can't both pass
+            // the pending check and add stock twice (TOCTOU).
+            $purchase_order = PurchaseOrder::query()
+                ->lockForUpdate()
+                ->with('details')
+                ->findOrFail($purchase_order->purchase_id);
+
+            if (! $purchase_order->isPending()) {
+                throw ValidationException::withMessages([
+                    'purchase_order' => 'Only pending orders can be received.',
+                ]);
+            }
 
             foreach ($purchase_order->details as $line) {
                 $inventory = Inventory::query()->firstOrCreate(

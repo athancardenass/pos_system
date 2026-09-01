@@ -61,13 +61,21 @@ class PosController extends Controller
             $subtotal = 0;
             $lines = [];
 
+            // Aggregate requested qty per product so duplicate items[] lines
+            // can't bypass the stock check (each line was checking the same
+            // full stock, then decrementing twice -> oversell).
+            $requested = [];
+            foreach ($data['items'] as $item) {
+                $requested[$item['product_id']] = ($requested[$item['product_id']] ?? 0) + $item['quantity'];
+            }
+
             foreach ($data['items'] as $item) {
                 $product = Product::query()->with('inventory')->lockForUpdate()->findOrFail($item['product_id']);
                 $stock = $product->stockQuantity();
 
-                if ($stock < $item['quantity']) {
+                if ($requested[$item['product_id']] > $stock) {
                     throw ValidationException::withMessages([
-                        'items' => "Not enough stock for {$product->product_name} (available: {$stock}).",
+                        'items' => "Not enough stock for {$product->product_name} (available: {$stock}, requested: {$requested[$item['product_id']]}).",
                     ]);
                 }
 
@@ -163,13 +171,19 @@ class PosController extends Controller
 
     public function refund(SaleTransaction $saleTransaction): RedirectResponse
     {
-        // Guard: only a completed sale can be refunded, and only once.
-        if ($saleTransaction->isRefunded()) {
-            return back()->with('error', 'This sale has already been refunded.');
-        }
-
         DB::transaction(function () use ($saleTransaction): void {
-            $saleTransaction->load('saleDetails.product', 'customer', 'payment');
+            // Lock the sale row so two concurrent refunds can't both pass the
+            // "not yet refunded" check (TOCTOU). Re-check status INSIDE the txn.
+            $saleTransaction = SaleTransaction::query()
+                ->lockForUpdate()
+                ->with(['saleDetails.product', 'customer', 'payment'])
+                ->findOrFail($saleTransaction->transaction_id);
+
+            if ($saleTransaction->isRefunded()) {
+                throw ValidationException::withMessages([
+                    'refund' => 'This sale has already been refunded.',
+                ]);
+            }
 
             // 1. Return each sold item to inventory (same lock used at sale time).
             foreach ($saleTransaction->saleDetails as $line) {

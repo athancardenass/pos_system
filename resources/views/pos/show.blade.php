@@ -29,6 +29,12 @@
     <div style="display: flex; justify-content: center;">
         <div class="card" id="receipt-screen" style="max-width: 420px; width: 100%; padding: 2rem;">
 
+            @if ($sale->isRefunded())
+                <div style="text-align: center; background: rgba(196,80,74,0.12); border: 2px solid var(--danger); color: var(--danger); font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.5rem; margin-bottom: 1rem; border-radius: 6px;">
+                    Refunded — Not Valid for Payment
+                </div>
+            @endif
+
             {{-- Store Header --}}
             <div style="text-align: center; margin-bottom: 1.25rem;">
                 <div style="font-size: 1.6rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text);">POS</div>

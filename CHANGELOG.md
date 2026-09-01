@@ -145,6 +145,30 @@ him understand and explain the system to groupmates, and to stop seeing Laravel 
 
 ---
 
+## 2026-09-01 — Bug fixes (from code review)
+
+**Critical bugs fixed:**
+
+1. **Oversell via duplicate product lines** (`PosController::store`) — Items with the same `product_id` bypassed the stock check (each line read the same full stock, then two decrements caused oversell). Added an aggregate step that sums requested qty per product before the check, so `[{product_id:X,qty:3},{product_id:X,qty:3}]` with stock=5 correctly rejects (6>5). Verified: agg[10]=6.
+
+2. **Refund race condition (TOCTOU)** (`PosController::refund`) — `isRefunded()` was checked outside the `DB::transaction` with no lock on the sale row, so two concurrent requests could both pass the guard and double-restore inventory + double-reverse loyalty. Moved the check inside the transaction, re-querying the sale row with `lockForUpdate()` + `with('saleDetails.product','customer','payment')` before the check. The lock serializes concurrent refunds.
+
+3. **Purchase Order receive race (TOCTOU)** (`PurchaseOrderController::receive`) — Same pattern: `isPending()` checked outside the transaction without a lock. Two concurrent "Receive" clicks could double-add stock. Moved the check inside a transaction with `lockForUpdate()` on the PO row.
+
+4. **Stored XSS via product name** (`pos/index.blade.php`) — Product names from DB were interpolated into `innerHTML` in the cart table rows and the barcode search result. A product named `<img src=x onerror=alert(1)>` would execute JS. Rewrote cart row rendering to use DOM methods (`createElement`, `textContent`, `append`) — no `innerHTML` with user data. Same for the barcode search result: switched to `textContent`. The only remaining `innerHTML` is `cartEl.innerHTML = ''` (clear, safe).
+
+**Medium bugs fixed:**
+
+5. **Dashboard revenue counted refunded sales** (`DashboardController`) — All revenue queries (`today_revenue`, `total_revenue`, `avg_transaction`, `weekly_trend`, `daily_baseline`, `payment_methods`) and `total_sales` now filter `where('status', 'completed')`. Verified: 10 status-filtered query paths.
+
+6. **Top products/categories included refunded details** (`DashboardController`) — `top_products` and `top_categories` now join `sale_transaction` and filter `where('sale_transaction.status', 'completed')` so refunded sales don't inflate "top selling" rankings.
+
+7. **Refund receipt still showed "Paid"** (`pos/show.blade.php`) — Added a prominent red "Refunded — Not Valid for Payment" banner at the top of the receipt when `$sale->isRefunded()`. The payment/change section still shows original amounts (for audit), but the banner makes it unmistakable.
+
+**Verified:** `php -l` clean on all 3 controllers; route:list shows all routes; oversell aggregate correctly sums 3+3=6; DashboardController invoked with 25 stats keys; all views render.
+
+---
+
 ## Standing conventions
 
 - Code style: keep existing Laravel conventions (singular table names, `<entity>_id` PKs, `public $timestamps = false` on most models).

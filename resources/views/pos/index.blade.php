@@ -131,20 +131,48 @@
                 const lineTotal = line.price * line.qty;
                 subtotal += lineTotal;
                 const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${line.name}<input type="hidden" name="items[${i}][product_id]" value="${line.id}"></td>
-                    <td>
-                        <div style="display: inline-flex; align-items: center; gap: 0.4rem;">
-                            <button type="button" class="qty-btn" data-act="dec" data-i="${i}" aria-label="Decrease quantity">−</button>
-                            <span style="min-width: 1.5rem; text-align: center; font-weight: 700;">${line.qty}</span>
-                            <button type="button" class="qty-btn" data-act="inc" data-i="${i}" aria-label="Increase quantity">+</button>
-                            <input type="hidden" name="items[${i}][quantity]" value="${line.qty}">
-                        </div>
-                    </td>
-                    <td>${money(line.price)}</td>
-                    <td>${money(lineTotal)}</td>
-                    <td><button class="btn-ghost" type="button" data-i="${i}" style="color: var(--danger);">Remove</button></td>
-                `;
+
+                // Build with DOM methods so product names can't inject HTML (XSS).
+                const tdName = document.createElement('td');
+                const nameText = document.createTextNode(line.name);
+                tdName.appendChild(nameText);
+                const hiddenId = document.createElement('input');
+                hiddenId.type = 'hidden';
+                hiddenId.name = `items[${i}][product_id]`;
+                hiddenId.value = line.id;
+                tdName.appendChild(hiddenId);
+
+                const tdQty = document.createElement('td');
+                const qtyWrap = document.createElement('div');
+                qtyWrap.style.cssText = 'display: inline-flex; align-items: center; gap: 0.4rem;';
+                const btnDec = document.createElement('button');
+                btnDec.type = 'button'; btnDec.className = 'qty-btn'; btnDec.dataset.act = 'dec'; btnDec.dataset.i = i;
+                btnDec.setAttribute('aria-label', 'Decrease quantity'); btnDec.textContent = '−';
+                const qtySpan = document.createElement('span');
+                qtySpan.style.cssText = 'min-width: 1.5rem; text-align: center; font-weight: 700;';
+                qtySpan.textContent = line.qty;
+                const btnInc = document.createElement('button');
+                btnInc.type = 'button'; btnInc.className = 'qty-btn'; btnInc.dataset.act = 'inc'; btnInc.dataset.i = i;
+                btnInc.setAttribute('aria-label', 'Increase quantity'); btnInc.textContent = '+';
+                const hiddenQty = document.createElement('input');
+                hiddenQty.type = 'hidden';
+                hiddenQty.name = `items[${i}][quantity]`;
+                hiddenQty.value = line.qty;
+                qtyWrap.append(btnDec, qtySpan, btnInc, hiddenQty);
+                tdQty.appendChild(qtyWrap);
+
+                const tdPrice = document.createElement('td');
+                tdPrice.textContent = money(line.price);
+                const tdLine = document.createElement('td');
+                tdLine.textContent = money(lineTotal);
+                const tdRm = document.createElement('td');
+                const rmBtn = document.createElement('button');
+                rmBtn.className = 'btn-ghost'; rmBtn.type = 'button'; rmBtn.dataset.i = i;
+                rmBtn.style.cssText = 'color: var(--danger);';
+                rmBtn.textContent = 'Remove';
+                tdRm.appendChild(rmBtn);
+
+                tr.append(tdName, tdQty, tdPrice, tdLine, tdRm);
                 cartEl.appendChild(tr);
             });
             const total = discountTotal(subtotal);
@@ -209,13 +237,14 @@
             barcodeTimer = setTimeout(() => {
                 const match = products.find(p => p.barcode === val);
                 if (match) {
-                    barcodeResult.innerHTML = `<span style="color: var(--success); font-weight: 600;">✓ ${match.name}</span> — ₱${money(match.price)} (Stock: ${match.stock})`;
+                    // textContent — product names are DB/user data (XSS-safe).
+                    barcodeResult.textContent = `✓ ${match.name} — ₱${money(match.price)} (Stock: ${match.stock})`;
                     addToCart(match.id, 1);
                     this.value = '';
                     barcodeResult.textContent = 'Added to cart!';
                     setTimeout(() => { barcodeResult.textContent = ''; }, 1500);
                 } else {
-                    barcodeResult.innerHTML = `<span style="color: var(--danger);">No product found for "${val}"</span>`;
+                    barcodeResult.textContent = `No product found for "${val}"`;
                 }
             }, 150);
         });
