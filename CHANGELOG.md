@@ -237,6 +237,14 @@ him understand and explain the system to groupmates, and to stop seeing Laravel 
 
 ---
 
+## 2026-09-06 — Data fix: 11 products had non-EAN-13 barcodes
+
+**What:** Karl hit "Barcode invalid — label printed with error notice" when printing a label. Diagnosis: 11 of 35 products (from the earlier demo seeder) had SKU-style barcodes (`BR-0001`, `SN-0002`, …) which JsBarcode rejects as EAN-13. The seeder predates the EAN-13 checksum fix.
+**Fix:** ran a one-off tinker script — for every product whose barcode fails the EAN-13 checksum, assigned a fresh valid code via `Product::generateBarcode()`. Result: 11 fixed, 0 invalid remaining (verified by re-checking all 35).
+**Note:** the generator itself was already correct (new products are fine); this was stale seed data only.
+
+---
+
 ## Standing conventions
 
 - Code style: keep existing Laravel conventions (singular table names, `<entity>_id` PKs, `public $timestamps = false` on most models).
