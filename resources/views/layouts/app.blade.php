@@ -137,15 +137,15 @@
         input[type="text"], input[type="password"], input[type="email"],
         input[type="number"], input[type="date"], input[type="search"],
         select, textarea {
-            width: 100%; padding: 0.7rem 0.85rem;
+            width: 100%;
+            padding: 0.85rem 1rem;
             margin-bottom: 1.1rem;
             background: var(--surface); border: 2px solid var(--rule);
             border-radius: 6px; color: var(--text);
-            font-family: inherit; font-size: 0.95rem;
+            font-family: inherit; font-size: 1rem; line-height: 1.4;
             outline: none;
             transition: border-color 0.15s, box-shadow 0.15s;
         }
-        select { padding: 0.85rem 1rem; font-size: 1rem; }
         input:focus, select:focus, textarea:focus {
             border-color: var(--accent); box-shadow: 0 0 0 3px rgba(196,80,74,0.15);
         }
@@ -164,6 +164,9 @@
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 0 2rem;
         }
+        /* Compact side-by-side fields (email + contact) — fixed width, not stretched. */
+        .field-pair { display: flex; gap: 2rem; flex-wrap: wrap; }
+        .field-pair > div { width: 300px; }
         /* Input + action button on the same row (e.g. barcode + Generate). */
         .field-with-btn {
             display: flex; align-items: center; gap: 0.6rem;
@@ -209,13 +212,17 @@
         }
         th:last-child { width: auto; }
         td.actions {
-            width: 25%; text-align: right;
+            width: 10%; text-align: right;
             border-bottom: 1px solid rgba(32,60,61,0.12);
             padding: 0.5rem 0.25rem 0.5rem 1rem;
+            white-space: nowrap;
         }
         td.actions .actions { display: inline-flex; gap: 0.4rem; align-items: center; }
         td.actions .inline-form { display: inline-flex; align-items: center; margin: 0; }
         td.actions a { font-size: 0.8rem; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+        /* Long text (names, emails, addresses) wraps instead of breaking the layout. */
+        tbody td { word-break: break-word; overflow-wrap: break-word; }
+        tbody td:not(.actions) { max-width: 260px; }
 
         /* --- Badge --- */
         .badge {

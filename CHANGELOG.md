@@ -169,6 +169,74 @@ him understand and explain the system to groupmates, and to stop seeing Laravel 
 
 ---
 
+## 2026-09-01 — Customer form redesigned to match product form
+
+**What (Karl: "redesign yung new customer text box like yung ginawa natin sa products"):**
+- `resources/views/customers/_form.blade.php` — First name, Last name, **Contact number**, and Address inputs now use `.input-lg bordered` (larger, explicit solid border — same as products' Name/Description). Email, Date of birth, Status stay normal boxed size. *(Contact number added after Karl flagged it was left out.)*
+- `resources/views/customers/create.blade.php` + `edit.blade.php` — Save/Update button wrapped in `.form-actions` for consistent top spacing (same as products).
+
+**Verified:** rendered `customers.create` in `tinker` — `first_name`, `last_name`, `address` carry `input-lg bordered`; contact/email/dob have none; `form-actions` present.
+
+---
+
+## 2026-09-01 — Redesigned remaining forms to match product/customer style
+
+**What (Karl's per-form requests):**
+- `employees/_form.blade.php` — First name, Last name, Username, Password, Contact number all `.input-lg bordered` (big). Role/Hire date/Status stay normal.
+- `discounts/_form.blade.php` — only **Name** is `.input-lg bordered` (Karl: "yung name lang na text box").
+- `suppliers/_form.blade.php` — Name + Address `.input-lg bordered`; **Email stays normal size in the 2-col grid** (Karl: email box looked too long/stretched — it's now compact beside Contact number).
+- `categories/_form.blade.php` — Name `.input-lg bordered` + Description turned into a `.input-lg bordered` **textarea** (multi-line).
+- `customers/_form.blade.php` — **Address changed to a `textarea` (rows=3, `.input-lg bordered`)** so it's "detailed out" (multi-line, bigger) instead of a single-line input.
+- All create/edit blades for employees, discounts, suppliers, categories — Save/Update buttons wrapped in `.form-actions`.
+
+**Verified:** rendered every create form — employees=5 big fields, discounts=1 (name only), suppliers=2 (name+address), categories=2 (name+desc textarea); all have form-actions; customers address is now a textarea; supplier email is normal size.
+
+---
+
+## 2026-09-02 — UI-only: unify form input sizing + table column layout
+
+**What (Karl: fix inconsistent textbox/input sizing across CRUD forms; UI-only, NO schema/address/CRM changes):**
+- `resources/views/layouts/app.blade.php` — shared form CSS unified:
+  - Base input rule (text/password/email/number/date/search/select/textarea) now uses `padding: 0.85rem 1rem; font-size: 1rem; line-height: 1.4` — previously base inputs were `0.7rem 0.85rem / 0.95rem` while `select` + `.input-lg` were `0.85rem 1rem / 1rem`, so any grid row mixing a normal input with an `.input-lg`/select field had mismatched heights (Discount Name vs Value, Customer Name vs Email, etc.).
+  - Removed the separate `select { padding: 0.85rem 1rem; font-size: 1rem; }` override — selects now inherit the unified rule, so all control types align vertically in a row.
+- Table layout fixes:
+  - `td.actions` width `25%` → `10%` + `white-space: nowrap` (edit/delete column no longer hogs the table).
+  - Added `word-break: break-word; overflow-wrap: break-word` + `max-width: 260px` on data cells so long names/emails/addresses wrap instead of breaking layout.
+
+**Verified:** rendered create forms for products, customers, employees, discounts, suppliers, categories — all OK. CSS checks: unified base padding, no separate select override, actions width 10%, long-text wrap present.
+
+**Deliberately NOT touched (per Karl):** customer/supplier `address` schema, models, controllers, migrations — CRM handled separately by another group; no address split.
+
+---
+
+## 2026-09-02 — Supplier form layout: 2×2 grid (Name|Email / Contact|Address)
+
+**What (Karl: email looked too far from the rest; wanted a tight 2×2 layout):**
+- `resources/views/suppliers/_form.blade.php` — restructured from (Name full-width, then Contact|Email, then Address full-width) to a single `.form-grid` 2×2:
+  - Row 1: **Name | Email**
+  - Row 2: **Contact number | Address** (Address stays a textarea, rows=3)
+  - All fields keep `.input-lg bordered` (consistent height).
+- UI-only; no schema/model/controller changes (per Karl: CRM handles address separately).
+
+**Verified:** rendered `suppliers.create` — all 4 fields in form-grid with `input-lg bordered`, Address is a textarea.
+
+---
+
+## 2026-09-02 — Supplier form: final layout (Name / Email+Contact pair / Address)
+
+**What (Karl's iterations: 2×2 awkward → vertical stack → email too wide → final):**
+- `resources/views/suppliers/_form.blade.php` — final layout:
+  - **Name** — full-width
+  - **Email | Contact number** — `.field-pair` (flex row, each fixed 300px, wraps on narrow screens) so email isn't stretched across the card
+  - **Address** — full-width textarea (rows=3)
+  - All fields `.input-lg bordered`.
+- `resources/views/layouts/app.blade.php` — added `.field-pair` CSS (replaced the unused `.form-grid-2` rules).
+- UI-only; no schema/model/controller changes (CRM/address split explicitly deferred to another group).
+
+**Verified:** rendered `suppliers.create` — field-pair used + defined; view cache cleared.
+
+---
+
 ## Standing conventions
 
 - Code style: keep existing Laravel conventions (singular table names, `<entity>_id` PKs, `public $timestamps = false` on most models).

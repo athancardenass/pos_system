@@ -1,6 +1,6 @@
 @php($discount = $discount ?? null)
 <label for="discount_name">Name</label>
-<input id="discount_name" name="discount_name" value="{{ old('discount_name', $discount?->discount_name) }}" required>
+<input id="discount_name" name="discount_name" class="input-lg bordered" value="{{ old('discount_name', $discount?->discount_name) }}" required>
 <div class="form-grid">
     <div>
         <label for="discount_type">Type</label>

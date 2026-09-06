@@ -13,7 +13,9 @@
             @csrf
             @method('PUT')
             @include('suppliers._form')
-            <button type="submit">Update</button>
+            <div class="form-actions">
+                <button type="submit">Update</button>
+            </div>
         </form>
     </div>
 @endsection
