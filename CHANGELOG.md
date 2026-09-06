@@ -270,6 +270,18 @@ him understand and explain the system to groupmates, and to stop seeing Laravel 
 
 ---
 
+## 2026-09-06 — Feature: Reports & CSV export (#3 from roadmap)
+
+**What:** New Manager/Admin Reports page with date-range filtering and CSV export.
+- `app/Http/Controllers/ReportController.php` — 4 reports: **Sales** (all transactions w/ cashier, customer, discount, status), **Top selling products** (units + revenue, completed sales only), **Inventory** (stock vs reorder level w/ Out-of-stock/Low/OK status), **Refunds** (per-event from sale_refund). `export()` streams CSV via `response()->streamDownload` with UTF-8 BOM (Excel-safe ₱), `strip_tags` on cells (CSV-injection guard), explicit `fputcsv` escape param (PHP 8.4 deprecation fix), unknown type → 404. Default range = last 30 days.
+- `resources/views/reports/index.blade.php` — date-range form (`.form-grid`), one card per report with 5-row preview + Export CSV button (no emoji).
+- `routes/web.php` — `GET /reports` + `GET /reports/export/{type}` inside `role:Manager,Admin`.
+- `config/roles.php` — `reports.index` module + "Reports" label → sidebar link auto-appears.
+
+**How verified:** `php -l` clean; routes listed; page renders all 4 sections; exports return 200 with real rows (sales=18, products=18, inventory=35, refunds=5 for Aug31–Sep6); unknown type 404s; role-gated (Cashier blocked by middleware).
+
+---
+
 ## Standing conventions
 
 - Code style: keep existing Laravel conventions (singular table names, `<entity>_id` PKs, `public $timestamps = false` on most models).
