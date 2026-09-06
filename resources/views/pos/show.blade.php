@@ -7,17 +7,14 @@
         <h1>Receipt {{ $sale->receipt->receipt_number ?? '#' . $sale->transaction_id }}</h1>
         <div style="display: flex; gap: 0.5rem;">
             <button type="button" class="btn" onclick="window.print()">🖨 Print Receipt</button>
-            @if (! $sale->isRefunded())
-                <form method="POST" action="{{ route('pos.refund', $sale) }}" style="display: inline;">
-                    @csrf
-                    <button type="submit" class="btn" style="background: var(--danger); color: #fff;"
-                        onclick="return confirm('Refund this sale? Inventory will be restored and the customer\u2019s points reversed.')">
-                        ↩ Refund Sale
-                    </button>
-                </form>
+            @if (! $sale->isFullyRefunded())
+                <button type="button" class="btn" style="background: var(--danger); color: #fff;"
+                    onclick="toggleRefundPanel()">
+                    ↩ Refund
+                </button>
             @else
                 <span class="btn btn-secondary" style="cursor: default; background: rgba(196,80,74,0.12); color: var(--danger); border-color: var(--danger);">
-                    Refunded
+                    Fully Refunded
                 </span>
             @endif
             <a class="btn btn-secondary" href="{{ route('pos.show', $sale) }}">View</a>
@@ -29,7 +26,7 @@
     <div style="display: flex; justify-content: center;">
         <div class="card" id="receipt-screen" style="max-width: 420px; width: 100%; padding: 2rem;">
 
-            @if ($sale->isRefunded())
+            @if ($sale->isFullyRefunded())
                 <div style="text-align: center; background: rgba(196,80,74,0.12); border: 2px solid var(--danger); color: var(--danger); font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.5rem; margin-bottom: 1rem; border-radius: 6px;">
                     Refunded — Not Valid for Payment
                 </div>
@@ -122,6 +119,69 @@
             </div>
         </div>
     </div>
+    {{-- Refund panel (hidden until Refund clicked) --}}
+    @if (! $sale->isFullyRefunded())
+        <div id="refund-panel" style="display: none; max-width: 560px; margin: 1.5rem auto 0;">
+            <div class="card">
+                <h2 style="margin-bottom: 1rem;">Refund this sale</h2>
+                <form method="POST" action="{{ route('pos.refund', $sale) }}">
+                    @csrf
+                    <div class="form-grid">
+                        @foreach ($sale->saleDetails as $line)
+                            <div>
+                                <label for="refund_qty_{{ $line->sale_detail_id }}">
+                                    {{ $line->product->product_name ?? 'Item' }} — refund qty ({{ $line->refundableQuantity() }} refundable)
+                                </label>
+                                <input id="refund_qty_{{ $line->sale_detail_id }}" type="number" min="0"
+                                    max="{{ $line->refundableQuantity() }}" value="0" name="items[{{ $line->sale_detail_id }}]">
+                            </div>
+                        @endforeach
+                        <div>
+                            <label for="refund_reason">Reason</label>
+                            <select id="refund_reason" name="reason" required>
+                                <option value="">— Select reason —</option>
+                                @foreach (\App\Services\RefundService::REASONS as $key => $label)
+                                    <option value="{{ $key }}">{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label for="refund_notes">Notes (optional)</label>
+                            <textarea id="refund_notes" name="notes" class="input-lg bordered" rows="2" maxlength="255"></textarea>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn" style="background: var(--danger);"
+                            onclick="return confirm('Process this refund?')">Process Refund</button>
+                        <button type="button" class="btn btn-secondary"
+                            onclick="document.getElementById('refund-panel').style.display='none'">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+    {{-- Refund history --}}
+    @if ($sale->refunds->isNotEmpty())
+        <div style="max-width: 560px; margin: 1.5rem auto 0;">
+            <div class="card">
+                <h2 style="margin-bottom: 1rem;">Refund history</h2>
+                @foreach ($sale->refunds as $refund)
+                    <div style="padding: 0.6rem 0; border-bottom: 1px solid rgba(32,60,61,0.12); font-size: 0.85rem;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="font-weight: 700; color: var(--danger);">−₱{{ number_format((float) $refund->refund_amount, 2) }}</span>
+                            <span class="muted">{{ $refund->refunded_at?->format('M j, Y g:i A') }}</span>
+                        </div>
+                        <div class="muted">
+                            {{ \App\Services\RefundService::REASONS[$refund->reason] ?? $refund->reason }}
+                            · {{ $refund->is_full_refund ? 'Full refund' : 'Partial refund' }}
+                            · by {{ $refund->employee?->username ?? '—' }}
+                            @if ($refund->notes) · “{{ $refund->notes }}” @endif
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
 @endsection
 
 @push('styles')
@@ -142,4 +202,20 @@
         .page-head, nav, .sidebar, .btn { display: none !important; }
     }
 </style>
+@endpush
+
+@push('scripts')
+<script>
+    function toggleRefundPanel() {
+        const panel = document.getElementById('refund-panel');
+        if (!panel) return;
+        const hidden = panel.style.display === 'none';
+        panel.style.display = hidden ? 'block' : 'none';
+        if (hidden) {
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const first = panel.querySelector('input[type="number"]');
+            if (first) setTimeout(() => first.focus(), 350);
+        }
+    }
+</script>
 @endpush

@@ -30,4 +30,21 @@ class SaleDetail extends Model
     {
         return $this->belongsTo(Product::class, 'product_id', 'product_id');
     }
+
+    public function refundItems()
+    {
+        return $this->hasMany(SaleRefundItem::class, 'sale_detail_id', 'sale_detail_id');
+    }
+
+    /** Quantity of this line already refunded across all refunds. */
+    public function refundedQuantity(): int
+    {
+        return (int) $this->refundItems()->sum('quantity');
+    }
+
+    /** Quantity still refundable on this line. */
+    public function refundableQuantity(): int
+    {
+        return max(0, (int) $this->quantity - $this->refundedQuantity());
+    }
 }

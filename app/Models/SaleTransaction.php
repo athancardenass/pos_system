@@ -72,4 +72,14 @@ class SaleTransaction extends Model
     {
         return $this->hasOne(Receipt::class, 'transaction_id', 'transaction_id');
     }
+
+    public function refunds()
+    {
+        return $this->hasMany(SaleRefund::class, 'transaction_id', 'transaction_id');
+    }
+
+    public function isFullyRefunded(): bool
+    {
+        return $this->status === 'refunded';
+    }
 }

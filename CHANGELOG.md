@@ -237,6 +237,31 @@ him understand and explain the system to groupmates, and to stop seeing Laravel 
 
 ---
 
+## 2026-09-06 — Refund system v2: partial refunds + reasons + role gate
+
+**What:** Upgraded the full-sale-only refund into a real refund system.
+- `database/migrations/2026_09_06_000000_create_sale_refund_tables.php` — NEW tables `sale_refund` (one row per refund event: amount, reason, notes, is_full_refund, employee, timestamp) + `sale_refund_item` (per-line refunded qty + amount).
+- `app/Models/SaleRefund.php` + `SaleRefundItem.php` — new models; `SaleTransaction::refunds()` + `isFullyRefunded()`; `SaleDetail::refundedQuantity()` / `refundableQuantity()`.
+- `app/Services/RefundService.php` — NEW central refund logic (full + partial): locks sale + detail rows (TOCTOU-safe), validates per-line refundable qty, **pro-rates discounts** (refund = actual paid share, not sticker price), restores inventory, reverses loyalty + total_purchases proportionally, writes refund records + audit, flips status to `refunded` only when all lines fully refunded. **Role gate:** Cashiers can only refund their own sales; Manager/Admin any sale. Reasons enum: damaged / wrong_item / changed_mind / defective / other.
+- `PosController::refund()` — now validates reason/notes/items and delegates to the service (old inline logic removed; behavior preserved + extended).
+- `resources/views/pos/show.blade.php` — Refund button opens a panel: per-line qty inputs (max = refundable), reason dropdown, notes; refund history card below; "Fully Refunded" badge when done.
+
+**How verified (tinker, real data):**
+- Partial: refund 1 of 3 (₱105 line) → ₱35.00 exact, stock 2→3, status stays completed.
+- Second partial of same line → ₱70; over-refund attempt → blocked ("Only 0 remaining").
+- Discounted sale (20% off): refund = paid share ₱100 = expected ₱100 ✅ (pro-rating correct).
+- Full refund (empty items) → is_full=true, status flipped to refunded + refunded_at set; second attempt blocked.
+- Role gate: cashier refunding manager's sale → rejected with clear message.
+- Receipt renders refund panel + history; route `pos.refund` intact; `php -l` clean.
+
+**Note:** testing created a few refund records on seeded sales (#2, #4, one full) — harmless demo data; `migrate:fresh --seed` resets.
+**Follow-up (Karl flagged off-design inputs):** replaced the custom items TABLE + inline-styled inputs in the refund panel with standard `.form-grid` fields — one labeled number input per line ("{Product} — refund qty (N refundable)"), matching every other CRUD form. No inline styles, no bespoke table.
+**Follow-up 2 (Karl):** Notes field → `.input-lg bordered` textarea rows=2 (matches Address/Description convention). Refund panel was hard to find (hidden below long receipt) → Refund button now calls `toggleRefundPanel()`: opens panel, smooth-scrolls to it, auto-focuses first qty input.
+
+**Still open (roadmap):** #3 refunds list page, #4 printable credit slip, #6 refund window policy, #7 dashboard refund stats.
+
+---
+
 ## 2026-09-06 — Data fix: 11 products had non-EAN-13 barcodes
 
 **What:** Karl hit "Barcode invalid — label printed with error notice" when printing a label. Diagnosis: 11 of 35 products (from the earlier demo seeder) had SKU-style barcodes (`BR-0001`, `SN-0002`, …) which JsBarcode rejects as EAN-13. The seeder predates the EAN-13 checksum fix.

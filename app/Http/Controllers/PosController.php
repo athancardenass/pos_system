@@ -8,6 +8,7 @@ use App\Models\Inventory;
 use App\Models\Product;
 use App\Models\SaleTransaction;
 use App\Services\AuditLogger;
+use App\Services\RefundService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -164,60 +165,33 @@ class PosController extends Controller
 
     public function show(SaleTransaction $saleTransaction): View
     {
-        $saleTransaction->load(['customer', 'employee', 'discount', 'saleDetails.product', 'payment', 'receipt']);
+        $saleTransaction->load(['customer', 'employee', 'discount', 'saleDetails.product', 'payment', 'receipt', 'refunds.employee', 'refunds.items']);
 
         return view('pos.show', ['sale' => $saleTransaction]);
     }
 
-    public function refund(SaleTransaction $saleTransaction): RedirectResponse
+    public function refund(Request $request, SaleTransaction $saleTransaction, RefundService $refunds): RedirectResponse
     {
-        DB::transaction(function () use ($saleTransaction): void {
-            // Lock the sale row so two concurrent refunds can't both pass the
-            // "not yet refunded" check (TOCTOU). Re-check status INSIDE the txn.
-            $saleTransaction = SaleTransaction::query()
-                ->lockForUpdate()
-                ->with(['saleDetails.product', 'customer', 'payment'])
-                ->findOrFail($saleTransaction->transaction_id);
+        $data = $request->validate([
+            'reason' => 'required|string|in:'.implode(',', array_keys(RefundService::REASONS)),
+            'notes' => 'nullable|string|max:255',
+            'items' => 'nullable|array',
+            'items.*' => 'nullable|integer|min:0',
+        ]);
 
-            if ($saleTransaction->isRefunded()) {
-                throw ValidationException::withMessages([
-                    'refund' => 'This sale has already been refunded.',
-                ]);
-            }
+        // Keep only lines with qty > 0; empty => service treats as full refund.
+        $items = array_filter(array_map('intval', (array) ($data['items'] ?? [])), fn ($q) => $q > 0);
 
-            // 1. Return each sold item to inventory (same lock used at sale time).
-            foreach ($saleTransaction->saleDetails as $line) {
-                $product = $line->product()->lockForUpdate()->findOrFail($line->product_id);
-                $inventory = Inventory::query()->firstOrCreate(
-                    ['product_id' => $product->product_id],
-                    ['stock_quantity' => 0],
-                );
-                $inventory->stock_quantity += $line->quantity;
-                $inventory->save();
-            }
+        try {
+            $refund = $refunds->refund($saleTransaction, $items, $data['reason'], $data['notes'] ?? null);
+        } catch (ValidationException $e) {
+            return back()->with('error', $e->validator->errors()->first('refund') ?: $e->getMessage());
+        }
 
-            // 2. Reverse loyalty points / total purchases if it was a customer sale.
-            if ($saleTransaction->customer) {
-                $customer = $saleTransaction->customer;
-                $customer->total_purchases = max(0, (float) $customer->total_purchases - $saleTransaction->total_amount);
-                $customer->loyalty_points = max(0, (int) $customer->loyalty_points - (int) floor($saleTransaction->total_amount / 100));
-                $customer->save();
-            }
+        $msg = $refund->is_full_refund
+            ? 'Sale fully refunded — inventory restored, points reversed.'
+            : 'Partial refund of ₱'.number_format((float) $refund->refund_amount, 2).' processed.';
 
-            // 3. Mark the sale refunded (we keep the row for the audit trail).
-            $saleTransaction->update([
-                'status' => 'refunded',
-                'refunded_at' => now(),
-            ]);
-
-            AuditLogger::record(
-                'refund',
-                'sale_transaction',
-                $saleTransaction->transaction_id,
-                'Refunded sale #'.$saleTransaction->transaction_id,
-            );
-        });
-
-        return redirect()->route('pos.show', $saleTransaction)->with('status', 'Sale refunded and inventory restored.');
+        return redirect()->route('pos.show', $saleTransaction)->with('status', $msg);
     }
 }
