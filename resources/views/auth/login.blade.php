@@ -48,7 +48,7 @@
 
             <div class="login-footer">
                 <p class="login-hint">
-                    Demo: <strong>admin</strong> / <strong>manager</strong> / <strong>cashier</strong> &mdash; password: <strong>password</strong>
+                    Demo: <strong>manager</strong> / <strong>cashier</strong> &mdash; password: <strong>password</strong>
                 </p>
             </div>
         </div>

@@ -1,7 +1,160 @@
 # POS System — Changelog
 
 > Every change/task in this project is documented here. Newest entries on top.
-> Format: `## YYYY-MM-DD — Title` → What changed, files touched, why.
+| Format: `## YYYY-MM-DD — Title` → What changed, files touched, why.
+
+> **AGENTS.md lock:** agent never runs `git commit`/`push`; group controls VCS.
+
+---
+
+## 2026-09-09 — Phase 0: Integration layer scaffolding (POS→CRM/HR/Procurement boundary)
+
+**What:** Created integration service boundaries (stubs only — no behavior change).
+- New `app/Services/Integration/` directory with contracts + stub service classes for each external system:
+  - `ExternalEntity.php` — enum of 7 cross-system entities (customer, employee, product, inventory, supplier, purchase_order, sale) for documentation/future stable-ID work
+  - `ExternalSystemInterface.php` — marker interface (systemName())
+  - `CRM/CustomerService.php` — stub `resolve()` + `syncCreate()` (return null/no-op)
+  - `HR/EmployeeService.php` — stub `resolve()` (returns null)
+  - `Procurement/ProcurementService.php` — stub `receiveStockReceipt()` + `resolveSupplier()` (no-op/null)
+- All stubs implement `ExternalSystemInterface`; all methods return null or void — **zero POS behavior change**.
+
+**Files touched:**
+- `app/Services/Integration/ExternalEntity.php` (NEW)
+- `app/Services/Integration/ExternalSystemInterface.php` (NEW)
+- `app/Services/Integration/CRM/CustomerService.php` (NEW)
+- `app/Services/Integration/HR/EmployeeService.php` (NEW)
+- `app/Services/Integration/Procurement/ProcurementService.php` (NEW)
+- `CHANGELOG.md` (this entry)
+
+**Why:** establishes the integration boundary so CRM/HR/Procurement communication is isolated from POS business logic (per AGENTS.md "API-friendly controllers" + "extension points over edits to shared models"). No destructive changes — POS continues exactly as before.
+
+**Assumed future ownership (ALL PROVISIONAL — pending other systems' audit):**
+- HR → employee master data; POS keeps employee_id for auth/audit
+- CRM → customer master data; POS keeps customer_id for sale association
+- Procurement → suppliers + PO workflow; POS keeps supplier_id on product + inventory receiving
+- Inventory → shared/POS-operational (checkout decrements; Procurement increments) — PENDING joint decision
+
+**What is NOT done (Phase 0):** no deletions, no FK changes, no UUID/stable-ID migrations, no real API calls, no ownership transfers. Those await your Phase 1+ approval after auditing the actual CRM/HR/Procurement systems.
+
+**Verified:** `php -l` clean on all 5 new files; tinker confirms stubs load + return null; 67 routes intact; all 6 controllers lint clean; receipt renders with address + VAT + refund button + print button unchanged.
+
+---
+
+## 2026-09-09 — Philippine VAT (Option A) + hardcoded receipt address
+
+**What:** Implemented Philippine VAT (Option A — VAT-inclusive pricing) and set the receipt address.
+- Researched current Philippine VAT: **standard rate 12%** (NIRC + RA 11663 / RR 1-2026); registration threshold ₱3M/annual gross sales; businesses below it use the 3% percentage tax. Receipt already carried a dummy "VAT Reg:" number, so the POS is assumed VAT-registered.
+- **Option A (VAT-inclusive):** existing prices are treated as VAT-inclusive (the common PH retail convention). VAT is *extracted on display only* — no DB column added, no price changes. `VAT = total × 0.12/1.12`; e.g. ₱427.00 → VAT ₱45.75, net ₱381.25 (verified: ₱381.25 + ₱45.75 = ₱427.00 ✅).
+
+**Files touched:**
+- `app/Models/SaleTransaction.php` — added `VAT_RATE = 0.12` const, `vatRegistered()` (reads `config('vat.enabled')`), and three accessors: `vat_amount`, `net_amount`, `vat_rate`. Zero DB writes.
+- `config/vat.php` (NEW) — `enabled` (env `VAT_ENABLED`, default true), `rate` (env `VAT_RATE`, default 0.12), `label`. Config toggle lets 3%-percentage-tax businesses flip VAT off.
+- `.env` — added `VAT_ENABLED=true` + `VAT_RATE=0.12`.
+- `resources/views/pos/show.blade.php` — receipt header address `Cavite, Philippines` → `Old Nalsian Road, Calasial, Calasiao, 2418 Pangasinan`; added VAT line item (`VAT (12%, included)` + amount) between Discount and TOTAL, gated behind `config('vat.enabled')`.
+- `resources/views/pos/refund-slip.blade.php` — same address fix in the credit-slip header.
+
+**Why:** VAT is legally required on receipts for VAT-registered PH businesses (BIR RR 16-2017); Option A adds the compliant breakdown without touching pricing data or DB schema (per your constraint). The address was requested to match your Pangasinan location.
+
+**Verified:** `php -l` clean on SaleTransaction + config/vat.php; `config:clear` + `view:clear`; receipt renders with the new address, the VAT row, and correct math (total ₱427.00, VAT ₱45.75, net ₱381.25); `vatRegistered` = true; `VAT_ENABLED`/`VAT_RATE` present in `.env`.
+
+---
+
+## 2026-09-08 — Refund analytics: dashboard card + reason breakdown (Option B scope)
+
+**What:** Added refund analytics to both the dashboard (glanceable KPI) and the Reports page (drill-down).
+- **Dashboard new card:** "Refund Rate (7d)" — `(refunds ÷ completed sales in last 7 days) × 100` as a single KPI, plus "vs prior week" baseline.
+- **Dashboard mini-bar:** beneath the stat cards, a small bar chart per refund **reason** (count + ₱ value) over the last 7 days — "Why customers refunded (last 7 days)".
+- **Reports page:** the refunds card header now shows a reason-breakdown bar (count + ₱ per reason) alongside the Export CSV button, using the same query shape as the export.
+
+**Files touched:**
+- `app/Http/Controllers/DashboardController.php` — added `refund_rate`, `refund_rate_baseline` (prior-week comparison, not the same value), `refund_reasons` to `$stats`.
+- `app/Http/Controllers/ReportController.php` — added `refundBreakdown()` helper returning `reason → {count, total, label}`; passed as `refund_breakdown` to the view.
+- `resources/views/dashboard.blade.php` — new Refund Rate card + mini-bar section.
+- `resources/views/reports/index.blade.php` — breakdown bar above the refunds table (Export CSV button always visible).
+- Fixed Blade `@php` syntax (was two statements in one `@php()`; split into two — the original failed to compile under Laravel 13).
+
+**Why:** closes the refund analytics gap you flagged — you can now see *why* people are refunding, not just the monetary total.
+
+**Verified:** `php -l` clean on all controllers; both views render via `tinker` (DASHBOARD ✅49044 chars, REPORTS ✅30857 chars); data is real (5 refunds → 33.3% rate, 4 reasons: wrong_item×2, damaged, defective, changed_mind).
+
+---
+
+---
+
+## 2026-09-08 — Remove Admin employee account (records reassigned to manager)
+
+**What:** Deleted the `admin` employee account (employee_id 1) — you asked to remove it properly rather than set inactive. Admin role had already been merged into Manager in the role-restructure earlier today.
+
+**Reassignment (transactional, integrity-preserving — no dangling FKs):**
+- `sale_transaction`: 3 rows reassigned employee_id 1→2 (manager)
+- `sale_refund`: 1 row reassigned 1→2
+- `audit_log`: 9 rows reassigned 1→2
+- `purchase_order`: 0 rows (none owned by admin)
+- Verified: 0 rows reference employee_id 1 anywhere; admin row deleted.
+
+**Controller logic fix:**
+- `app/Http/Controllers/EmployeeController.php` — `destroy()` no longer hard-blocks on "sales history". Now reassigns all 4 FK tables to the first active **Manager** (skipping the deleted employee) inside a `DB::transaction`, then deletes. Removes the "Cannot delete an employee with sales history" blocker permanently. Throws a clear error only if no active Manager exists to take the records.
+
+**Seeder/login updates:**
+- `database/seeders/EmployeeSeeder.php` — removed the `admin` demo account; `RoleSeeder` seeds only `Manager` + `Cashier`.
+- `resources/views/auth/login.blade.php` — demo hint now shows `manager`/`cashier` only.
+
+**Why:** You wanted the Admin account fully gone (not just inactive). Reassigning records keeps financial/receipt integrity intact — receipts still show a real cashier.
+
+**Verified:** `php -l` clean; tinker confirms 2 employees (manager=Manager/active, cashier=Cashier/active) + 2 roles; HTTP round-trip: `login manager → 302 /dashboard`; `manager → /employees 200` (Manager keeps full access).
+
+---
+
+> **AGENTS.md lock (2026-09-08 session):** agent never runs `git commit`/`push`; group controls VCS.
+
+---
+
+## 2026-09-08 — Simplify roles: removed Admin, merged into Manager (only Manager + Cashier)
+
+**What:** Consolidated the 3-role system (`admin`/`manager`/`cashier`) into a 2-role system (`manager`/`cashier`). The **Manager** role now inherits all Admin-level permissions (employees, audit logs, everything). **Permission boundaries preserved**: Cashier keeps only `pos.index` + `customers.index`; Manager now owns all `categories/products/inventory/suppliers/purchase-orders/discounts/reports/employees/audit-logs`.
+
+**Files touched:**
+- `config/roles.php` — replaced all `'Admin'` entries in the `modules` map with `'Manager'` (employees.index + audit-logs.index are now Manager-only, matching the old Admin boundary).
+- `routes/web.php` — three `role:` middleware strings updated: `role:Cashier,Manager,Admin`→`role:Cashier,Manager`; `role:Manager,Admin`→`role:Manager`; `role:Admin`→`role:Manager`.
+- `app/Services/RefundService.php` — role gate `hasRole('Manager', 'Admin')` → `hasRole('Manager')`; added `MANAGER_ROLES = ['Manager']` constant; window-override logic now Manager-only (was Manager-or-Admin, now Manager-only = equivalent); removed "admin" wording from messages.
+- `database/seeders/RoleSeeder.php` — only seeds `Manager` + `Cashier`.
+- `database/seeders/EmployeeSeeder.php` — removed the `admin` demo account in a later cleanup (2026-09-08, see entry below); `RoleSeeder` seeds only `Manager` + `Cashier`.
+- `resources/views/dashboard.blade.php` — removed ⚡ emoji from "New Sale" button (no-emoji rule); `Admin` comment → `Manager`.
+- `AGENTS.md` — updated `config/roles.php` description line to reflect `manager`/`cashier`. **Note:** `config/roles.php` is normally locked by AGENTS.md #4 ("DO NOT modify config/ files unless the task explicitly says so") — this task explicitly requested the role restructure, so it's in-scope.
+
+**DB migration (data only, no schema change):**
+- `employee.role_id` where `1` (old admin) → remapped to `2` (Manager): **1 employee** (`admin` user) updated.
+- Deleted the obsolete `role` row `('admin')`: row removed.
+- Verified via tinker: `manager` role `Manager`, `admin` user now role `Manager`, `cashier` still `Cashier`. Live HTTP checks confirm `cashier → /employees: 403`, `cashier → /pos: 200`, `cashier → /reports: 403`, `manager → /employees: 200`.
+
+**Why:** You asked to simplify to two roles. The old `admin` role was redundant — every Admin-only route (`employees`, `audit-logs`) now lives under Manager, preserving the cashier-can't-access-admin-boundary guarantee.
+
+**Verified:** `php -l` clean on all 6 PHP files; `php artisan route:list` shows updated middleware; tinker + live HTTP role-gate tests all pass.
+
+---
+
+## 2026-09-08 — Env fix: stale dev server caused phantom login failures
+
+**What:** Login returning 419/Page Expired due to stale `php artisan serve` (multiple orphaned listeners on :8000 serving old compiled views without CSRF token). **No code or DB changes.**
+**Files touched:** none in repo tree.
+**Actions:** killed stale `php.exe` PIDs on :8000, ran `view:clear` + `config:clear`, started single fresh `php artisan serve --port=8000`. Verified via GET→POST round-trip: `manager`/`password` → HTTP 200 → `/dashboard`.
+
+---
+
+## 2026-09-08 — Refund features: 7-day window + printable credit slip + dashboard refund stats
+
+**What changed (all working-tree, NOT committed — AGENTS.md forbids agent git writes):**
+- `database/migrations/2026_09_08_000000_add_window_override_to_sale_refund_table.php` — new `window_override` bool on `sale_refund` (audit flag).
+- `app/Services/RefundService.php` — added `WINDOW_DAYS = 7` const; refunds older than 7 days now require Manager/Admin role and are flagged `window_override=true` (cashier blocked with a clear message).
+- `app/Models/SaleRefund.php` — `window_override` added to fillable + casts.
+- `app/Http/Controllers/PosController.php` — new `slip()` method → printable credit slip.
+- `routes/web.php` — new `GET /pos/refund/{refund}/slip` (pos.refund.slip).
+- `resources/views/pos/refund-slip.blade.php` — new credit-slip view (print-friendly, store info + line items + amount + reason).
+- `resources/views/pos/show.blade.php` — refund history now links to its slip ("Slip" button).
+- `app/Http/Controllers/DashboardController.php` + `resources/views/dashboard.blade.php` — new "Refunds This Week" stat card (₱ + all-time count).
+
+**Why:** completes refund roadmap items #4 (credit slip), #6 (refund window), #7 (dashboard stats).
+**Verified:** migrate OK; `php -l` clean on all touched PHP; tinker confirms WINDOW_DAYS=7, `window_override` column present, slip view renders, dashboard shows refunds_week=1562.00 / refunds_count=5.
 
 ---
 

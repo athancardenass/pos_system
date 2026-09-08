@@ -36,7 +36,7 @@
             <div style="text-align: center; margin-bottom: 1.25rem;">
                 <div style="font-size: 1.6rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text);">POS</div>
                 <div style="font-size: 0.75rem; color: var(--muted); margin-top: 0.15rem;">Your Trusted Point of Sale</div>
-                <div style="font-size: 0.7rem; color: var(--muted);">Cavite, Philippines</div>
+                <div style="font-size: 0.7rem; color: var(--muted);">Old Nalsian Road, Calasial, Calasiao, 2418 Pangasinan</div>
                 <div style="font-size: 0.7rem; color: var(--muted);">VAT Reg: 123-456-789-000</div>
             </div>
 
@@ -93,6 +93,12 @@
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem; color: var(--success);">
                         <span>{{ $sale->discount->discount_name }} ({{ $sale->discount->discount_type === 'percentage' ? $sale->discount->discount_value . '%' : 'Fixed' }})</span>
                         <span>−₱{{ number_format($sale->subtotal - $sale->total_amount, 2) }}</span>
+                    </div>
+                @endif
+                @if (config('vat.enabled', true))
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem; color: var(--muted);">
+                        <span>VAT ({{ ($sale->vat_rate * 100) }}%, included)</span>
+                        <span>₱{{ number_format($sale->vat_amount, 2) }}</span>
                     </div>
                 @endif
                 <div style="display: flex; justify-content: space-between; font-size: 1.15rem; font-weight: 800; padding: 0.5rem 0; border-top: 2px solid var(--rule); border-bottom: 2px solid var(--rule); margin: 0.5rem 0;">
@@ -169,7 +175,10 @@
                     <div style="padding: 0.6rem 0; border-bottom: 1px solid rgba(32,60,61,0.12); font-size: 0.85rem;">
                         <div style="display: flex; justify-content: space-between;">
                             <span style="font-weight: 700; color: var(--danger);">−₱{{ number_format((float) $refund->refund_amount, 2) }}</span>
-                            <span class="muted">{{ $refund->refunded_at?->format('M j, Y g:i A') }}</span>
+                            <span style="display: inline-flex; gap: 0.75rem; align-items: center;">
+                                <a class="btn-ghost" href="{{ route('pos.refund.slip', $refund) }}">Slip</a>
+                                <span class="muted">{{ $refund->refunded_at?->format('M j, Y g:i A') }}</span>
+                            </span>
                         </div>
                         <div class="muted">
                             {{ \App\Services\RefundService::REASONS[$refund->reason] ?? $refund->reason }}

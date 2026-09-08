@@ -3,21 +3,22 @@
 return [
     /*
     | Allowed roles per named route. Cashier = sales floor.
-    | Manager = catalog, stock, purchasing. Admin = everything including employees.
+    | Manager = everything (catalog, stock, purchasing, employees, audit).
+    | The old 'Admin' role has been merged into Manager (manager = everything).
     */
     'modules' => [
-        'dashboard' => ['Admin', 'Manager', 'Cashier'],
-        'pos.index' => ['Admin', 'Manager', 'Cashier'],
-        'customers.index' => ['Admin', 'Manager', 'Cashier'],
-        'categories.index' => ['Admin', 'Manager'],
-        'products.index' => ['Admin', 'Manager'],
-        'inventory.index' => ['Admin', 'Manager'],
-        'suppliers.index' => ['Admin', 'Manager'],
-        'purchase-orders.index' => ['Admin', 'Manager'],
-        'discounts.index' => ['Admin', 'Manager'],
-        'reports.index' => ['Admin', 'Manager'],
-        'employees.index' => ['Admin'],
-        'audit-logs.index' => ['Admin'],
+        'dashboard' => ['Manager', 'Cashier'],
+        'pos.index' => ['Manager', 'Cashier'],
+        'customers.index' => ['Manager', 'Cashier'],
+        'categories.index' => ['Manager'],
+        'products.index' => ['Manager'],
+        'inventory.index' => ['Manager'],
+        'suppliers.index' => ['Manager'],
+        'purchase-orders.index' => ['Manager'],
+        'discounts.index' => ['Manager'],
+        'reports.index' => ['Manager'],
+        'employees.index' => ['Manager'],
+        'audit-logs.index' => ['Manager'],
     ],
 
     'labels' => [

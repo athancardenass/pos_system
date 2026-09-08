@@ -19,6 +19,7 @@ class SaleRefund extends Model
         'reason',
         'notes',
         'is_full_refund',
+        'window_override',
         'refunded_at',
     ];
 
@@ -27,6 +28,7 @@ class SaleRefund extends Model
         return [
             'refund_amount' => 'decimal:2',
             'is_full_refund' => 'boolean',
+            'window_override' => 'boolean',
             'refunded_at' => 'datetime',
         ];
     }

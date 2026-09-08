@@ -2,11 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Employee;
+use App\Models\PurchaseOrder;
 use App\Models\Role;
+use App\Models\SaleRefund;
+use App\Models\SaleTransaction;
 use App\Services\AuditLogger;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class EmployeeController extends Controller
@@ -67,17 +73,35 @@ class EmployeeController extends Controller
             return back()->with('error', 'You cannot delete your own account.');
         }
 
-        if ($employee->saleTransactions()->exists()) {
-            return back()->with('error', 'Cannot delete an employee with sales history. Set them inactive instead.');
-        }
+        // Reassign all sales/audit/PO records to another Manager, then delete.
+        // This preserves financial/receipt integrity (no dangling FKs) instead of
+        // hard-blocking deletion for employees with a sales history.
+        DB::transaction(function () use ($employee) {
+            $manager = Employee::query()
+                ->where('status', 'active')
+                ->whereHas('role', fn ($q) => $q->where('role_name', 'Manager'))
+                ->where('employee_id', '!=', $employee->employee_id)
+                ->orderBy('employee_id')
+                ->first();
 
-        $id = $employee->employee_id;
-        $username = $employee->username;
-        $employee->delete();
+            if (! $manager) {
+                throw ValidationException::withMessages([
+                    'employee' => 'Cannot delete this employee: no active Manager exists to reassign their records.',
+                ]);
+            }
 
-        AuditLogger::record('delete', 'employee', $id, 'Deleted employee '.$username);
+            $targetId = $manager->employee_id;
+            SaleTransaction::where('employee_id', $employee->employee_id)->update(['employee_id' => $targetId]);
+            SaleRefund::where('employee_id', $employee->employee_id)->update(['employee_id' => $targetId]);
+            AuditLog::where('employee_id', $employee->employee_id)->update(['employee_id' => $targetId]);
+            PurchaseOrder::where('employee_id', $employee->employee_id)->update(['employee_id' => $targetId]);
 
-        return redirect()->route('employees.index')->with('status', 'Employee deleted.');
+            $employee->delete();
+        });
+
+        AuditLogger::record('delete', 'employee', $employee->employee_id, 'Deleted employee '.$employee->username.' (records reassigned)');
+
+        return redirect()->route('employees.index')->with('status', 'Employee deleted; their records were reassigned to an active manager.');
     }
 
     private function validated(Request $request, ?Employee $employee = null): array

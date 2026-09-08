@@ -31,15 +31,16 @@ Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth')->
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
-    Route::middleware('role:Cashier,Manager,Admin')->group(function () {
+    Route::middleware('role:Cashier,Manager')->group(function () {
         Route::get('/pos', [PosController::class, 'index'])->name('pos.index');
         Route::post('/pos', [PosController::class, 'store'])->name('pos.store');
         Route::get('/pos/{saleTransaction}', [PosController::class, 'show'])->name('pos.show');
         Route::post('/pos/{saleTransaction}/refund', [PosController::class, 'refund'])->name('pos.refund');
+        Route::get('/pos/refund/{refund}/slip', [PosController::class, 'slip'])->name('pos.refund.slip');
         Route::resource('customers', CustomerController::class)->except('show');
     });
 
-    Route::middleware('role:Manager,Admin')->group(function () {
+    Route::middleware('role:Manager')->group(function () {
         Route::resource('categories', CategoryController::class)->except('show');
         Route::resource('products', ProductController::class)->except('show');
         Route::get('/products/generate-barcode', [ProductController::class, 'generateBarcode'])->name('products.generate-barcode');
@@ -59,7 +60,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/reports/export/{type}', [ReportController::class, 'export'])->name('reports.export');
     });
 
-    Route::middleware('role:Admin')->group(function () {
+    Route::middleware('role:Manager')->group(function () {
         Route::resource('employees', EmployeeController::class)->except('show');
         Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
     });

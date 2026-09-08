@@ -12,10 +12,10 @@ class EmployeeSeeder extends Seeder
     {
         $accounts = [
             [
-                'username' => 'admin',
-                'role_name' => 'Admin',
+                'username' => 'manager',
+                'role_name' => 'Manager',
                 'first_name' => 'System',
-                'last_name' => 'Admin',
+                'last_name' => 'Manager',
             ],
             [
                 'username' => 'manager',

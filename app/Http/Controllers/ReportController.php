@@ -35,6 +35,7 @@ class ReportController extends Controller
                 'inventory' => $this->inventoryRows(),
                 'refunds' => $this->refundRows($from, $to),
             ],
+            'refund_breakdown' => $this->refundBreakdown($from, $to),
         ]);
     }
 
@@ -175,6 +176,23 @@ class ReportController extends Controller
                 $r->is_full_refund ? 'Full' : 'Partial',
                 \App\Services\RefundService::REASONS[$r->reason] ?? $r->reason,
                 $r->notes ?? '—',
+            ])->all();
+    }
+
+    /** @return array<string, array{count:int, total:float}> */
+    private function refundBreakdown(Carbon $from, Carbon $to): array
+    {
+        return SaleRefund::query()
+            ->select('reason', DB::raw('COUNT(*) as count'), DB::raw('SUM(refund_amount) as total'))
+            ->whereBetween('refunded_at', [$from, $to])
+            ->groupBy('reason')
+            ->orderByDesc('count')
+            ->get()
+            ->keyBy('reason')
+            ->map(fn ($r) => [
+                'count' => (int) $r->count,
+                'total' => (float) $r->total,
+                'label' => \App\Services\RefundService::REASONS[$r->reason] ?? $r->reason,
             ])->all();
     }
 }

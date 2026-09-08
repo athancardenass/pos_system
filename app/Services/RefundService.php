@@ -19,6 +19,12 @@ class RefundService
         'other' => 'Other',
     ];
 
+    /** Standard refund window in days. Outside it, only a Manager may refund (logged as an override). */
+    public const WINDOW_DAYS = 7;
+
+    /** Roles allowed to override the refund window or refund any sale. */
+    public const MANAGER_ROLES = ['Manager'];
+
     /**
      * Refund a sale — full (no $items) or partial ($items = [sale_detail_id => qty]).
      *
@@ -38,8 +44,10 @@ class RefundService
     {
         $employee = auth()->user();
 
-        // Role gate: Cashiers may only refund their own sales; Manager/Admin any sale.
-        if ($employee->hasRole('Cashier') && ! $employee->hasRole('Manager', 'Admin')
+        // Role gate: Cashiers may only refund their own sales; Managers can refund any sale.
+        // (Admin role merged into Manager — see CHANGELOG 2026-09-08.)
+        $isManager = $employee->hasRole('Manager');
+        if ($employee->hasRole('Cashier') && ! $isManager
             && (int) $sale->employee_id !== (int) $employee->employee_id) {
             throw ValidationException::withMessages([
                 'refund' => 'Cashiers can only refund their own sales. Ask a manager.',
@@ -50,7 +58,25 @@ class RefundService
             throw ValidationException::withMessages(['reason' => 'Invalid refund reason.']);
         }
 
-        return DB::transaction(function () use ($sale, $items, $reason, $notes, $employee): SaleRefund {
+        // Refund window: within WINDOW_DAYS anyone eligible may refund.
+        // Beyond it, only a Manager — and the event is flagged as an override.
+        $daysOld = $sale->transaction_date
+            ? (int) $sale->transaction_date->diffInDays(now())
+            : 0;
+        $outsideWindow = $daysOld > self::WINDOW_DAYS;
+        $windowOverride = false;
+
+        if ($outsideWindow) {
+            $isManager = $employee && $employee->hasRole('Manager');
+            if (! $isManager) {
+                throw ValidationException::withMessages([
+                    'refund' => 'This sale is older than '.self::WINDOW_DAYS.' days — only a manager can refund it.',
+                ]);
+            }
+            $windowOverride = true;
+        }
+
+        return DB::transaction(function () use ($sale, $items, $reason, $notes, $employee, $windowOverride): SaleRefund {
             // Lock + reload the sale so two concurrent refunds serialize (TOCTOU-safe).
             $sale = SaleTransaction::query()->lockForUpdate()->findOrFail($sale->transaction_id);
 
@@ -117,6 +143,7 @@ class RefundService
                 'reason' => $reason,
                 'notes' => $notes,
                 'is_full_refund' => $isFull,
+                'window_override' => $windowOverride,
                 'refunded_at' => now(),
             ]);
 

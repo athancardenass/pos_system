@@ -170,6 +170,13 @@ class PosController extends Controller
         return view('pos.show', ['sale' => $saleTransaction]);
     }
 
+    public function slip(\App\Models\SaleRefund $refund): View
+    {
+        $refund->load(['sale.receipt', 'sale.employee', 'sale.customer', 'items.saleDetail.product', 'employee']);
+
+        return view('pos.refund-slip', ['refund' => $refund]);
+    }
+
     public function refund(Request $request, SaleTransaction $saleTransaction, RefundService $refunds): RedirectResponse
     {
         $data = $request->validate([

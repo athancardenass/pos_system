@@ -22,7 +22,7 @@
     {{-- Quick Actions --}}
     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
         @if (in_array('pos.index', $modules))
-            <a href="{{ route('pos.index') }}" class="btn" style="font-size: 0.85rem;">⚡ New Sale</a>
+            <a href="{{ route('pos.index') }}" class="btn" style="font-size: 0.85rem;">New Sale</a>
         @endif
         @if (in_array('products.index', $modules))
             <a href="{{ route('products.create') }}" class="btn btn-secondary" style="font-size: 0.85rem;">+ Add Product</a>
@@ -55,7 +55,37 @@
                 <div style="font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.25rem;">Total Revenue</div>
                 <div style="font-size: 1.75rem; font-weight: 700;">₱{{ number_format($stats['total_revenue'], 2) }}</div>
             </div>
+            <div style="background: var(--surface); border-bottom: 3px solid var(--danger); padding: 1rem 1.25rem;">
+                <div style="font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.25rem;">Refunds This Week</div>
+                <div style="font-size: 1.75rem; font-weight: 700;">₱{{ number_format($stats['refunds_week'] ?? 0, 2) }}</div>
+                <div style="font-size: 0.72rem; color: var(--muted);">{{ $stats['refunds_count'] ?? 0 }} refund(s) all time</div>
+            </div>
+            <div style="background: var(--surface); border-bottom: 3px solid var(--text); padding: 1rem 1.25rem;">
+                <div style="font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.25rem;">Refund Rate (7d)</div>
+                <div style="font-size: 1.75rem; font-weight: 700;">{{ number_format($stats['refund_rate'] ?? 0, 1) }}%</div>
+                <div style="font-size: 0.72rem; color: var(--muted);">{{ round($stats['refund_rate_baseline'] ?? 0, 1) }}% vs prior week</div>
+            </div>
         </div>
+
+        {{-- Refund reasons mini-bar (7-day) --}}
+        @if (($stats['refund_rate'] ?? 0) > 0 && ($stats['refund_reasons'] ?? collect())->isNotEmpty())
+            <div style="background: var(--surface); border: 2px solid var(--rule); padding: 1rem 1.25rem; margin-bottom: 1.5rem;">
+                <div style="font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.5rem;">Why customers refunded (last 7 days)</div>
+                <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+                    @foreach ($stats['refund_reasons'] as $r)
+                        @php($w = 40 + ($r->count * 12))
+                        @php($lab = \App\Services\RefundService::REASONS[$r->reason] ?? $r->reason)
+                        <div style="flex: 1; min-width: 80px; display: flex; flex-direction: column; align-items: center;">
+                            <div style="width: 100%; height: {{ $w }}px; background: var(--accent); border-radius: 4px; position: relative; display: flex; align-items: flex-end; justify-content: center;">
+                                <span style="font-size: 0.7rem; font-weight: 700; color: #fff;">{{ $r->count }}</span>
+                            </div>
+                            <span style="font-size: 0.7rem; color: var(--muted); text-align: center; margin-top: 0.25rem;">{{ $lab }}</span>
+                            <span style="font-size: 0.65rem; color: var(--muted);">₱{{ number_format((float) $r->total, 0) }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
 
         {{-- Weekly Trend --}}
         @if ($stats['weekly_trend']->count())
@@ -206,7 +236,7 @@
         </div>
     @endif
 
-    {{-- Recent Activity (Admin) --}}
+    {{-- Recent Activity (Manager) --}}
     @if (in_array('audit-logs.index', $modules) && isset($stats['recent_activity']) && $stats['recent_activity']->count())
         <div style="background: var(--surface); border: 2px solid var(--rule); padding: 1.25rem; margin-bottom: 1.5rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">

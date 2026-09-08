@@ -25,7 +25,7 @@ class DashboardController extends Controller
 
         $stats = [];
 
-        // === Sales Stats (Cashier, Manager, Admin) ===
+        // === Sales Stats (Cashier, Manager) ===
         if (in_array('pos.index', $modules)) {
             $today = Carbon::today();
 
@@ -57,6 +57,32 @@ class DashboardController extends Controller
                 Carbon::now()->subDays(7)->endOfDay(),
             ])->sum('total_amount');
             $stats['daily_baseline'] = $prevWeekRevenue / 7;
+
+            // Refund totals (today / 7 days / all time) for the dashboard cards.
+            $stats['refunds_today'] = \App\Models\SaleRefund::whereDate('refunded_at', $today)->sum('refund_amount');
+            $stats['refunds_week'] = \App\Models\SaleRefund::where('refunded_at', '>=', Carbon::now()->subDays(6)->startOfDay())->sum('refund_amount');
+            $stats['refunds_total'] = \App\Models\SaleRefund::sum('refund_amount');
+            $stats['refunds_count'] = \App\Models\SaleRefund::count();
+
+            // Refund rate (7-day window): refunds / completed sales, as a %.
+            // Guards against division-by-zero on a dead week.
+            $weekSalesCount = (int) SaleTransaction::where('status', 'completed')
+                ->where('transaction_date', '>=', Carbon::now()->subDays(6)->startOfDay())->count();
+            $weekRefundCount = (int) \App\Models\SaleRefund::where('refunded_at', '>=', Carbon::now()->subDays(6)->startOfDay())->count();
+            $stats['refund_rate'] = $weekSalesCount > 0 ? round(($weekRefundCount / $weekSalesCount) * 100, 1) : 0;
+
+            // Prior-week refund rate for the baseline comparison.
+            $prevWeekSales = (int) SaleTransaction::where('status', 'completed')
+                ->whereBetween('transaction_date', [Carbon::now()->subDays(13)->startOfDay(), Carbon::now()->subDays(7)->endOfDay()])->count();
+            $prevWeekRefunds = (int) \App\Models\SaleRefund::whereBetween('refunded_at', [Carbon::now()->subDays(13)->startOfDay(), Carbon::now()->subDays(7)->endOfDay()])->count();
+            $stats['refund_rate_baseline'] = $prevWeekSales > 0 ? round(($prevWeekRefunds / $prevWeekSales) * 100, 1) : 0;
+
+            // Refund reason breakdown (7-day window) — for the dashboard mini-bar.
+            $stats['refund_reasons'] = \App\Models\SaleRefund::query()
+                ->select('reason', \Illuminate\Support\Facades\DB::raw('COUNT(*) as count'), \Illuminate\Support\Facades\DB::raw('SUM(refund_amount) as total'))
+                ->where('refunded_at', '>=', Carbon::now()->subDays(6)->startOfDay())
+                ->groupBy('reason')
+                ->get();
 
             // Payment method breakdown (today)
             $stats['payment_methods'] = SaleTransaction::select('payment_method', DB::raw('COUNT(*) as count'), DB::raw('SUM(total_amount) as total'))
@@ -93,7 +119,7 @@ class DashboardController extends Controller
                 ->get();
         }
 
-        // === Inventory Stats (Manager, Admin) ===
+        // === Inventory Stats (Manager) ===
         if (in_array('products.index', $modules)) {
             $stats['products'] = Product::count();
             $stats['categories'] = Category::count();
@@ -119,25 +145,25 @@ class DashboardController extends Controller
             $stats['out_of_stock_count'] = count($stats['out_of_stock']);
         }
 
-        // === Customer Stats (Cashier, Manager, Admin) ===
+        // === Customer Stats (Cashier, Manager) ===
         if (in_array('customers.index', $modules)) {
             $stats['customers'] = Customer::count();
             $stats['active_customers'] = Customer::where('customer_status', 'active')->count();
         }
 
-        // === Employee Stats (Admin) ===
+        // === Employee Stats (Manager) ===
         if (in_array('employees.index', $modules)) {
             $stats['employees'] = Employee::count();
             $stats['active_employees'] = Employee::where('status', 'active')->count();
         }
 
-        // === Purchase Orders (Manager, Admin) ===
+        // === Purchase Orders (Manager) ===
         if (in_array('purchase-orders.index', $modules)) {
             $stats['pending_orders'] = PurchaseOrder::where('status', 'pending')->count();
             $stats['received_orders'] = PurchaseOrder::where('status', 'received')->count();
         }
 
-        // === Audit Log (Admin) ===
+        // === Audit Log (Manager) ===
         if (in_array('audit-logs.index', $modules)) {
             $stats['recent_activity'] = AuditLog::with('employee')
                 ->latest('action_timestamp')

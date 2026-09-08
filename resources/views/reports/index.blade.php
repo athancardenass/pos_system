@@ -38,6 +38,19 @@
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
                 <h2>{{ $label }}</h2>
+                @if ($key === 'refunds' && ($refund_breakdown ?? []) !== [])
+                    <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                        @foreach ($refund_breakdown as $reason => $b)
+                            @php($barW = 8 + ($b['count'] * 6))
+                            <div style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem;">
+                                <div style="width: {{ $barW }}px; height: 14px; background: var(--accent); border-radius: 3px;"></div>
+                                <span style="color: var(--muted);">{{ $b['label'] }}:</span>
+                                <span style="font-weight: 700;">{{ $b['count'] }}</span>
+                                <span style="color: var(--muted);">₱{{ number_format($b['total'], 0) }}</span>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
                 <a class="btn" href="{{ route('reports.export', ['type' => $key, 'from' => $from->toDateString(), 'to' => $to->toDateString()]) }}">
                     Export CSV
                 </a>
