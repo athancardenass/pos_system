@@ -6,11 +6,11 @@
     <div class="page-head">
         <h1>Receipt {{ $sale->receipt->receipt_number ?? '#' . $sale->transaction_id }}</h1>
         <div style="display: flex; gap: 0.5rem;">
-            <button type="button" class="btn" onclick="window.print()">Print Receipt</button>
+            <button type="button" class="btn" onclick="window.print()">🖨 Print Receipt</button>
             @if (! $sale->isFullyRefunded())
-                <button type="button" class="btn btn-danger"
+                <button type="button" class="btn" style="background: var(--danger); color: #fff;"
                     onclick="toggleRefundPanel()">
-                    Refund
+                    ↩ Refund
                 </button>
             @else
                 <span class="btn btn-secondary" style="cursor: default; background: rgba(196,80,74,0.12); color: var(--danger); border-color: var(--danger);">
@@ -89,28 +89,12 @@
                     <span style="color: var(--muted);">Subtotal</span>
                     <span>₱{{ number_format($sale->subtotal, 2) }}</span>
                 </div>
-                {{-- Promotion engine savings, printed in the order they were applied. --}}
-                @foreach ($sale->appliedPromotions as $row)
-                    <div class="receipt-line receipt-save">
-                        <span>{{ $row->label() }}</span>
-                        <span>−₱{{ number_format((float) $row->amount_discounted, 2) }}</span>
-                    </div>
-                @endforeach
                 @if ($sale->discount)
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem; color: var(--success);">
                         <span>{{ $sale->discount->discount_name }} ({{ $sale->discount->discount_type === 'percentage' ? $sale->discount->discount_value . '%' : 'Fixed' }})</span>
-                        {{-- The manual step is not stored as an amount: it worked on the subtotal
-                             LEFT by promotions, so it must be reconstructed, not re-derived from
-                             subtotal - total (that would also swallow promo + coupon savings). --}}
-                        <span>−₱{{ number_format($sale->manualDiscountAmount(), 2) }}</span>
+                        <span>−₱{{ number_format($sale->subtotal - $sale->total_amount, 2) }}</span>
                     </div>
                 @endif
-                @foreach ($sale->couponRedemptions as $redemption)
-                    <div class="receipt-line receipt-save">
-                        <span>Coupon {{ $redemption->coupon->code ?? $redemption->coupon_id }}</span>
-                        <span>−₱{{ number_format((float) $redemption->amount_applied, 2) }}</span>
-                    </div>
-                @endforeach
                 @if (config('vat.enabled', true))
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem; color: var(--muted);">
                         <span>VAT ({{ ($sale->vat_rate * 100) }}%, included)</span>
@@ -173,7 +157,7 @@
                         </div>
                     </div>
                     <div class="form-actions">
-                        <button type="submit" class="btn btn-danger"
+                        <button type="submit" class="btn" style="background: var(--danger);"
                             onclick="return confirm('Process this refund?')">Process Refund</button>
                         <button type="button" class="btn btn-secondary"
                             onclick="document.getElementById('refund-panel').style.display='none'">Cancel</button>

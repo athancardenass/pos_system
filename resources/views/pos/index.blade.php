@@ -35,11 +35,6 @@
                         </select>
                     </div>
                     <div>
-                        <label for="coupon_code">Coupon code (optional)</label>
-                        <input id="coupon_code" type="text" name="coupon_code" maxlength="40" autocomplete="off"
-                            value="{{ old('coupon_code') }}" placeholder="Enter code">
-                    </div>
-                    <div>
                         <label for="payment_method">Payment method</label>
                         <select id="payment_method" name="payment_method" required>
                             <option value="cash">Cash</option>
@@ -55,8 +50,8 @@
 
                 {{-- Barcode Search --}}
                 <div style="margin-bottom: 1rem;">
-                    <label for="barcode_search">Barcode / SKU Search</label>
-                    <input id="barcode_search" type="text" placeholder="Scan or type barcode..." class="barcode-input" autofocus>
+                    <label for="barcode_search">🔍 Barcode / SKU Search</label>
+                    <input id="barcode_search" type="text" placeholder="Scan or type barcode..." style="text-transform: none; letter-spacing: 0.05em; font-size: 1rem;" autofocus>
                     <div id="barcode-result" style="font-size: 0.82rem; margin-top: 0.25rem; min-height: 1.2em;"></div>
                 </div>
 
@@ -106,7 +101,7 @@
                     </div>
                 </div>
                 <div style="margin-top: 1rem; display: flex; gap: 0.5rem; align-items: center;">
-                    <button type="button" class="btn btn-ghost" id="clear-cart">Clear</button>
+                    <button type="button" class="btn btn-ghost" id="clear-cart" style="color: var(--danger);">Clear</button>
                     <button type="submit">Complete sale</button>
                 </div>
             </form>
@@ -243,7 +238,7 @@
                 const match = products.find(p => p.barcode === val);
                 if (match) {
                     // textContent — product names are DB/user data (XSS-safe).
-                    barcodeResult.textContent = `${match.name} — ₱${money(match.price)} (Stock: ${match.stock})`;
+                    barcodeResult.textContent = `✓ ${match.name} — ₱${money(match.price)} (Stock: ${match.stock})`;
                     addToCart(match.id, 1);
                     this.value = '';
                     barcodeResult.textContent = 'Added to cart!';
@@ -268,12 +263,6 @@
                 alert('Add at least one item.');
                 return;
             }
-            // A coupon code (and any auto-promotion) is priced server-side, and the
-            // server is authoritative. The pre-submit guard below only understands the
-            // manual discount picker, so with a code entered it would block a payment
-            // that is actually sufficient — skip it and let PromotionService decide.
-            const couponCode = (document.getElementById('coupon_code').value || '').trim();
-            if (couponCode) return;
             const total = discountTotal(cart.reduce((s, l) => s + l.price * l.qty, 0));
             const paid = Number(document.getElementById('amount_paid').value || 0);
             if (paid < total - 0.001) {
