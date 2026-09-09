@@ -162,10 +162,12 @@ class PosController extends Controller
                 }
             }
 
+            // Audit entry INSIDE the transaction so a committed sale can never
+            // lack its audit trail (matches RefundService pattern).
+            AuditLogger::record('sale', 'sale_transaction', $sale->transaction_id, 'Completed sale #'.$sale->transaction_id);
+
             return $sale;
         });
-
-        AuditLogger::record('sale', 'sale_transaction', $sale->transaction_id, 'Completed sale #'.$sale->transaction_id);
 
         return redirect()->route('pos.show', $sale)->with('status', 'Sale completed.');
     }

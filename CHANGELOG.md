@@ -7,6 +7,14 @@
 
 ---
 
+## 2026-09-09 — Fix: sale audit entry now written inside the checkout transaction
+
+**What:** `PosController::store()` previously called `AuditLogger::record()` AFTER `DB::transaction` committed — a failure between commit and the audit write would leave a completed sale with no audit trail. The call now sits inside the transaction, matching the `RefundService` pattern; sale + payment + receipt + inventory + audit log now commit or roll back as one unit.
+
+**Files touched:** `app/Http/Controllers/PosController.php`, `CHANGELOG.md`. 44/44 tests pass.
+
+---
+
 ## 2026-09-09 — Fix: app timezone UTC → Asia/Manila (+ one-time data shift)
 
 **What:** POS stored/displayed all timestamps in UTC while the store operates in PHT (UTC+8) — new checkouts showed as ~5 AM instead of ~1 PM, and date-window stats (Today's Sales, weekly trend) cut off at the wrong wall-clock boundary.
