@@ -188,7 +188,15 @@
         .promo-grid > div > label { min-height: 2.2em; }
         .promo-grid > div > input,
         .promo-grid > div > select,
-        .promo-grid > div > textarea { width: 100%; margin-bottom: 0; }
+        .promo-grid > div > textarea {
+            width: 100%;
+            margin-bottom: 0;
+            /* Force every control — including datetime-local, which has its own
+               intrinsic height — to the same box height as text/select. Scoped to
+               .promo-grid only, so POS/products/etc. are unaffected. */
+            height: 3.35rem;
+            box-sizing: border-box;
+        }
         @media (max-width: 900px) { .promo-grid { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 560px) { .promo-grid { grid-template-columns: 1fr; } .promo-grid > div > label { min-height: 0; } }
         /* Barcode "Generate" button: matches .btn-secondary, fills green on hover. */
