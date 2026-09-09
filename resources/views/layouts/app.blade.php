@@ -186,16 +186,33 @@
         }
         .promo-grid > div { display: flex; flex-direction: column; min-width: 0; }
         .promo-grid > div > label { min-height: 2.2em; }
+        /* All single-line controls in this form share ONE box size, including
+           datetime-local (which has browser-internal sub-parts that ignore normal
+           CSS inheritance on Chrome/Edge). Scoped to .promo-grid only. */
         .promo-grid > div > input,
+        .promo-grid > div > input[type="datetime-local"],
         .promo-grid > div > select,
         .promo-grid > div > textarea {
             width: 100%;
             margin-bottom: 0;
-            /* Force every control — including datetime-local, which has its own
-               intrinsic height — to the same box height as text/select. Scoped to
-               .promo-grid only, so POS/products/etc. are unaffected. */
             height: 3.35rem;
+            padding: 0.85rem 1rem;
+            background: var(--surface);
+            border: 2px solid var(--rule);
+            border-radius: 6px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 1rem;
+            line-height: 1.4;
             box-sizing: border-box;
+        }
+        /* Keep the calendar picker icon inside the padded box (Chrome/Edge render an
+           internal indicator that ignores padding). nudge it so it isn't clipped. */
+        .promo-grid > div > input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+            margin: 0;
+            margin-left: 0.4rem;
+            opacity: 0.7;
+            cursor: pointer;
         }
         @media (max-width: 900px) { .promo-grid { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 560px) { .promo-grid { grid-template-columns: 1fr; } .promo-grid > div > label { min-height: 0; } }
