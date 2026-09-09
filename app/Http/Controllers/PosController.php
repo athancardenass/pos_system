@@ -109,7 +109,7 @@ class PosController extends Controller
             }
 
             $sale = SaleTransaction::query()->create([
-                'customer_id' => $data['customer_id'] ?: null,
+                'customer_id' => $data['customer_id'] ?? null,
                 'employee_id' => auth()->id(),
                 'discount_id' => $discount?->discount_id,
                 'transaction_date' => now(),

@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('receipt', function (Blueprint $table) {
             $table->integer('receipt_id', true);
-            $table->integer('transaction_id')->unique('transaction_id');
+            $table->integer('transaction_id')->unique('receipt_transaction_id');
             $table->string('receipt_number', 50)->unique('receipt_number');
             $table->dateTime('issued_date')->useCurrent();
         });

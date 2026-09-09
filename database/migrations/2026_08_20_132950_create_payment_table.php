@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('payment', function (Blueprint $table) {
             $table->integer('payment_id', true);
-            $table->integer('transaction_id')->unique('transaction_id');
+            $table->integer('transaction_id')->unique('payment_transaction_id');
             $table->string('payment_method', 50);
             $table->decimal('amount_paid', 10);
             $table->decimal('change_amount', 10)->default(0);
