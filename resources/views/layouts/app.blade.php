@@ -17,6 +17,7 @@
             --success: #2D8A4E;
             --danger: #C4504A;
             --sidebar-w: 230px;
+            --control-h: 3.35rem; /* uniform height for all single-line form controls */
         }
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -136,6 +137,7 @@
         }
         input[type="text"], input[type="password"], input[type="email"],
         input[type="number"], input[type="date"], input[type="search"],
+        input[type="datetime-local"],
         select, textarea {
             width: 100%;
             padding: 0.85rem 1rem;
@@ -145,7 +147,14 @@
             font-family: inherit; font-size: 1rem; line-height: 1.4;
             outline: none;
             transition: border-color 0.15s, box-shadow 0.15s;
+            /* Force uniform sizing so selects / datetime-local match text inputs. */
+            height: var(--control-h);
+            box-sizing: border-box;
         }
+        textarea { height: auto; min-height: 90px; resize: vertical; }
+        select { appearance: none; -webkit-appearance: none; -moz-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23203C3D' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 1rem center; padding-right: 2.5rem; }
         input:focus, select:focus, textarea:focus {
             border-color: var(--accent); box-shadow: 0 0 0 3px rgba(196,80,74,0.15);
         }
@@ -153,6 +162,10 @@
         .input-lg { padding: 0.85rem 1rem; font-size: 1rem; line-height: 1.4; }
         /* Explicit solid border for the prominent text boxes (name/barcode/description). */
         .bordered { border: 2px solid var(--rule); border-radius: 6px; background: var(--surface); }
+        /* Barcode search field: keeps letters upright with slightly looser tracking than
+           the default boxed input. Replaces an inline style on the POS input (design-system
+           rule: never inline-style a form control). */
+        .barcode-input { text-transform: none; letter-spacing: 0.05em; font-size: 1rem; }
         /* Full-width field whose action button sits below the input. */
         .field-stack { grid-column: 1 / -1; margin-bottom: 1.25rem; }
         .field-stack .btn { margin-top: 0.5rem; }
@@ -161,8 +174,32 @@
         textarea { min-height: 90px; resize: vertical; }
         .form-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 0 2rem;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.25rem 1.5rem;
+            align-items: start;
+        }
+        /* Every field is a label+control cell that fills its column equally. */
+        .form-grid > div {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+        /* Reserve two label lines so inputs align across a row even when a
+           label wraps to a second line. */
+        .form-grid > div > label { min-height: 2.2em; }
+        /* Grid gap owns the vertical rhythm; drop the per-control margin. */
+        .form-grid > div > input,
+        .form-grid > div > select,
+        .form-grid > div > textarea {
+            margin-bottom: 0;
+            width: 100%;
+        }
+        @media (max-width: 900px) {
+            .form-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 560px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .form-grid > div > label { min-height: 0; }
         }
         /* Compact side-by-side fields (email + contact) — fixed width, not stretched. */
         .field-pair { display: flex; gap: 2rem; flex-wrap: wrap; }
@@ -234,6 +271,13 @@
         .badge-active { background: rgba(45,138,78,0.12); color: var(--success); border: 1px solid rgba(45,138,78,0.25); }
         .badge-inactive { background: rgba(196,80,74,0.12); color: var(--danger); border: 1px solid rgba(196,80,74,0.25); }
         .badge-pending { background: rgba(196,149,106,0.15); color: #8B6F47; border: 1px solid rgba(196,149,106,0.3); }
+
+        /* --- Receipt lines --- */
+        /* Label|amount rows of the printed POS receipt (subtotal, savings, totals).
+           Class-based so receipt markup never hand-rolls an inline style. */
+        .receipt-line { display: flex; justify-content: space-between; margin-bottom: 0.3rem; }
+        /* Money taken OFF the bill (promotion / manual discount / coupon). */
+        .receipt-save { color: var(--success); }
 
         /* --- Flash --- */
         .flash { padding: 0.85rem 1.1rem; margin-bottom: 1.5rem; border-left: 4px solid; font-weight: 500; font-size: 0.88rem; }

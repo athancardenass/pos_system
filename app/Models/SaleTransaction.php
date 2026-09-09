@@ -20,6 +20,8 @@ class SaleTransaction extends Model
         'transaction_date',
         'subtotal',
         'total_amount',
+        'promo_discount',
+        'coupon_discount',
         'payment_method',
         'status',
         'refunded_at',
@@ -30,6 +32,10 @@ class SaleTransaction extends Model
         return [
             'transaction_date' => 'datetime',
             'refunded_at' => 'datetime',
+            'subtotal' => 'decimal:2',
+            'total_amount' => 'decimal:2',
+            'promo_discount' => 'decimal:2',
+            'coupon_discount' => 'decimal:2',
         ];
     }
 
@@ -76,6 +82,44 @@ class SaleTransaction extends Model
     public function refunds()
     {
         return $this->hasMany(SaleRefund::class, 'transaction_id', 'transaction_id');
+    }
+
+    /** Auto-promotions that fired on this sale (promotion engine audit rows). */
+    public function appliedPromotions()
+    {
+        return $this->hasMany(SalePromotion::class, 'transaction_id', 'transaction_id');
+    }
+
+    /** Coupons redeemed on this sale. */
+    public function couponRedemptions()
+    {
+        return $this->hasMany(CouponRedemption::class, 'transaction_id', 'transaction_id');
+    }
+
+    /** Total saved through the promotion engine (promotions + coupon). */
+    public function promotionSavings(): float
+    {
+        return round((float) $this->promo_discount + (float) $this->coupon_discount, 2);
+    }
+
+    /**
+     * The legacy manual-discount amount (the cashier's discount_id picker).
+     *
+     * It is never stored: the checkout order is
+     *   subtotal -> promotions -> manual discount -> coupon -> total
+     * and Discount::applyTo() is deterministic, so replaying it on the post-promotion
+     * remainder reproduces exactly what was charged — including sales made before the
+     * promotion engine existed (promo_discount defaults to 0).
+     */
+    public function manualDiscountAmount(): float
+    {
+        if (! $this->discount) {
+            return 0.0;
+        }
+
+        $afterPromotions = round((float) $this->subtotal - (float) $this->promo_discount, 2);
+
+        return round($afterPromotions - (float) $this->discount->applyTo($afterPromotions), 2);
     }
 
     public function isFullyRefunded(): bool

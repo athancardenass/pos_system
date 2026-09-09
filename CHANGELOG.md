@@ -7,6 +7,81 @@
 
 ---
 
+## 2026-09-09 — Feature: centralized promotion engine + digital coupons
+
+**What:** Discounts used to be computed in two disconnected places (`Discount::applyTo()` at checkout, nothing anywhere else). This adds a single source of truth for all discount math — `app/Services/PromotionService.php` — plus manager-managed promotion rules and digital coupons, and wires the whole stack into checkout.
+
+**Rule types implemented:** `percentage`, `fixed`, `bundle_price` (every complete N-unit group is charged at a set price, leftovers stay at list price), `buy_x_get_y` (per complete group of `x_qty`, `y_qty` units are free). Scopes: `product`, `category`, `cart`.
+
+**Interpretation chosen for buy_x_get_y:** free units = `y_qty * floor(totalUnitsInScope / x_qty)`, and the units given away are always the CHEAPEST in the scope pool. Merchant-safe (never gives away the priciest item), deterministic, and unit-test pinned (`test_buy_x_get_y_across_a_category_gives_away_the_cheapest_units`). Incomplete groups earn nothing.
+
+**Checkout order** (each step works on the remainder the previous one left, total floors at 0):
+`line subtotals -> promotions -> manual discount (existing discount_id) -> coupon -> total`
+
+**Changes:**
+
+- Migrations (new only; no existing migration touched): `2026_09_09_000007_create_promotion_and_coupon_tables.php` (`promotion`, `coupon`), `..._000008_...` (`coupon_redemption`, `sale_promotion`, FKs `onDelete('restrict')` so audit history can never be cascade-destroyed), `..._000009_add_promo_columns_to_sale_transaction_table.php` (nullable `promo_discount`, `coupon_discount`). All guarded with `Schema::hasTable`/`hasColumn` for the shared DB.
+- Models: `Promotion`, `Coupon`, `CouponRedemption`, `SalePromotion`; `SaleTransaction` gained `appliedPromotions()`, `couponRedemptions()`, `promotionSavings()`, `manualDiscountAmount()`.
+- `SaleTransaction::manualDiscountAmount()` RECONSTRUCTS the manual step instead of re-deriving it: the legacy `subtotal - total_amount` formula would have swallowed the promo + coupon savings too, so it replays `Discount::applyTo(subtotal - promo_discount)`.
+- `app/Services/PromotionService.php` — `eligiblePromotions()`, `applyPromotions()` (biggest saving first, `promotion_id` tie-break, running stack capped at cart subtotal), `discountFor()`, `validateCoupon()` (throws `ValidationException` keyed on `coupon_code` so the cart survives the redirect-back), `couponDiscount()`, `redeemCoupon()`.
+- TOCTOU: `redeemCoupon()` does NOT open its own transaction — it re-reads the coupon row with `lockForUpdate()` and re-checks `isExhausted()` AFTER the lock, inside the caller's checkout transaction. Two cashiers racing the last use serialize and exactly one wins (`test_redemption_re_checks_the_cap_after_locking_the_row`). Sale writes, promo audit rows, coupon spend and stock deduction all commit or roll back together — a rejected coupon leaves no redemption and no stock movement.
+- `PosController::store()` — injects `PromotionService`, validates the new `coupon_code` field, runs the full stack inside the existing `DB::transaction`, writes one `sale_promotion` row per applied rule with a `snapshot()` of the rule as it was at that moment (a later manager edit cannot rewrite a printed receipt), and skips the coupon redemption when the coupon had nothing left to take. `amount_paid >= total` is still checked AFTER all discounting, so the server — not the browser — is authoritative.
+- `resources/views/pos/index.blade.php` — one boxed `coupon_code` input. Its pre-submit payment guard now stands down when a code is entered (client-side it cannot know the promo/coupon math, and would otherwise block a payment that is actually sufficient).
+- `resources/views/pos/show.blade.php` — receipt prints each promotion and the coupon as its own savings line; manual-discount line switched to `manualDiscountAmount()` (see above).
+- `resources/views/layouts/app.blade.php` — added `.receipt-line` / `.receipt-save` so the new receipt rows need no inline styles.
+- Manager CRUD (mirrors the discounts CRUD gate): `PromotionController`, `CouponController`, routes `promotions.*` / `coupons.*` (`->except('show')`) inside the existing `role:Manager` group, views `promotions/{_form,create,edit,index}` and `coupons/{_form,create,edit,index}`. Deleting a rule that has been applied to a sale, or a code that has been redeemed, is refused with a message pointing at deactivation instead.
+
+**Deliberately untouched:** the customer/supplier address schema (CRM group), `config/`, `.env`, `composer.json`/`package.json`, and every existing migration. The legacy manual-discount flow keeps its own model and `applyTo()`; the engine only changed WHEN it is applied (after promotions) — behaviour with no promotion and no coupon is byte-identical (`test_manual_discount_still_works_alongside_the_engine`).
+
+**Flagged conflicts (per AGENTS.md, not silently worked around):**
+
+1. `config/roles.php` is the nav source and is locked against edits, so Promotions/Coupons do NOT appear in the sidebar — the pages are reachable by URL (`/promotions`, `/coupons`) and role-gated to Manager. Someone needs to add the two nav entries in that file.
+2. Pre-existing emoji remain in `resources/views/pos/index.blade.php` (barcode-search label, JS check-mark) and `pos/show.blade.php` (print button). They violate the no-emoji law but predate this task and sit outside its scope, so they were left for the humans.
+
+**How verified:** `php -l` clean on every new/changed file; `php artisan route:list` shows all 12 new routes under the Manager group; migrations apply cleanly to dev MySQL and to both test DBs; `php artisan test` -> **90 passed** (was 44), and re-run against MariaDB via `php artisan test -c phpunit.mysql.xml` -> **90 passed**. New tests: `tests/Unit/PromotionServiceTest.php` (28 — every peso figure hand-computed) and `tests/Feature/PromotionEngineTest.php` (18 — checkout, stack order, rollback on bad coupon, per-customer cap, last-use race, refund pro-rating, receipt markup, role gate, form validation, design-system assertions on the rendered HTML).
+
+**Files touched:** 3 new migrations, 5 models (4 new), `app/Services/PromotionService.php` (new), `app/Http/Controllers/{PosController,PromotionController,CouponController}.php`, `routes/web.php`, `resources/views/layouts/app.blade.php`, `resources/views/pos/{index,show}.blade.php`, 8 new views, 2 new test files, CHANGELOG.md.
+
+---
+
+## 2026-09-09 — Refactor: consistent 3-column form grid for promotion/coupon forms
+
+**What:** Promotion and coupon forms used `auto-fit minmax(220px,1fr)` so a partial last
+row stretched one field full-width while others were ~1/3 — inconsistent widths. The
+Name/Code field also sat *outside* `.form-grid` as a bare full-width element (isolated
+narrow row). Replaced the grid with a fixed `repeat(3, 1fr)` (2-col ≤900px, 1-col ≤560px),
+each field wrapped in a `.form-grid > div` flex column, `label { min-height: 2.2em }` so
+inputs stay aligned across a row even when a label wraps, and grid `gap` owns the vertical
+rhythm (per-control `margin-bottom` removed inside the grid). Name/Code pulled into the grid
+as normal cells. Pure CSS/layout change — no business logic, validation, or functionality
+touched.
+
+**Files:** `resources/views/layouts/app.blade.php` (`.form-grid` + cells), `resources/views/promotions/_form.blade.php`, `resources/views/coupons/_form.blade.php`
+**Why:** User reported uneven fields / misaligned first row on the new promotion and coupon
+create forms; wanted the shared layout system fixed, not per-field patches.
+
+## 2026-09-09 — Fix: uniform control sizing across promotion/coupon (and all) forms
+
+**What:** Root cause of misaligned text boxes was that single-line controls had no
+enforced height, so native `select` and `datetime-local` rendered a few px shorter/taller
+than text inputs. Added `--control-h: 3.35rem` and applied `height: var(--control-h)`
+to all text/number/date/datetime-local/select controls in `layouts/app.blade.php`.
+Also reset `box-sizing: border-box` on controls and gave `select` a custom caret
+(native appearance removed) so every field is identical in width/height/padding/
+border/radius/vertical alignment. No per-field margins used — pure CSS rule.
+
+**Files:** `resources/views/layouts/app.blade.php`
+**Why:** User reported form fields not visually consistent (alignment/width/height) on
+the new promotion and coupon create forms; wanted the underlying CSS fixed, not band-aids.
+
+## 2026-09-09 — Fix: datetime-local inputs unstyled on promotion/coupon forms
+
+**What:** `layouts/app.blade.php` form CSS selector list (width/padding/border/margin for boxed inputs) omitted `input[type="datetime-local"]`, so Starts-at/Ends-at boxes on /promotions and /coupons rendered with browser-default styling — smaller, misaligned vs the other fields. Added the selector so all date fields share the standard boxed style. Verified by rendering both create views.
+
+**Files touched:** `resources/views/layouts/app.blade.php`, `CHANGELOG.md`.
+
+---
+
 ## 2026-09-09 — Fix: sale audit entry now written inside the checkout transaction
 
 **What:** `PosController::store()` previously called `AuditLogger::record()` AFTER `DB::transaction` committed — a failure between commit and the audit write would leave a completed sale with no audit trail. The call now sits inside the transaction, matching the `RefundService` pattern; sale + payment + receipt + inventory + audit log now commit or roll back as one unit.
@@ -22,6 +97,7 @@
 **Root cause:** `config/app.php` shipped with Laravel's default `'timezone' => 'UTC'`. No bug in transaction flow — sale #233 was committed and queryable all along, just stamped 05:19 instead of 13:19.
 
 **Changes:**
+
 - `config/app.php` — `timezone` changed to `Asia/Manila` (EXPLICIT USER TASK exception to the config/ lock; flagged per AGENTS.md).
 - One-time data shift — all app-written datetime columns (`sale_transaction.transaction_date/refunded_at`, `payment.payment_date`, `receipt.issued_date`, `sale_refund.refunded_at`, `audit_log.action_timestamp`, `stock_movement.created_at`, `inventory.last_restocked/updated_at`, `reorder_signal.created_at/resolved_at`, `customer.created_at/updated_at`) shifted +8h via guarded script; marker row `TZ_SHIFT_UTC_TO_PHT_V1` in audit_log prevents double-shifting. Idempotent.
 
@@ -38,6 +114,7 @@
 **Root cause:** Seeder created today's demo sales as `now()->subDays(0)->addHours(rand(8,20))` — landing 8-20 hours in the FUTURE (e.g. 23:39 when it was 05:00). Dashboard "Recent Transactions" sorts by `transaction_date DESC`, so these rows floated to the top forever and real new checkouts (#230-#232) appeared BELOW them, looking like the dashboard "wasn't updating".
 
 **Changes:**
+
 - `RealisticDataSeeder.php` — today's rows (`$day === 0`) now use `now()->subMinutes(rand(1,720))` (always in the past); other days unchanged.
 - Data fix — clamped 3 future-dated sales (#225, #226, #227) back into the recent past via tinker script.
 
@@ -50,6 +127,7 @@
 **What:** Added EAN-13 checksum validation to the barcode field and fixed the product seeder to generate valid barcodes.
 
 **Changes:**
+
 - `ProductController::validated()` — barcode field now validates EAN-13 checksum when a 13-digit numeric code is manually entered. Invalid codes are rejected with a clear message directing the user to the Generate button.
 - `ProductSeeder` — removed hardcoded invalid barcodes (`BR-0001`, `SN-0001`, etc.) and now uses `Product::generateBarcode()` to produce valid EAN-13 codes for all demo products.
 
