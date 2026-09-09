@@ -1,5 +1,5 @@
 @php($promotion = $promotion ?? null)
-<div class="form-grid">
+<div class="form-grid promo-grid">
     <div>
         <label for="name">Name</label>
         <input id="name" name="name" class="input-lg bordered" value="{{ old('name', $promotion?->name) }}" maxlength="100" required>

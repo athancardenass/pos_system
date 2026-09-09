@@ -176,6 +176,21 @@
         .field-with-btn .btn { flex: 0 0 auto; margin-bottom: 0; }
         /* Group of form action buttons with consistent top spacing. */
         .form-actions { margin-top: 1.5rem; display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+        /* Scoped grid for the promotion/coupon create-edit forms ONLY.
+           Does not affect the shared .form-grid used by POS, products, customers, etc. */
+        .promo-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.25rem 1.5rem;
+            align-items: start;
+        }
+        .promo-grid > div { display: flex; flex-direction: column; min-width: 0; }
+        .promo-grid > div > label { min-height: 2.2em; }
+        .promo-grid > div > input,
+        .promo-grid > div > select,
+        .promo-grid > div > textarea { width: 100%; margin-bottom: 0; }
+        @media (max-width: 900px) { .promo-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 560px) { .promo-grid { grid-template-columns: 1fr; } .promo-grid > div > label { min-height: 0; } }
         /* Barcode "Generate" button: matches .btn-secondary, fills green on hover. */
         #generate-barcode { transition: background-color 0.15s, color 0.15s, border-color 0.15s; }
         #generate-barcode:hover {

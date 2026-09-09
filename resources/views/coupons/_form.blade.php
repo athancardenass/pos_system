@@ -1,5 +1,5 @@
 @php($coupon = $coupon ?? null)
-<div class="form-grid">
+<div class="form-grid promo-grid">
     <div>
         <label for="code">Code</label>
         <input id="code" name="code" class="input-lg bordered" value="{{ old('code', $coupon?->code) }}" maxlength="40" required autocomplete="off">

@@ -4,11 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Customer;
 use App\Models\Discount;
-use App\Models\Inventory;
 use App\Models\Product;
 use App\Models\SaleTransaction;
 use App\Services\AuditLogger;
 use App\Services\InventoryService;
+use App\Services\PromotionService;
 use App\Services\RefundService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,6 +20,7 @@ class PosController extends Controller
 {
     public function __construct(
         private readonly InventoryService $inventory,
+        private readonly PromotionService $promotions,
     ) {
     }
 
@@ -57,6 +58,7 @@ class PosController extends Controller
         $data = $request->validate([
             'customer_id' => 'nullable|exists:customer,customer_id',
             'discount_id' => 'nullable|exists:discount,discount_id',
+            'coupon_code' => 'nullable|string|max:40',
             'payment_method' => 'required|in:cash,card,e-wallet',
             'amount_paid' => 'required|numeric|min:0',
             'items' => 'required|array|min:1',
@@ -67,6 +69,8 @@ class PosController extends Controller
         $sale = DB::transaction(function () use ($data) {
             $subtotal = 0;
             $lines = [];
+            // Promotion-engine view of the cart (see PromotionService::$lines contract).
+            $promoLines = [];
 
             // Aggregate requested qty per product so duplicate items[] lines
             // can't bypass the stock check (each line was checking the same
@@ -94,8 +98,31 @@ class PosController extends Controller
                     'unit_price' => $product->unit_price,
                     'subtotal' => $lineSubtotal,
                 ];
+                $promoLines[] = [
+                    'product_id' => (int) $product->product_id,
+                    'category_id' => $product->category_id ? (int) $product->category_id : null,
+                    'quantity' => (float) $item['quantity'],
+                    'unit_price' => (float) $product->unit_price,
+                ];
             }
 
+            $subtotal = round($subtotal, 2);
+
+            /*
+             | Discount stack — one service owns all of it, in this fixed order:
+             |   1. promotions (auto-applied by rule)   -> promo_discount column
+             |   2. manual discount (cashier's picker)  -> not stored, reconstructed on read
+             |   3. coupon (cashier-entered code)       -> coupon_discount column
+             | Each step works on the remainder left by the previous one, and the final
+             | total floors at 0. Unit prices in sale_details are never rewritten.
+             */
+
+            // 1. Auto-promotions.
+            $promoResult = $this->promotions->applyPromotions($promoLines, $subtotal);
+            $promoDiscount = $promoResult['total_discount'];
+            $running = round($subtotal - $promoDiscount, 2);
+
+            // 2. Legacy manual discount (unchanged flow, now applied to the remainder).
             $discount = null;
             if (! empty($data['discount_id'])) {
                 $discount = Discount::query()->findOrFail($data['discount_id']);
@@ -106,7 +133,28 @@ class PosController extends Controller
                 }
             }
 
-            $total = $discount ? $discount->applyTo($subtotal) : round($subtotal, 2);
+            if ($discount) {
+                // Only the resulting total is stored. The manual STEP is not a column —
+                // SaleTransaction::manualDiscountAmount() reconstructs it for the receipt.
+                $running = round($discount->applyTo($running), 2);
+            }
+
+            // 3. Coupon.
+            $coupon = null;
+            $couponDiscount = 0.0;
+            $couponCode = trim((string) ($data['coupon_code'] ?? ''));
+
+            if ($couponCode !== '') {
+                $coupon = $this->promotions->validateCoupon(
+                    $couponCode,
+                    $subtotal,
+                    $data['customer_id'] ?? null,
+                );
+                $couponDiscount = $this->promotions->couponDiscount($coupon, $running);
+                $running = round($running - $couponDiscount, 2);
+            }
+
+            $total = max(0.0, round($running, 2));
 
             if ((float) $data['amount_paid'] < $total) {
                 throw ValidationException::withMessages([
@@ -121,6 +169,8 @@ class PosController extends Controller
                 'transaction_date' => now(),
                 'subtotal' => $subtotal,
                 'total_amount' => $total,
+                'promo_discount' => $promoDiscount,
+                'coupon_discount' => $couponDiscount,
                 'payment_method' => $data['payment_method'],
             ]);
 
@@ -148,6 +198,21 @@ class PosController extends Controller
                 'payment_date' => now(),
             ]);
 
+            // Promotion engine audit rows + coupon spend — inside the same transaction, so
+            // a failed checkout can never leave a redeemed coupon or an inflated used_count.
+            foreach ($promoResult['applied'] as $applied) {
+                $sale->appliedPromotions()->create([
+                    'promotion_id' => $applied['promotion_id'],
+                    'amount_discounted' => $applied['amount'],
+                    'snapshot' => $applied['snapshot'],
+                ]);
+            }
+
+            // A coupon that has nothing left to take (cart already at zero) is not spent.
+            if ($coupon && $couponDiscount > 0) {
+                $this->promotions->redeemCoupon($coupon, $sale, $sale->customer, $couponDiscount);
+            }
+
             $sale->receipt()->create([
                 'receipt_number' => 'R'.now()->format('Ymd').'-'.str_pad((string) $sale->transaction_id, 6, '0', STR_PAD_LEFT),
                 'issued_date' => now(),
@@ -174,7 +239,16 @@ class PosController extends Controller
 
     public function show(SaleTransaction $saleTransaction): View
     {
-        $saleTransaction->load(['customer', 'employee', 'discount', 'saleDetails.product', 'payment', 'receipt', 'refunds.employee', 'refunds.items']);
+        $saleTransaction->load([
+            'customer', 'employee', 'discount', 'payment', 'receipt',
+            'refunds.employee', 'refunds.items',
+            'appliedPromotions.promotion', 'couponRedemptions.coupon',
+            // Product AND the refunded-qty aggregate ride along on the lines, so the
+            // receipt loop's refundableQuantity() calls cost zero extra queries (N+1).
+            'saleDetails' => fn ($query) => $query
+                ->with('product')
+                ->withSum('refundItems as refunded_qty', 'quantity'),
+        ]);
 
         return view('pos.show', ['sale' => $saleTransaction]);
     }
