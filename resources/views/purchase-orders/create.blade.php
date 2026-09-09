@@ -60,16 +60,48 @@
 
 @push('scripts')
 <script>
-    const products = @json($products->map(fn ($p) => ['id' => $p->product_id, 'name' => $p->product_name, 'cost' => $p->cost_price]));
+    const products = @json($products->map(fn ($p) => ['id' => $p->product_id, 'name' => $p->product_name]));
     let index = 1;
     document.getElementById('add-line').addEventListener('click', () => {
+        // Product names are DB/user data: build the row with createElement/textContent,
+        // never interpolate them into innerHTML (stored-XSS guard, AGENTS.md).
         const row = document.createElement('tr');
-        const options = products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-        row.innerHTML = `
-            <td><select name="items[${index}][product_id]" required><option value="">Select product</option>${options}</select></td>
-            <td><input type="number" min="1" name="items[${index}][quantity]" value="1" required></td>
-            <td><input type="number" min="0" step="0.01" name="items[${index}][unit_cost]" value="0" required></td>
-        `;
+
+        const select = document.createElement('select');
+        select.name = `items[${index}][product_id]`;
+        select.required = true;
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Select product';
+        select.append(placeholder);
+        products.forEach(p => {
+            const option = document.createElement('option');
+            option.value = p.id;
+            option.textContent = p.name;
+            select.append(option);
+        });
+
+        const qty = document.createElement('input');
+        qty.type = 'number';
+        qty.min = '1';
+        qty.name = `items[${index}][quantity]`;
+        qty.value = '1';
+        qty.required = true;
+
+        const cost = document.createElement('input');
+        cost.type = 'number';
+        cost.min = '0';
+        cost.step = '0.01';
+        cost.name = `items[${index}][unit_cost]`;
+        cost.value = '0';
+        cost.required = true;
+
+        [select, qty, cost].forEach(control => {
+            const cell = document.createElement('td');
+            cell.append(control);
+            row.append(cell);
+        });
+
         document.getElementById('lines').appendChild(row);
         index++;
     });

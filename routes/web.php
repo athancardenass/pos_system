@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CouponController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DiscountController;
@@ -10,6 +11,7 @@ use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SupplierController;
@@ -40,10 +42,14 @@ Route::middleware('auth')->group(function () {
         Route::resource('customers', CustomerController::class)->except('show');
     });
 
+    // Manager-only: the two previous `role:Manager` groups are merged into one so the
+    // gate is declared once. Static routes stay ABOVE the resource catch-alls (e.g.
+    // products/generate-barcode above Route::resource('products')).
     Route::middleware('role:Manager')->group(function () {
         Route::resource('categories', CategoryController::class)->except('show');
-        Route::resource('products', ProductController::class)->except('show');
+        // Static routes MUST stay above the products resource (see comment above).
         Route::get('/products/generate-barcode', [ProductController::class, 'generateBarcode'])->name('products.generate-barcode');
+        Route::resource('products', ProductController::class)->except('show');
         Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
         Route::post('/inventory/sync', [InventoryController::class, 'storeMissing'])->name('inventory.sync');
         Route::get('/inventory/{inventory}/edit', [InventoryController::class, 'edit'])->name('inventory.edit');
@@ -56,11 +62,12 @@ Route::middleware('auth')->group(function () {
         Route::post('/purchase-orders/{purchase_order}/receive', [PurchaseOrderController::class, 'receive'])->name('purchase-orders.receive');
         Route::post('/purchase-orders/{purchase_order}/cancel', [PurchaseOrderController::class, 'cancel'])->name('purchase-orders.cancel');
         Route::resource('discounts', DiscountController::class)->except('show');
+        // Promotion engine (manager-only, mirrors the discounts CRUD gate). No static
+        // routes here yet; if any are added they must go ABOVE these resource catch-alls.
+        Route::resource('promotions', PromotionController::class)->except('show');
+        Route::resource('coupons', CouponController::class)->except('show');
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('/reports/export/{type}', [ReportController::class, 'export'])->name('reports.export');
-    });
-
-    Route::middleware('role:Manager')->group(function () {
         Route::resource('employees', EmployeeController::class)->except('show');
         Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
     });

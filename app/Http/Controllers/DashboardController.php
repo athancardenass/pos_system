@@ -6,7 +6,6 @@ use App\Models\AuditLog;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Employee;
-use App\Models\Inventory;
 use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\SaleDetail;

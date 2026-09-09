@@ -72,11 +72,25 @@
             const name = this.dataset.name;
             const barcode = this.dataset.barcode;
             const price = this.dataset.price;
+            // Build the label with createElement/textContent — product names and
+            // barcodes are DB/user data and must NEVER be interpolated into innerHTML
+            // (stored-XSS guard, AGENTS.md). Same markup as the old template string.
             const label = document.createElement('div');
             label.className = 'barcode-label';
-            label.innerHTML = `<div class="bl-name">${name}</div><div class="bl-code">SKU: ${barcode}</div><svg class="bl-barcode"></svg><div class="bl-price">₱${price}</div>`;
+            const nameEl = document.createElement('div');
+            nameEl.className = 'bl-name';
+            nameEl.textContent = name;
+            const codeEl = document.createElement('div');
+            codeEl.className = 'bl-code';
+            codeEl.textContent = 'SKU: ' + barcode;
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('class', 'bl-barcode');
+            const priceEl = document.createElement('div');
+            priceEl.className = 'bl-price';
+            priceEl.textContent = '₱' + price;
+            label.append(nameEl, codeEl, svg, priceEl);
             document.body.appendChild(label);
-            JsBarcode(label.querySelector('.bl-barcode'), barcode, {
+            JsBarcode(svg, barcode, {
                 format: 'EAN13',
                 width: 1.4,
                 height: 34,
@@ -87,8 +101,12 @@
                 margin: 8,
                 valid: function(valid) {
                     if (!valid) {
-                        label.querySelector('.bl-barcode').outerHTML = '<div class="bl-barcode" style="color:red;font-size:8pt;text-align:center;padding:2mm;">Invalid EAN-13<br>(' + barcode + ')</div>';
-                        alert('⚠️ Barcode invalid — label printed with error notice');
+                        const err = document.createElement('div');
+                        err.className = 'bl-barcode';
+                        err.setAttribute('style', 'color:red;font-size:8pt;text-align:center;padding:2mm;');
+                        err.append('Invalid EAN-13', document.createElement('br'), '(' + barcode + ')');
+                        svg.replaceWith(err);
+                        alert('Barcode invalid — label printed with error notice');
                     }
                 }
             });

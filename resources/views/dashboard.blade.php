@@ -26,13 +26,13 @@
         @endif
         @if (in_array('products.index', $modules))
             <a href="{{ route('products.create') }}" class="btn btn-secondary" style="font-size: 0.85rem;">+ Add Product</a>
-            <a href="{{ route('inventory.index') }}" class="btn btn-secondary" style="font-size: 0.85rem;">📦 Inventory</a>
+            <a href="{{ route('inventory.index') }}" class="btn btn-secondary" style="font-size: 0.85rem;">Inventory</a>
         @endif
         @if (in_array('customers.index', $modules))
-            <a href="{{ route('customers.index') }}" class="btn btn-secondary" style="font-size: 0.85rem;">👤 Customers</a>
+            <a href="{{ route('customers.index') }}" class="btn btn-secondary" style="font-size: 0.85rem;">Customers</a>
         @endif
         @if (in_array('purchase-orders.index', $modules))
-            <a href="{{ route('purchase-orders.index') }}" class="btn btn-secondary" style="font-size: 0.85rem;">📋 Orders</a>
+            <a href="{{ route('purchase-orders.index') }}" class="btn btn-secondary" style="font-size: 0.85rem;">Orders</a>
         @endif
     </div>
 
@@ -192,7 +192,7 @@
     {{-- Inventory Alerts --}}
     @if (in_array('products.index', $modules) && $stats['low_stock_count'] > 0)
         <div style="background: var(--surface); border: 2px solid var(--rule); border-left: 4px solid var(--danger); padding: 1.25rem; margin-bottom: 1.5rem;">
-            <h2 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.75rem; color: var(--danger);">⚠ Low Stock Alert</h2>
+            <h2 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.75rem; color: var(--danger);">Low Stock Alert</h2>
                 <div class="table-wrap">
                 <table>
                     <thead>

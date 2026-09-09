@@ -35,6 +35,18 @@ class Discount extends Model
         return $this->hasMany(SaleTransaction::class, 'discount_id', 'discount_id');
     }
 
+    /**
+     * Is this manual discount usable on the given day?
+     *
+     * DELIBERATE WHOLE-DAY SEMANTICS — NOT an inconsistency with Promotion/Coupon.
+     * Discounts are stored as `date` columns (start_date/end_date, midnight only),
+     * whereas promotions/coupons use `datetime` columns. A discount therefore spans
+     * whole calendar days and is intentionally compared at startOfDay() so, e.g.,
+     * end_date = today keeps the discount active for the entire day. This is the
+     * observed/intended behavior; the exact-time window used by Promotion::isLive()
+     * and Coupon::isLive() is a separate rule for time-of-day-sensitive codes and is
+     * intentionally NOT applied here. (See CHANGELOG 2026-09-09.)
+     */
     public function isActive(?\DateTimeInterface $on = null): bool
     {
         $on = $on ? \Illuminate\Support\Carbon::parse($on)->startOfDay() : now()->startOfDay();
