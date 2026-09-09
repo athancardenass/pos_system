@@ -21,8 +21,6 @@ return new class extends Migration
             $table->string('contact_number', 20)->nullable();
             $table->date('hire_date');
             $table->enum('status', ['active', 'inactive'])->default('active');
-
-            $table->primary(['employee_id']);
         });
     }
 

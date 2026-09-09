@@ -2,15 +2,19 @@
 
 namespace App\Services;
 
-use App\Models\Inventory;
 use App\Models\SaleDetail;
 use App\Models\SaleRefund;
 use App\Models\SaleTransaction;
+use App\Services\InventoryService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class RefundService
 {
+    public function __construct(
+        private readonly InventoryService $inventory,
+    ) {
+    }
     public const REASONS = [
         'damaged' => 'Damaged item',
         'wrong_item' => 'Wrong item',
@@ -119,14 +123,6 @@ class RefundService
                 $refundAmount += $amount;
 
                 $lines[] = ['detail' => $detail, 'qty' => $qty, 'amount' => $amount];
-
-                // Restore inventory.
-                $inventory = Inventory::query()->firstOrCreate(
-                    ['product_id' => $detail->product_id],
-                    ['stock_quantity' => 0],
-                );
-                $inventory->stock_quantity += $qty;
-                $inventory->save();
             }
 
             $refundAmount = round($refundAmount, 2);
@@ -153,6 +149,16 @@ class RefundService
                     'quantity' => $line['qty'],
                     'amount' => $line['amount'],
                 ]);
+
+                // Restore the refunded quantity to on-hand stock.
+                $this->inventory->adjustStock(
+                    $line['detail']->product_id,
+                    $line['qty'],
+                    'refund',
+                    'sale_refund',
+                    $refund->refund_id,
+                    $reason,
+                );
             }
 
             // Reverse loyalty + total purchases proportionally to the refunded amount.

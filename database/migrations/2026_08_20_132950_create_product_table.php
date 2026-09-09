@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('product', function (Blueprint $table) {
             $table->integer('product_id', true);
-            $table->integer('category_id')->nullable()->index('category_id');
-            $table->integer('supplier_id')->nullable()->index('supplier_id');
+            $table->integer('category_id')->nullable()->index('product_category_id_index');
+            $table->integer('supplier_id')->nullable()->index('product_supplier_id_index');
             $table->string('product_name', 150)->index('idx_product_name');
             $table->string('description')->nullable();
             $table->string('barcode', 50)->unique('barcode');

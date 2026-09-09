@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('inventory', function (Blueprint $table) {
             $table->integer('inventory_id', true);
-            $table->integer('product_id')->unique('product_id');
+            $table->integer('product_id')->unique('inventory_product_id_unique');
             $table->integer('stock_quantity')->default(0);
             $table->dateTime('last_restocked')->nullable();
             $table->dateTime('updated_at')->useCurrentOnUpdate()->useCurrent();

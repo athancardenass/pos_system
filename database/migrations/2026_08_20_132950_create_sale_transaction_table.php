@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::create('sale_transaction', function (Blueprint $table) {
             $table->integer('transaction_id', true);
-            $table->integer('customer_id')->nullable()->index('customer_id');
-            $table->integer('employee_id')->index('idx_transaction_employee');
-            $table->integer('discount_id')->nullable()->index('discount_id');
+            $table->integer('customer_id')->nullable()->index('sale_transaction_customer_id_index');
+            $table->integer('employee_id')->index('sale_transaction_employee_id_index');
+            $table->integer('discount_id')->nullable()->index('sale_transaction_discount_id_index');
             $table->dateTime('transaction_date')->useCurrent()->index('idx_transaction_date');
             $table->decimal('subtotal', 10);
             $table->decimal('total_amount', 10);

@@ -7,9 +7,54 @@
 
 ---
 
+## 2026-09-09 — Fix: app timezone UTC → Asia/Manila (+ one-time data shift)
+
+**What:** POS stored/displayed all timestamps in UTC while the store operates in PHT (UTC+8) — new checkouts showed as ~5 AM instead of ~1 PM, and date-window stats (Today's Sales, weekly trend) cut off at the wrong wall-clock boundary.
+
+**Root cause:** `config/app.php` shipped with Laravel's default `'timezone' => 'UTC'`. No bug in transaction flow — sale #233 was committed and queryable all along, just stamped 05:19 instead of 13:19.
+
+**Changes:**
+- `config/app.php` — `timezone` changed to `Asia/Manila` (EXPLICIT USER TASK exception to the config/ lock; flagged per AGENTS.md).
+- One-time data shift — all app-written datetime columns (`sale_transaction.transaction_date/refunded_at`, `payment.payment_date`, `receipt.issued_date`, `sale_refund.refunded_at`, `audit_log.action_timestamp`, `stock_movement.created_at`, `inventory.last_restocked/updated_at`, `reorder_signal.created_at/resolved_at`, `customer.created_at/updated_at`) shifted +8h via guarded script; marker row `TZ_SHIFT_UTC_TO_PHT_V1` in audit_log prevents double-shifting. Idempotent.
+
+**Verification:** now() returns PHT; dashboard Recent Transactions shows `Sep 9, 1:19 PM` for sale #233; 44/44 tests pass.
+
+**Files touched:** `config/app.php`, CHANGELOG.md (data shift via script, no code files).
+
+---
+
+## 2026-09-09 — Fix: future-dated demo sales burying Recent Transactions
+
+**What:** Fixed RealisticDataSeeder future-dating "today's" demo sales, and clamped the 3 bad rows already in the DB.
+
+**Root cause:** Seeder created today's demo sales as `now()->subDays(0)->addHours(rand(8,20))` — landing 8-20 hours in the FUTURE (e.g. 23:39 when it was 05:00). Dashboard "Recent Transactions" sorts by `transaction_date DESC`, so these rows floated to the top forever and real new checkouts (#230-#232) appeared BELOW them, looking like the dashboard "wasn't updating".
+
+**Changes:**
+- `RealisticDataSeeder.php` — today's rows (`$day === 0`) now use `now()->subMinutes(rand(1,720))` (always in the past); other days unchanged.
+- Data fix — clamped 3 future-dated sales (#225, #226, #227) back into the recent past via tinker script.
+
+**Files touched:** `database/seeders/RealisticDataSeeder.php`, CHANGELOG.md. 44/44 tests pass.
+
+---
+
+## 2026-09-09 — Barcode validation + seeder fix
+
+**What:** Added EAN-13 checksum validation to the barcode field and fixed the product seeder to generate valid barcodes.
+
+**Changes:**
+- `ProductController::validated()` — barcode field now validates EAN-13 checksum when a 13-digit numeric code is manually entered. Invalid codes are rejected with a clear message directing the user to the Generate button.
+- `ProductSeeder` — removed hardcoded invalid barcodes (`BR-0001`, `SN-0001`, etc.) and now uses `Product::generateBarcode()` to produce valid EAN-13 codes for all demo products.
+
+**Why:** Previously, manually entering a 13-digit number with an invalid check digit would pass server-side validation but fail when rendered as a barcode on labels (JsBarcode shows "Invalid EAN-13"). The seeder also created products with non-EAN-13 barcodes that couldn't be rendered.
+
+**Files touched:** `app/Http/Controllers/ProductController.php`, `database/seeders/ProductSeeder.php`, `CHANGELOG.md`.
+
+---
+
 ## 2026-09-09 — Phase 0: Integration layer scaffolding (POS→CRM/HR/Procurement boundary)
 
 **What:** Created integration service boundaries (stubs only — no behavior change).
+
 - New `app/Services/Integration/` directory with contracts + stub service classes for each external system:
   - `ExternalEntity.php` — enum of 7 cross-system entities (customer, employee, product, inventory, supplier, purchase_order, sale) for documentation/future stable-ID work
   - `ExternalSystemInterface.php` — marker interface (systemName())
@@ -19,6 +64,7 @@
 - All stubs implement `ExternalSystemInterface`; all methods return null or void — **zero POS behavior change**.
 
 **Files touched:**
+
 - `app/Services/Integration/ExternalEntity.php` (NEW)
 - `app/Services/Integration/ExternalSystemInterface.php` (NEW)
 - `app/Services/Integration/CRM/CustomerService.php` (NEW)
@@ -29,6 +75,7 @@
 **Why:** establishes the integration boundary so CRM/HR/Procurement communication is isolated from POS business logic (per AGENTS.md "API-friendly controllers" + "extension points over edits to shared models"). No destructive changes — POS continues exactly as before.
 
 **Assumed future ownership (ALL PROVISIONAL — pending other systems' audit):**
+
 - HR → employee master data; POS keeps employee_id for auth/audit
 - CRM → customer master data; POS keeps customer_id for sale association
 - Procurement → suppliers + PO workflow; POS keeps supplier_id on product + inventory receiving
@@ -43,10 +90,12 @@
 ## 2026-09-09 — Philippine VAT (Option A) + hardcoded receipt address
 
 **What:** Implemented Philippine VAT (Option A — VAT-inclusive pricing) and set the receipt address.
+
 - Researched current Philippine VAT: **standard rate 12%** (NIRC + RA 11663 / RR 1-2026); registration threshold ₱3M/annual gross sales; businesses below it use the 3% percentage tax. Receipt already carried a dummy "VAT Reg:" number, so the POS is assumed VAT-registered.
 - **Option A (VAT-inclusive):** existing prices are treated as VAT-inclusive (the common PH retail convention). VAT is *extracted on display only* — no DB column added, no price changes. `VAT = total × 0.12/1.12`; e.g. ₱427.00 → VAT ₱45.75, net ₱381.25 (verified: ₱381.25 + ₱45.75 = ₱427.00 ✅).
 
 **Files touched:**
+
 - `app/Models/SaleTransaction.php` — added `VAT_RATE = 0.12` const, `vatRegistered()` (reads `config('vat.enabled')`), and three accessors: `vat_amount`, `net_amount`, `vat_rate`. Zero DB writes.
 - `config/vat.php` (NEW) — `enabled` (env `VAT_ENABLED`, default true), `rate` (env `VAT_RATE`, default 0.12), `label`. Config toggle lets 3%-percentage-tax businesses flip VAT off.
 - `.env` — added `VAT_ENABLED=true` + `VAT_RATE=0.12`.
@@ -62,11 +111,13 @@
 ## 2026-09-08 — Refund analytics: dashboard card + reason breakdown (Option B scope)
 
 **What:** Added refund analytics to both the dashboard (glanceable KPI) and the Reports page (drill-down).
+
 - **Dashboard new card:** "Refund Rate (7d)" — `(refunds ÷ completed sales in last 7 days) × 100` as a single KPI, plus "vs prior week" baseline.
 - **Dashboard mini-bar:** beneath the stat cards, a small bar chart per refund **reason** (count + ₱ value) over the last 7 days — "Why customers refunded (last 7 days)".
 - **Reports page:** the refunds card header now shows a reason-breakdown bar (count + ₱ per reason) alongside the Export CSV button, using the same query shape as the export.
 
 **Files touched:**
+
 - `app/Http/Controllers/DashboardController.php` — added `refund_rate`, `refund_rate_baseline` (prior-week comparison, not the same value), `refund_reasons` to `$stats`.
 - `app/Http/Controllers/ReportController.php` — added `refundBreakdown()` helper returning `reason → {count, total, label}`; passed as `refund_breakdown` to the view.
 - `resources/views/dashboard.blade.php` — new Refund Rate card + mini-bar section.
@@ -86,6 +137,7 @@
 **What:** Deleted the `admin` employee account (employee_id 1) — you asked to remove it properly rather than set inactive. Admin role had already been merged into Manager in the role-restructure earlier today.
 
 **Reassignment (transactional, integrity-preserving — no dangling FKs):**
+
 - `sale_transaction`: 3 rows reassigned employee_id 1→2 (manager)
 - `sale_refund`: 1 row reassigned 1→2
 - `audit_log`: 9 rows reassigned 1→2
@@ -93,9 +145,11 @@
 - Verified: 0 rows reference employee_id 1 anywhere; admin row deleted.
 
 **Controller logic fix:**
+
 - `app/Http/Controllers/EmployeeController.php` — `destroy()` no longer hard-blocks on "sales history". Now reassigns all 4 FK tables to the first active **Manager** (skipping the deleted employee) inside a `DB::transaction`, then deletes. Removes the "Cannot delete an employee with sales history" blocker permanently. Throws a clear error only if no active Manager exists to take the records.
 
 **Seeder/login updates:**
+
 - `database/seeders/EmployeeSeeder.php` — removed the `admin` demo account; `RoleSeeder` seeds only `Manager` + `Cashier`.
 - `resources/views/auth/login.blade.php` — demo hint now shows `manager`/`cashier` only.
 
@@ -114,6 +168,7 @@
 **What:** Consolidated the 3-role system (`admin`/`manager`/`cashier`) into a 2-role system (`manager`/`cashier`). The **Manager** role now inherits all Admin-level permissions (employees, audit logs, everything). **Permission boundaries preserved**: Cashier keeps only `pos.index` + `customers.index`; Manager now owns all `categories/products/inventory/suppliers/purchase-orders/discounts/reports/employees/audit-logs`.
 
 **Files touched:**
+
 - `config/roles.php` — replaced all `'Admin'` entries in the `modules` map with `'Manager'` (employees.index + audit-logs.index are now Manager-only, matching the old Admin boundary).
 - `routes/web.php` — three `role:` middleware strings updated: `role:Cashier,Manager,Admin`→`role:Cashier,Manager`; `role:Manager,Admin`→`role:Manager`; `role:Admin`→`role:Manager`.
 - `app/Services/RefundService.php` — role gate `hasRole('Manager', 'Admin')` → `hasRole('Manager')`; added `MANAGER_ROLES = ['Manager']` constant; window-override logic now Manager-only (was Manager-or-Admin, now Manager-only = equivalent); removed "admin" wording from messages.
@@ -123,6 +178,7 @@
 - `AGENTS.md` — updated `config/roles.php` description line to reflect `manager`/`cashier`. **Note:** `config/roles.php` is normally locked by AGENTS.md #4 ("DO NOT modify config/ files unless the task explicitly says so") — this task explicitly requested the role restructure, so it's in-scope.
 
 **DB migration (data only, no schema change):**
+
 - `employee.role_id` where `1` (old admin) → remapped to `2` (Manager): **1 employee** (`admin` user) updated.
 - Deleted the obsolete `role` row `('admin')`: row removed.
 - Verified via tinker: `manager` role `Manager`, `admin` user now role `Manager`, `cashier` still `Cashier`. Live HTTP checks confirm `cashier → /employees: 403`, `cashier → /pos: 200`, `cashier → /reports: 403`, `manager → /employees: 200`.
@@ -144,6 +200,7 @@
 ## 2026-09-08 — Refund features: 7-day window + printable credit slip + dashboard refund stats
 
 **What changed (all working-tree, NOT committed — AGENTS.md forbids agent git writes):**
+
 - `database/migrations/2026_09_08_000000_add_window_override_to_sale_refund_table.php` — new `window_override` bool on `sale_refund` (audit flag).
 - `app/Services/RefundService.php` — added `WINDOW_DAYS = 7` const; refunds older than 7 days now require Manager/Admin role and are flagged `window_override=true` (cashier blocked with a clear message).
 - `app/Models/SaleRefund.php` — `window_override` added to fillable + casts.
@@ -165,6 +222,7 @@ project/workspace shortcut (files were never deleted — only the sidebar pointe
 re-linked it as "POS System (canonical)".
 
 **Files touched / created:**
+
 - `CHANGELOG.md` (this file) — new running log of all work.
 - `dashboard-sales-case-study.md` — dashboard sales feature write-up (group-submission case study).
 - `pos-system-case-study.md` + `pos-system-case-study.docx` — overall project case study (academic-casual tone).
@@ -175,6 +233,7 @@ re-linked it as "POS System (canonical)".
 him understand and explain the system to groupmates, and to stop seeing Laravel as "random files."
 
 **Notes:**
+
 - The 25-part guide cites real files; key honest flags recorded: the `users` table is UNUSED (auth uses
   `employee`); no product/category/supplier seeders exist; no automated tests yet.
 - Nothing in the application source was modified during this session — analysis/authoring only.
@@ -184,6 +243,7 @@ him understand and explain the system to groupmates, and to stop seeing Laravel 
 ## 2026-08-27 — Forms: switched inputs to boxed style (option #2)
 
 **What (Karl picked "boxed" from a live 3-option preview):**
+
 - `resources/views/layouts/app.blade.php` — the global input/select/textarea rule changed from transparent + bottom-border-only (skeleton look) to **boxed**: `background: var(--surface)` (white), `border: 2px solid var(--rule)` (teal), `border-radius: 6px`, `padding: 0.6rem 0.7rem`. Focus state: coral `--accent` border + `box-shadow: 0 0 0 3px rgba(196,80,74,0.15)` glow (replaces the old bottom-border-only focus).
 - `.field-with-btn` changed `align-items: flex-end` → `center` so the Generate button lines up with the now-boxed barcode input.
 
@@ -209,6 +269,7 @@ him understand and explain the system to groupmates, and to stop seeing Laravel 
 ## 2026-08-27 — Barcode Generate button restyle (no emoji, green hover)
 
 **What (Karl's request):** Remove the ⚡ emoji and make the button match the design + fill green on hover.
+
 - `resources/views/products/_form.blade.php` — button text `⚡ Generate` → `Generate` (no emoji).
 - `resources/views/layouts/app.blade.php` — added `#generate-barcode` rule: keeps the shared `.btn .btn-secondary` look (white bg / teal border) and transitions to `background: var(--success)` (#2D8A4E), white text, green border on `:hover` (15ms transition).
 
@@ -219,6 +280,7 @@ him understand and explain the system to groupmates, and to stop seeing Laravel 
 ## 2026-08-27 — UI polish: barcode Generate button alignment + PO button spacing
 
 **What (from Karl's feedback on screenshots):**
+
 - `resources/views/layouts/app.blade.php` — added two CSS classes: `.field-with-btn` (input + button on one row, `align-items: flex-end` so the button lines up with the input's underline, reuses the existing bottom-border input style) and `.form-actions` (consistent top spacing + gap for grouped form buttons).
 - `resources/views/products/_form.blade.php` — replaced the hand-rolled inline `flex` div around the barcode input with `.field-with-btn`; removed the leftover inline `white-space: nowrap` hack. Generate button now keeps the existing `.btn .btn-secondary` design (uppercase, bordered) and aligns to the input baseline.
 - `resources/views/purchase-orders/create.blade.php` — wrapped "Add line" + "Create order" in `.form-actions` (was a bare `<p>` + cramped submit with no spacing). Buttons now have proper top margin + gap.
@@ -232,12 +294,14 @@ him understand and explain the system to groupmates, and to stop seeing Laravel 
 ## 2026-08-27 — Feature: Barcode Generator on product form
 
 **What:** Added a "⚡ Generate" button to the product create/edit form so staff don't hand-type barcodes. It fetches a unique, 13-digit barcode from the server and fills the input.
+
 - `routes/web.php` — `GET /products/generate-barcode` → `ProductController@generateBarcode` (name `products.generate-barcode`), inside the `role:Manager,Admin` group.
 - `app/Http/Controllers/ProductController.php::generateBarcode()` — returns `response()->json(['barcode' => ...])`; loops `random_int(1000000000000, 9999999999999)` until the code is not already in `product.barcode` (collision-safe).
 - `resources/views/products/_form.blade.php` — barcode input now sits next to a "Generate" button.
 - `resources/views/products/create.blade.php` + `edit.blade.php` — `@push('scripts')` block with vanilla JS that `fetch()`es the route and fills `#barcode`.
 
 **How verified:**
+
 - `php -l` clean; `route:list` shows `products.generate-barcode`.
 - `tinker`: generator returned `4689726262231` → len=13, numeric, unique.
 - **Bug caught & fixed during testing:** first version used `random_int(100000000000, 999999999999)` → only 12 digits, but the index page renders barcodes as **EAN13** (needs 13). Corrected the range to 13 digits and re-tested.
@@ -249,6 +313,7 @@ him understand and explain the system to groupmates, and to stop seeing Laravel 
 ## 2026-08-27 — Feature: Sale Refund / Void (#2 from roadmap)
 
 **What:** Added the ability to refund a completed sale from the receipt screen. Full-sale refund (teaching-simple, no per-item partial refund yet).
+
 - `database/migrations/2026_08_27_000000_add_refund_fields_to_sale_transaction_table.php` — adds `status` (default `completed`, indexed) and `refunded_at` columns to `sale_transaction`.
 - `app/Models/SaleTransaction.php` — added `status`/`refunded_at` to `$fillable` + `casts` (`refunded_at` datetime); added `scopeRefunded()` and `isRefunded()` helper (mirrors `PurchaseOrder::isPending()`).
 - `routes/web.php` — `POST /pos/{saleTransaction}/refund` → `PosController@refund` (name `pos.refund`), inside the `role:Cashier,Manager,Admin` group.
@@ -256,6 +321,7 @@ him understand and explain the system to groupmates, and to stop seeing Laravel 
 - `resources/views/pos/show.blade.php` — adds a "Refund Sale" button (with JS confirm) when not yet refunded, and a red "Refunded" badge after.
 
 **How verified:**
+
 - `php -l` clean on controller + model.
 - `php artisan migrate --force` → migration DONE.
 - `php artisan route:list` shows `pos.refund`.
@@ -270,6 +336,7 @@ him understand and explain the system to groupmates, and to stop seeing Laravel 
 ## 2026-08-27 — Added demo seeders (categories + suppliers + products)
 
 **What:** Created seeders so the catalog is populated out-of-the-box (previously only roles + employees were seeded, leaving the POS with no sellable products after `migrate:fresh`).
+
 - `database/seeders/CategorySeeder.php` — seeds 5 categories (Beverages, Snacks, Personal Care, Household, Stationery).
 - `database/seeders/SupplierSeeder.php` — seeds 3 suppliers.
 - `database/seeders/ProductSeeder.php` — seeds 11 demo products, each linked to a category + supplier and given an `inventory` row (mirrors `ProductController@store` so the POS is sale-ready immediately).
@@ -286,6 +353,7 @@ him understand and explain the system to groupmates, and to stop seeing Laravel 
 ## 2026-08-27 — Repo cleanup (remove leftover/junk files)
 
 **What:** Removed build artifacts and confirmed the repo is free of AI/Cursor temp files.
+
 - Deleted `pos_case_study_spec.json` (the docx build spec created earlier this session — leftover, not app code).
 - Cleared `storage/framework/views/*.php` (compiled Blade cache; Laravel regenerates automatically).
 - Verified `.freebuff/` is already gone and a `find` for `freebuff`/`cursor`/`.tmp`/`.bak` returned nothing.
@@ -312,11 +380,11 @@ him understand and explain the system to groupmates, and to stop seeing Laravel 
 
 **Medium bugs fixed:**
 
-5. **Dashboard revenue counted refunded sales** (`DashboardController`) — All revenue queries (`today_revenue`, `total_revenue`, `avg_transaction`, `weekly_trend`, `daily_baseline`, `payment_methods`) and `total_sales` now filter `where('status', 'completed')`. Verified: 10 status-filtered query paths.
+1. **Dashboard revenue counted refunded sales** (`DashboardController`) — All revenue queries (`today_revenue`, `total_revenue`, `avg_transaction`, `weekly_trend`, `daily_baseline`, `payment_methods`) and `total_sales` now filter `where('status', 'completed')`. Verified: 10 status-filtered query paths.
 
-6. **Top products/categories included refunded details** (`DashboardController`) — `top_products` and `top_categories` now join `sale_transaction` and filter `where('sale_transaction.status', 'completed')` so refunded sales don't inflate "top selling" rankings.
+2. **Top products/categories included refunded details** (`DashboardController`) — `top_products` and `top_categories` now join `sale_transaction` and filter `where('sale_transaction.status', 'completed')` so refunded sales don't inflate "top selling" rankings.
 
-7. **Refund receipt still showed "Paid"** (`pos/show.blade.php`) — Added a prominent red "Refunded — Not Valid for Payment" banner at the top of the receipt when `$sale->isRefunded()`. The payment/change section still shows original amounts (for audit), but the banner makes it unmistakable.
+3. **Refund receipt still showed "Paid"** (`pos/show.blade.php`) — Added a prominent red "Refunded — Not Valid for Payment" banner at the top of the receipt when `$sale->isRefunded()`. The payment/change section still shows original amounts (for audit), but the banner makes it unmistakable.
 
 **Verified:** `php -l` clean on all 3 controllers; route:list shows all routes; oversell aggregate correctly sums 3+3=6; DashboardController invoked with 25 stats keys; all views render.
 
@@ -325,6 +393,7 @@ him understand and explain the system to groupmates, and to stop seeing Laravel 
 ## 2026-09-01 — Customer form redesigned to match product form
 
 **What (Karl: "redesign yung new customer text box like yung ginawa natin sa products"):**
+
 - `resources/views/customers/_form.blade.php` — First name, Last name, **Contact number**, and Address inputs now use `.input-lg bordered` (larger, explicit solid border — same as products' Name/Description). Email, Date of birth, Status stay normal boxed size. *(Contact number added after Karl flagged it was left out.)*
 - `resources/views/customers/create.blade.php` + `edit.blade.php` — Save/Update button wrapped in `.form-actions` for consistent top spacing (same as products).
 
@@ -335,6 +404,7 @@ him understand and explain the system to groupmates, and to stop seeing Laravel 
 ## 2026-09-01 — Redesigned remaining forms to match product/customer style
 
 **What (Karl's per-form requests):**
+
 - `employees/_form.blade.php` — First name, Last name, Username, Password, Contact number all `.input-lg bordered` (big). Role/Hire date/Status stay normal.
 - `discounts/_form.blade.php` — only **Name** is `.input-lg bordered` (Karl: "yung name lang na text box").
 - `suppliers/_form.blade.php` — Name + Address `.input-lg bordered`; **Email stays normal size in the 2-col grid** (Karl: email box looked too long/stretched — it's now compact beside Contact number).
@@ -349,6 +419,7 @@ him understand and explain the system to groupmates, and to stop seeing Laravel 
 ## 2026-09-02 — UI-only: unify form input sizing + table column layout
 
 **What (Karl: fix inconsistent textbox/input sizing across CRUD forms; UI-only, NO schema/address/CRM changes):**
+
 - `resources/views/layouts/app.blade.php` — shared form CSS unified:
   - Base input rule (text/password/email/number/date/search/select/textarea) now uses `padding: 0.85rem 1rem; font-size: 1rem; line-height: 1.4` — previously base inputs were `0.7rem 0.85rem / 0.95rem` while `select` + `.input-lg` were `0.85rem 1rem / 1rem`, so any grid row mixing a normal input with an `.input-lg`/select field had mismatched heights (Discount Name vs Value, Customer Name vs Email, etc.).
   - Removed the separate `select { padding: 0.85rem 1rem; font-size: 1rem; }` override — selects now inherit the unified rule, so all control types align vertically in a row.
@@ -365,6 +436,7 @@ him understand and explain the system to groupmates, and to stop seeing Laravel 
 ## 2026-09-02 — Supplier form layout: 2×2 grid (Name|Email / Contact|Address)
 
 **What (Karl: email looked too far from the rest; wanted a tight 2×2 layout):**
+
 - `resources/views/suppliers/_form.blade.php` — restructured from (Name full-width, then Contact|Email, then Address full-width) to a single `.form-grid` 2×2:
   - Row 1: **Name | Email**
   - Row 2: **Contact number | Address** (Address stays a textarea, rows=3)
@@ -378,6 +450,7 @@ him understand and explain the system to groupmates, and to stop seeing Laravel 
 ## 2026-09-02 — Supplier form: final layout (Name / Email+Contact pair / Address)
 
 **What (Karl's iterations: 2×2 awkward → vertical stack → email too wide → final):**
+
 - `resources/views/suppliers/_form.blade.php` — final layout:
   - **Name** — full-width
   - **Email | Contact number** — `.field-pair` (flex row, each fixed 300px, wraps on narrow screens) so email isn't stretched across the card
@@ -393,6 +466,7 @@ him understand and explain the system to groupmates, and to stop seeing Laravel 
 ## 2026-09-06 — Refund system v2: partial refunds + reasons + role gate
 
 **What:** Upgraded the full-sale-only refund into a real refund system.
+
 - `database/migrations/2026_09_06_000000_create_sale_refund_tables.php` — NEW tables `sale_refund` (one row per refund event: amount, reason, notes, is_full_refund, employee, timestamp) + `sale_refund_item` (per-line refunded qty + amount).
 - `app/Models/SaleRefund.php` + `SaleRefundItem.php` — new models; `SaleTransaction::refunds()` + `isFullyRefunded()`; `SaleDetail::refundedQuantity()` / `refundableQuantity()`.
 - `app/Services/RefundService.php` — NEW central refund logic (full + partial): locks sale + detail rows (TOCTOU-safe), validates per-line refundable qty, **pro-rates discounts** (refund = actual paid share, not sticker price), restores inventory, reverses loyalty + total_purchases proportionally, writes refund records + audit, flips status to `refunded` only when all lines fully refunded. **Role gate:** Cashiers can only refund their own sales; Manager/Admin any sale. Reasons enum: damaged / wrong_item / changed_mind / defective / other.
@@ -400,6 +474,7 @@ him understand and explain the system to groupmates, and to stop seeing Laravel 
 - `resources/views/pos/show.blade.php` — Refund button opens a panel: per-line qty inputs (max = refundable), reason dropdown, notes; refund history card below; "Fully Refunded" badge when done.
 
 **How verified (tinker, real data):**
+
 - Partial: refund 1 of 3 (₱105 line) → ₱35.00 exact, stock 2→3, status stays completed.
 - Second partial of same line → ₱70; over-refund attempt → blocked ("Only 0 remaining").
 - Discounted sale (20% off): refund = paid share ₱100 = expected ₱100 ✅ (pro-rating correct).
@@ -426,6 +501,7 @@ him understand and explain the system to groupmates, and to stop seeing Laravel 
 ## 2026-09-06 — Feature: Reports & CSV export (#3 from roadmap)
 
 **What:** New Manager/Admin Reports page with date-range filtering and CSV export.
+
 - `app/Http/Controllers/ReportController.php` — 4 reports: **Sales** (all transactions w/ cashier, customer, discount, status), **Top selling products** (units + revenue, completed sales only), **Inventory** (stock vs reorder level w/ Out-of-stock/Low/OK status), **Refunds** (per-event from sale_refund). `export()` streams CSV via `response()->streamDownload` with UTF-8 BOM (Excel-safe ₱), `strip_tags` on cells (CSV-injection guard), explicit `fputcsv` escape param (PHP 8.4 deprecation fix), unknown type → 404. Default range = last 30 days.
 - `resources/views/reports/index.blade.php` — date-range form (`.form-grid`), one card per report with 5-row preview + Export CSV button (no emoji).
 - `routes/web.php` — `GET /reports` + `GET /reports/export/{type}` inside `role:Manager,Admin`.
@@ -434,6 +510,31 @@ him understand and explain the system to groupmates, and to stop seeing Laravel 
 **How verified:** `php -l` clean; routes listed; page renders all 4 sections; exports return 200 with real rows (sales=18, products=18, inventory=35, refunds=5 for Aug31–Sep6); unknown type 404s; role-gated (Cashier blocked by middleware).
 
 ---
+
+## 2026-09-09 — Phase A: Inventory Foundation (stock_movement, reorder_signal, decimal quantities, InventoryService / ReorderSignalService)
+
+**What:** Established the auditable inventory foundation per brief. Every stock mutation now flows through `InventoryService::adjustStock()` (signed delta + `StockMovement` row, `lockForUpdate` + `DB::transaction` TOCTOU guard) and low stock is surfaced through `ReorderSignalService`.
+
+- `database/migrations/2026_09_09_000001_create_stock_movement_table.php` — `stock_movement` (movement_id PK, product_id, movement_type enum[sale,purchase,refund,adjustment,return,damage], quantity/stock_before/stock_after decimal(10,3), reference_type/reference_id, reason, employee_id, created_at). Indexes on product_id + employee_id.
+- `database/migrations/2026_09_09_000002_create_reorder_signal_table.php` — `reorder_signal` (signal_id PK, product_id, signal_type enum[low_stock,critical,out_of_stock,reorder_suggested], current_stock/reorder_level decimal(10,3), suggested_quantity nullable decimal(10,3), supplier_id nullable, status enum[open,requested,po_created,dismissed] default open, created_at, resolved_at nullable). Indexes on product_id + supplier_id.
+- `database/migrations/2026_09_09_000003_add_inventory_columns_to_product_table.php` — product gains `unit_of_measure` enum (default piece, `->after('reorder_level')`), `critical_reorder_level` decimal(10,3) default 0 (`->after`), `is_active` boolean default true (`->after`).
+- `database/migrations/2026_09_09_000004_change_inventory_stock_quantity_to_decimal.php` — `inventory.stock_quantity` -> decimal(10,3) default 0 (`->change()`).
+- `database/migrations/2026_09_09_000005_change_sale_details_quantity_to_decimal.php` — `sale_details.quantity` -> decimal(10,3) (`->change()`).
+- `database/migrations/2026_09_09_000006_change_purchase_order_details_quantity_to_decimal.php` — `purchase_order_details.quantity` -> decimal(10,3) (`->change()`).
+- `app/Models/StockMovement.php` — `stock_movement` model; movement_id PK; quantity/stock_before/stock_after `decimal:3` casts; `product()` + `employee()` relations.
+- `app/Models/ReorderSignal.php` — `reorder_signal` model; signal_id PK; current_stock/reorder_level/suggested_quantity `decimal:3` casts; `product()` + `supplier()` relations.
+- `app/Models/Product.php` — `unit_of_measure`, `critical_reorder_level`, `is_active` added to `$fillable`; casts `critical_reorder_level => 'decimal:3'`, `is_active => 'boolean'`; `reorderSignals()` HasMany.
+- `app/Models/Inventory.php` — `stockMovements()` HasMany.
+- `app/Services/InventoryService.php` — `adjustStock(productId, quantity, type, referenceType, referenceId, reason?)` (signed delta, lockForUpdate + transaction, `StockMovement::create` with `employee_id => auth()->id()`), `getCurrentStock()`, `getStockHistory()`, `checkReorderNeeded()` (out_of_stock | critical | low_stock | null).
+- `app/Services/ReorderSignalService.php` — `scanForLowStock()` (opens non-duplicate open signals), `createSignal(productId, type)` (snapshots current_stock/reorder_level, suggested_quantity = reorder - stock), `resolveSignal(signalId)` (status dismissed + resolved_at), `getSignals(status)`.
+- `app/Http/Controllers/PosController.php::store` — sale routes stock deduction through `InventoryService::adjustStock(..., 'sale', 'sale_transaction', ...)`.
+- `app/Services/RefundService.php::refund` — refunded quantity restored via `InventoryService::adjustStock(..., 'refund', 'sale_refund', $refund->refund_id, $reason)`.
+- `app/Http/Controllers/PurchaseOrderController.php::receive` — PO receipt routes through `InventoryService::adjustStock(..., 'purchase', 'purchase_order', ...)`; `last_restocked` still updated.
+- `tests/Feature/InventoryFoundationTest.php` — covers `adjustStock` (add / deduct / missing-row), `getCurrentStock`, `getStockHistory`, `checkReorderNeeded` level thresholds, `ReorderSignalService` scan/create/resolve/getSignals, and `StockMovement` relations.
+
+**How verified:** `php -l` clean on every new/changed file; full suite green via `vendor/bin/phpunit -c phpunit.mysql.xml` -> 44 passed (19 existing feature tests + new foundation tests). Existing migrations were not modified (no indexes removed; only new columns/indexes added).
+
+**Note:** The suite runs on MySQL/MariaDB (`pos_system_test`). `->after()` and `->change()` require a real MySQL connection, so the SQLite `:memory:` config cannot execute these migrations.
 
 ## Standing conventions
 

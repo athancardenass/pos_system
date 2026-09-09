@@ -83,10 +83,10 @@ class CrudAndPosTest extends TestCase
 
     public function test_admin_can_view_employees_and_cashier_cannot(): void
     {
-        $this->actingAs($this->employee('admin'))
+        $this->actingAs($this->employee('manager'))
             ->get(route('employees.index'))
             ->assertOk()
-            ->assertSee('admin');
+            ->assertSee('manager');
 
         $this->actingAs($this->employee('cashier'))
             ->get(route('employees.index'))
@@ -130,7 +130,7 @@ class CrudAndPosTest extends TestCase
             'total_amount' => 40,
         ]);
 
-        $this->assertSame(8, $product->fresh()->inventory->stock_quantity);
+        $this->assertEquals(8.000, $product->fresh()->inventory->stock_quantity);
     }
 
     private function employee(string $username): Employee

@@ -7,9 +7,11 @@ use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
 use App\Services\AuditLogger;
+use App\Services\InventoryService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class PurchaseOrderController extends Controller
@@ -83,8 +85,6 @@ class PurchaseOrderController extends Controller
     public function receive(PurchaseOrder $purchase_order): RedirectResponse
     {
         DB::transaction(function () use ($purchase_order): void {
-            // Lock the PO row so two concurrent "Receive" clicks can't both pass
-            // the pending check and add stock twice (TOCTOU).
             $purchase_order = PurchaseOrder::query()
                 ->lockForUpdate()
                 ->with('details')
@@ -96,16 +96,20 @@ class PurchaseOrderController extends Controller
                 ]);
             }
 
-            foreach ($purchase_order->details as $line) {
-                $inventory = Inventory::query()->firstOrCreate(
-                    ['product_id' => $line->product_id],
-                    ['stock_quantity' => 0],
-                );
+            $inventoryService = app(InventoryService::class);
 
-                $inventory->stock_quantity += $line->quantity;
-                $inventory->last_restocked = now();
-                $inventory->save();
+            foreach ($purchase_order->details as $line) {
+                $inventoryService->adjustStock(
+                    $line->product_id,
+                    (float) $line->quantity,
+                    'purchase',
+                    'purchase_order',
+                    $purchase_order->purchase_id,
+                );
             }
+
+            $receivedIds = $purchase_order->details->pluck('product_id')->all();
+            Inventory::query()->whereIn('product_id', $receivedIds)->update(['last_restocked' => now()]);
 
             $purchase_order->update(['status' => 'received']);
         });

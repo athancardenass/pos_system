@@ -25,6 +25,9 @@ class Product extends Model
         'unit_price',
         'cost_price',
         'reorder_level',
+        'unit_of_measure',
+        'critical_reorder_level',
+        'is_active',
     ];
 
     protected function casts(): array
@@ -32,6 +35,8 @@ class Product extends Model
         return [
             'unit_price' => 'decimal:2',
             'cost_price' => 'decimal:2',
+            'critical_reorder_level' => 'decimal:3',
+            'is_active' => 'boolean',
         ];
     }
 
@@ -58,6 +63,16 @@ class Product extends Model
     public function purchaseOrderDetails(): HasMany
     {
         return $this->hasMany(PurchaseOrderDetail::class, 'product_id', 'product_id');
+    }
+
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(StockMovement::class, 'product_id', 'product_id');
+    }
+
+    public function reorderSignals(): HasMany
+    {
+        return $this->hasMany(ReorderSignal::class, 'product_id', 'product_id');
     }
 
     public function stockQuantity(): int

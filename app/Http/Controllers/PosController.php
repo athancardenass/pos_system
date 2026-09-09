@@ -8,6 +8,7 @@ use App\Models\Inventory;
 use App\Models\Product;
 use App\Models\SaleTransaction;
 use App\Services\AuditLogger;
+use App\Services\InventoryService;
 use App\Services\RefundService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,6 +18,11 @@ use Illuminate\View\View;
 
 class PosController extends Controller
 {
+    public function __construct(
+        private readonly InventoryService $inventory,
+    ) {
+    }
+
     public function index(): View
     {
         $products = Product::query()
@@ -55,7 +61,7 @@ class PosController extends Controller
             'amount_paid' => 'required|numeric|min:0',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:product,product_id',
-            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.quantity' => 'required|numeric|min:0.001',
         ]);
 
         $sale = DB::transaction(function () use ($data) {
@@ -126,12 +132,13 @@ class PosController extends Controller
                     'subtotal' => $line['subtotal'],
                 ]);
 
-                $inventory = Inventory::query()->firstOrCreate(
-                    ['product_id' => $line['product']->product_id],
-                    ['stock_quantity' => 0],
+                $this->inventory->adjustStock(
+                    $line['product']->product_id,
+                    -$line['quantity'],
+                    'sale',
+                    'sale_transaction',
+                    $sale->transaction_id,
                 );
-                $inventory->stock_quantity -= $line['quantity'];
-                $inventory->save();
             }
 
             $sale->payment()->create([

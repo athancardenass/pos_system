@@ -203,7 +203,12 @@ class RealisticDataSeeder extends Seeder
                     'customer_id' => $customer?->customer_id,
                     'employee_id' => $employee->employee_id,
                     'discount_id' => $discount?->discount_id,
-                    'transaction_date' => $date->copy()->addHours(rand(8, 20))->addMinutes(rand(0, 59)),
+                    // "Today" rows must land in the PAST: adding hours to now()
+                    // used to future-date today's demo sales, which then floated
+                    // to the top of the dashboard's Recent Transactions forever.
+                    'transaction_date' => $day === 0
+                        ? now()->subMinutes(rand(1, 720))
+                        : $date->copy()->addHours(rand(8, 20))->addMinutes(rand(0, 59)),
                     'subtotal' => $subtotal,
                     'total_amount' => $total,
                     'payment_method' => $paymentMethod,

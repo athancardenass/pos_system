@@ -98,7 +98,24 @@ class ProductController extends Controller
             'supplier_id' => 'nullable|exists:supplier,supplier_id',
             'product_name' => 'required|string|max:150',
             'description' => 'nullable|string|max:255',
-            'barcode' => 'required|string|max:50|unique:product,barcode,'.($product?->product_id ?? 'NULL').',product_id',
+            'barcode' => [
+                'required',
+                'string',
+                'max:50',
+                'unique:product,barcode,' . ($product?->product_id ?? 'NULL') . ',product_id',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (preg_match('/^\d{13}$/', $value)) {
+                        $sum = 0;
+                        for ($i = 0; $i < 12; $i++) {
+                            $sum += (int) $value[$i] * ($i % 2 === 0 ? 1 : 3);
+                        }
+                        $check = (10 - ($sum % 10)) % 10;
+                        if ($check !== (int) $value[12]) {
+                            $fail('The barcode is not a valid EAN-13 (check digit is wrong). Use the Generate button to create a valid one.');
+                        }
+                    }
+                },
+            ],
             'unit_price' => 'required|numeric|min:0',
             'cost_price' => 'required|numeric|min:0',
             'reorder_level' => 'required|integer|min:0',

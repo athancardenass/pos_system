@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('sale_details', function (Blueprint $table) {
             $table->integer('sale_detail_id', true);
-            $table->integer('transaction_id')->index('transaction_id');
-            $table->integer('product_id')->index('product_id');
+            $table->integer('transaction_id')->index('sale_details_transaction_id_index');
+            $table->integer('product_id')->index('sale_details_product_id_index');
             $table->integer('quantity');
             $table->decimal('unit_price', 10);
             $table->decimal('subtotal', 10);
