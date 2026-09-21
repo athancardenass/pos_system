@@ -17,7 +17,7 @@
     </div>
 
     <div class="card">
-        <form method="GET" action="{{ route('reports.index') }}">
+        <form method="GET" action="{{ route('reports.index') }}" id="report-filter-form">
             <div class="form-grid">
                 <div>
                     <label for="from">From</label>
@@ -28,11 +28,63 @@
                     <input id="to" type="date" name="to" value="{{ $to->toDateString() }}">
                 </div>
             </div>
-            <div class="form-actions">
-                <button type="submit">Apply date range</button>
+            <div class="pos-quick-filters">
+                <button type="button" class="pos-quick-btn" data-range="daily">Daily</button>
+                <button type="button" class="pos-quick-btn" data-range="weekly">Weekly</button>
+                <button type="button" class="pos-quick-btn" data-range="monthly">Monthly</button>
+                <button type="button" class="pos-quick-btn" data-range="yearly">Yearly</button>
+                <button type="submit" class="btn">Apply</button>
             </div>
         </form>
     </div>
+
+    @push('styles')
+    <style>
+        .pos-quick-filters { display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap; }
+        .pos-quick-btn {
+            padding: 0.5rem 1rem;
+            background: var(--surface); border: 2px solid var(--rule);
+            border-radius: 6px; cursor: pointer;
+            font-family: inherit; font-size: 0.78rem; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.03em;
+            color: var(--text); transition: all 0.15s;
+        }
+        .pos-quick-btn:hover { border-color: var(--accent); }
+    </style>
+    @endpush
+
+    @push('scripts')
+    <script>
+        document.querySelectorAll('.pos-quick-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const today = new Date();
+                let from = new Date();
+                const to = new Date();
+                switch (btn.dataset.range) {
+                    case 'daily':
+                        from = new Date(today);
+                        break;
+                    case 'weekly':
+                        from = new Date(today);
+                        from.setDate(today.getDate() - 6);
+                        break;
+                    case 'monthly':
+                        from = new Date(today);
+                        from.setMonth(today.getMonth() - 1);
+                        break;
+                    case 'yearly':
+                        from = new Date(today);
+                        from.setFullYear(today.getFullYear() - 1);
+                        break;
+                }
+                const fmt = d => d.toISOString().split('T')[0];
+                document.getElementById('from').value = fmt(from);
+                document.getElementById('to').value = fmt(to);
+                document.getElementById('report-filter-form').submit();
+            });
+        });
+    </script>
+    @endpush
 
     @foreach ($types as $key => $label)
         <div class="card">
