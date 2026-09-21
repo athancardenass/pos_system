@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CashDrawer;
 use App\Models\Customer;
 use App\Models\Discount;
 use App\Models\Product;
 use App\Models\SaleTransaction;
 use App\Services\AuditLogger;
+use App\Services\CashDrawerService;
 use App\Services\InventoryService;
 use App\Services\PromotionService;
 use App\Services\RefundService;
@@ -21,6 +23,7 @@ class PosController extends Controller
     public function __construct(
         private readonly InventoryService $inventory,
         private readonly PromotionService $promotions,
+        private readonly CashDrawerService $cashDrawer,
     ) {
     }
 
@@ -230,6 +233,11 @@ class PosController extends Controller
             // Audit entry INSIDE the transaction so a committed sale can never
             // lack its audit trail (matches RefundService pattern).
             AuditLogger::record('sale', 'sale_transaction', $sale->transaction_id, 'Completed sale #'.$sale->transaction_id);
+
+            // Update cash drawer for cash payments
+            if ($data['payment_method'] === 'cash') {
+                $this->cashDrawer->addCash(auth()->id(), $total);
+            }
 
             return $sale;
         });

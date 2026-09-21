@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\CashDrawerController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CouponController;
 use App\Http\Controllers\CustomerController;
@@ -39,6 +40,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/pos/{saleTransaction}', [PosController::class, 'show'])->name('pos.show');
         Route::post('/pos/{saleTransaction}/refund', [PosController::class, 'refund'])->name('pos.refund');
         Route::get('/pos/refund/{refund}/slip', [PosController::class, 'slip'])->name('pos.refund.slip');
+        Route::post('/cash-drawer/open', [CashDrawerController::class, 'open'])->name('cash-drawer.open');
+        Route::post('/cash-drawer/close', [CashDrawerController::class, 'close'])->name('cash-drawer.close');
+        Route::get('/cash-drawer/status', [CashDrawerController::class, 'status'])->name('cash-drawer.status');
         Route::resource('customers', CustomerController::class)->except('show');
     });
 
@@ -62,6 +66,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/purchase-orders/{purchase_order}/receive', [PurchaseOrderController::class, 'receive'])->name('purchase-orders.receive');
         Route::post('/purchase-orders/{purchase_order}/cancel', [PurchaseOrderController::class, 'cancel'])->name('purchase-orders.cancel');
         Route::resource('discounts', DiscountController::class)->except('show');
+        // Cash drawer review (manager-only)
+        Route::get('/cash-drawers', [CashDrawerController::class, 'index'])->name('cash-drawers.index');
         // Promotion engine (manager-only, mirrors the discounts CRUD gate). No static
         // routes here yet; if any are added they must go ABOVE these resource catch-alls.
         Route::resource('promotions', PromotionController::class)->except('show');
