@@ -7,6 +7,50 @@
 
 ---
 
+## 2026-09-23 — POS UI Redesign, Cash Drawer Modals, CheckoutService Extraction, Navigation Update & Payment Validations
+
+**What:**
+1. **POS UI Redesign & Clean Modals:**
+   - Replaced browser `prompt()` with clean, modern in-app modals for opening (float presets ₱1k-₱10k) and closing cash drawer sessions (live difference/shortage/overage calculation).
+   - Rebuilt POS screen strictly matching the two-column ASCII mockup: Left = Customer & Live Receipt items with steppers; Right = Product Search & live results; Middle = Subtotal, Discount & Huge Grand Total; Bottom = Payment method toggle & Cash Received/Change/Complete Sale.
+   - Zero inline `style=""` on form controls, no emojis (clean inline SVGs used).
+2. **Card & E-Wallet Validations & Payment Reference Tracking:**
+   - Added migration `2026_09_23_012925_add_payment_reference_to_payment_table.php` adding `reference_number` and `payment_provider` to `payment` table.
+   - Enforced client-side and backend validations:
+     - Card payments require Terminal Auth / Approval Code and card network before completion (no unverified card sales).
+     - E-Wallet payments require Reference / Transaction Number (e.g. GCash/Maya reference ID) before completion.
+     - Cash payments require amount received >= total due.
+   - Printed payment reference on the customer receipt when available.
+   - Added feature test in `tests/Feature/CheckoutFlowTest.php`.
+3. **Extracted `CheckoutService`:**
+   - Moved the entire atomic checkout transaction logic out of `PosController::store()` into `app/Services/CheckoutService.php` (thin controller pattern).
+   - Handles product stock locking (`lockForUpdate`), promotion engine evaluation, manual discounts, coupon validation, inventory adjustments, payment record, receipt, customer loyalty updates, audit logging, and cash drawer updates inside one atomic `DB::transaction`.
+   - Added unit test `tests/Unit/CheckoutServiceTest.php`.
+4. **Primary Navigation Refocusing (`roles.primary_navigation`):**
+   - Refocused primary navigation strictly around POS operations (POS, Customers, Cash Management, Promotions, Coupons, Discounts, Reports, Dashboard, Employees, Audit Logs).
+   - Hidden back-office inventory modules (`Products`, `Inventory`, `Purchase Orders`, `Suppliers`, `Categories`) from the primary sidebar without deleting their routes, models, or controllers, strictly per the professor's requirements.
+5. **Customer Loyalty Card Auto-Lookup:**
+   - Supported typing or scanning Customer ID or contact number in POS, automatically resolving active customer details and live loyalty points badge.
+6. **App CSRF Meta Tag:**
+   - Added `<meta name="csrf-token">` to `layouts/app.blade.php` to support modern async fetch requests securely.
+
+**Files touched:**
+- `app/Services/CheckoutService.php` (NEW)
+- `tests/Unit/CheckoutServiceTest.php` (NEW)
+- `database/migrations/2026_09_23_012925_add_payment_reference_to_payment_table.php` (NEW)
+- `app/Models/Payment.php`
+- `app/Http/Controllers/PosController.php`
+- `app/Providers/AppServiceProvider.php`
+- `config/roles.php`
+- `resources/views/layouts/app.blade.php`
+- `resources/views/pos/index.blade.php`
+- `resources/views/pos/show.blade.php`
+- `tests/Feature/CheckoutFlowTest.php`
+- `CHANGELOG.md`
+93/93 tests pass.
+
+---
+
 ## 2026-09-09 — Fix: sale audit entry now written inside the checkout transaction
 
 **What:** `PosController::store()` previously called `AuditLogger::record()` AFTER `DB::transaction` committed — a failure between commit and the audit write would leave a completed sale with no audit trail. The call now sits inside the transaction, matching the `RefundService` pattern; sale + payment + receipt + inventory + audit log now commit or roll back as one unit.

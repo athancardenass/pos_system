@@ -400,4 +400,36 @@ class CheckoutFlowTest extends TestCase
         $this->assertCount(2, $sale->saleDetails);
         $this->assertEquals(110.00, $sale->subtotal);
     }
+
+    public function test_card_and_ewallet_store_reference_number_correctly(): void
+    {
+        $product = Product::query()->create([
+            'product_name' => 'Card Item',
+            'barcode' => '4006381000985',
+            'unit_price' => 250.00,
+            'cost_price' => 125.00,
+            'reorder_level' => 5,
+        ]);
+        Inventory::query()->create([
+            'product_id' => $product->product_id,
+            'stock_quantity' => 10,
+        ]);
+
+        $this->actingAs($this->employee('cashier'))
+            ->post(route('pos.store'), [
+                'payment_method' => 'card',
+                'payment_provider' => 'Visa',
+                'reference_number' => 'APPR-998822 (**** 1234)',
+                'amount_paid' => 250.00,
+                'items' => [
+                    ['product_id' => $product->product_id, 'quantity' => 1],
+                ],
+            ])
+            ->assertRedirect();
+
+        $sale = SaleTransaction::query()->latest('transaction_id')->first();
+        $this->assertEquals('card', $sale->payment->payment_method);
+        $this->assertEquals('Visa', $sale->payment->payment_provider);
+        $this->assertEquals('APPR-998822 (**** 1234)', $sale->payment->reference_number);
+    }
 }

@@ -122,9 +122,15 @@
                     <span>₱{{ number_format($sale->total_amount, 2) }}</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
-                    <span style="color: var(--muted);">Payment ({{ strtoupper($sale->payment_method) }})</span>
+                    <span style="color: var(--muted);">Payment ({{ strtoupper($sale->payment_method) }}{{ $sale->payment?->payment_provider ? ' — '.$sale->payment->payment_provider : '' }})</span>
                     <span>₱{{ number_format($sale->payment->amount_paid ?? 0, 2) }}</span>
                 </div>
+                @if ($sale->payment?->reference_number)
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem; font-size: 0.78rem;">
+                        <span style="color: var(--muted);">Ref / Auth #</span>
+                        <span style="font-family: monospace;">{{ $sale->payment->reference_number }}</span>
+                    </div>
+                @endif
                 <div style="display: flex; justify-content: space-between; font-weight: 600;">
                     <span style="color: var(--muted);">Change</span>
                     <span>₱{{ number_format($sale->payment->change_amount ?? 0, 2) }}</span>

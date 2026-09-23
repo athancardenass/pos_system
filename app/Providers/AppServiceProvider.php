@@ -24,9 +24,14 @@ class AppServiceProvider extends ServiceProvider
             $employee = auth()->user();
             $employee?->loadMissing('role');
 
+            $navModules = collect(config('roles.primary_navigation', []))
+                ->filter(fn (array $roles) => $employee?->hasRole(...$roles))
+                ->keys()
+                ->all();
+
             $view->with([
                 'navEmployee' => $employee,
-                'navModules' => $employee?->allowedModules() ?? [],
+                'navModules' => $navModules,
             ]);
         });
     }
