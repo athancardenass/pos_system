@@ -319,6 +319,67 @@
         .badge-active { background: var(--success-soft); color: var(--success); border: 1px solid rgba(45, 138, 78, 0.25); }
         .badge-inactive { background: var(--accent-soft); color: var(--danger); border: 1px solid rgba(196, 80, 74, 0.25); }
         .badge-pending { background: rgba(196, 149, 106, 0.15); color: var(--warn-ink); border: 1px solid rgba(196, 149, 106, 0.3); }
+        .badge-balanced { background: var(--success-soft); color: var(--success); border: 1px solid rgba(45, 138, 78, 0.25); }
+        .badge-shortage { background: var(--accent-soft); color: var(--danger); border: 1px solid rgba(196, 80, 74, 0.25); }
+        .badge-overage { background: rgba(32, 60, 61, 0.08); color: var(--text); border: 1px solid var(--rule-faint); }
+
+        /* --- Modern Metric & Stat Cards --- */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--rule-faint);
+            border-radius: var(--r-lg);
+            padding: 1.25rem 1.4rem;
+            box-shadow: var(--shadow-card);
+            transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-pop);
+        }
+        .stat-card-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+            margin-bottom: 0.4rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .stat-card-val {
+            font-size: 1.85rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: var(--text);
+            font-variant-numeric: tabular-nums;
+            line-height: 1.2;
+        }
+        .stat-card-sub {
+            font-size: 0.76rem;
+            color: var(--muted);
+            margin-top: 0.45rem;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        .card-header-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
 
         /* --- Flash --- */
         .flash {

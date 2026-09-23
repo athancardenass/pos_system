@@ -7,6 +7,32 @@
 
 ---
 
+## 2026-09-23 — System-Wide UI Modernization (Dashboard, Cash Drawers, Customers, Layout)
+
+**What:**
+1. **Global Design System Upgrades (`layouts/app.blade.php`):**
+   - Added `.stat-grid` and `.stat-card` modern metric components with hover elevation.
+   - Added `.badge-balanced`, `.badge-shortage`, `.badge-overage` pill indicators for shift accountability.
+   - Standardized table styles and card header action bars.
+2. **Dashboard UI Modernization (`dashboard.blade.php`):**
+   - Replaced clunky raw inline styles with modern `.stat-card` metrics (Today's Sales, Revenue, Avg Transaction, Total Sales, Refunds).
+   - Cleaned up Weekly Trend daily performance bars and Payment Method breakdown cards.
+   - Modernized Recent Completed Transactions table with proper typography, badges, and timestamps.
+3. **Cash Drawer Sessions UI (`cash-drawers/index.blade.php`):**
+   - Modernized shift closure history with status badges (`Balanced`, `Overage`, `Shortage`), formatted timestamps, and tabular figures.
+4. **Customers & Loyalty UI (`customers/index.blade.php`):**
+   - Modernized customer directory table with highlighted loyalty points badges, code tags for customer IDs, and clean action links.
+
+**Files touched:**
+- `resources/views/layouts/app.blade.php`
+- `resources/views/dashboard.blade.php`
+- `resources/views/cash-drawers/index.blade.php`
+- `resources/views/customers/index.blade.php`
+- `CHANGELOG.md`
+93/93 tests pass.
+
+---
+
 ## 2026-09-23 — POS UI Redesign, Cash Drawer Modals, CheckoutService Extraction, Navigation Update & Payment Validations
 
 **What:**
