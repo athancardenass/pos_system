@@ -7,6 +7,22 @@
 
 ---
 
+## 2026-09-23 — Terminal Login Redesign & Demo Quick-Switcher
+
+**What:**
+- Redesigned the authentication screen (`resources/views/auth/login.blade.php`) to look like a modern supermarket terminal login.
+- Added 1-click demo role switcher chips (`Cashier` / `Manager`) to instantly auto-fill credentials during school demos and testing.
+- Added input field icons, real-time show/hide password visibility toggle, system status badge (Asia/Manila PHT online), and security footer.
+- Kept the color palette and typography strictly consistent with the design system.
+- Zero emoji used (pure inline SVGs).
+
+**Files touched:**
+- `resources/views/auth/login.blade.php`
+- `CHANGELOG.md`
+93/93 tests pass.
+
+---
+
 ## 2026-09-23 — System-Wide UI Modernization (Dashboard, Cash Drawers, Customers, Layout)
 
 **What:**
