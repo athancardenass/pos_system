@@ -22,6 +22,18 @@
         </div>
     </div>
 
+    @if (request()->query('auto_print'))
+        <div style="background: var(--success-soft); border: 1.5px solid var(--success); color: var(--success); padding: 0.85rem 1.25rem; border-radius: var(--r-sm); margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 0.95rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Sale Completed! Change: ₱{{ number_format($sale->payment?->change_amount ?? 0, 2) }}</span>
+            </div>
+            <a href="{{ route('pos.index') }}" class="btn" style="padding: 0.5rem 1.15rem; font-size: 0.82rem; background: var(--success); border-color: var(--success); color: #fff !important;">
+                Next Customer &rarr; (Space / Enter)
+            </a>
+        </div>
+    @endif
+
     {{-- On-screen receipt (centered card) --}}
     <div style="display: flex; justify-content: center;">
         <div class="card" id="receipt-screen" style="max-width: 420px; width: 100%; padding: 2rem;">
@@ -237,6 +249,26 @@
 
 @push('scripts')
 <script>
+    window.addEventListener('DOMContentLoaded', () => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('auto_print') === '1') {
+            setTimeout(() => {
+                window.print();
+            }, 350);
+        }
+    });
+
+    window.addEventListener('keydown', (e) => {
+        if (e.key === ' ' || e.key === 'Enter') {
+            const active = document.activeElement;
+            if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')) {
+                return;
+            }
+            e.preventDefault();
+            window.location.href = "{{ route('pos.index') }}";
+        }
+    });
+
     function toggleRefundPanel() {
         const panel = document.getElementById('refund-panel');
         if (!panel) return;

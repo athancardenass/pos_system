@@ -7,6 +7,74 @@
 
 ---
 
+## 2026-09-23 — Supermarket POS Features: Live Coupon Preview, Category Chips, Keyboard Shortcuts & Auto-Print
+
+**What:**
+1. **Live Coupon Apply & Instant Discount Preview:**
+   - Added `POST /pos/check-coupon` route and `PosController::checkCoupon` endpoint utilizing `PromotionService::validateCoupon` and `PromotionService::couponDiscount`.
+   - Added "Apply" button and live coupon validation feedback in `pos/index.blade.php`.
+   - Grand total, discount line, and change recalculate live on screen before sale completion.
+2. **Product Search Category Filter Chips:**
+   - Added category filter pills (`[ All ] [ Beverages ] [ Bakery ] ...`) above the live search results in `pos/index.blade.php`.
+   - Clicking a chip filters the products instantly without typing.
+3. **Cashier Keyboard Shortcuts:**
+   - Integrated keyboard navigation:
+     - `F2`: Focus Search / Barcode scanner.
+     - `F4`: Focus Cash Received field.
+     - `F8`: Cycle payment methods (Cash &harr; Card &harr; E-Wallet).
+     - `Enter`: Submit sale when inside payment fields.
+     - `Esc`: Close modals or clear search.
+   - Added sleek keyboard shortcut hint bar at the bottom of the POS terminal.
+4. **Auto-Receipt Print & Continuous Queue Flow:**
+   - Added `?auto_print=1` trigger on `pos.show` so thermal receipt print dialog executes automatically upon checkout.
+   - Added "Next Customer" banner and global Spacebar / Enter shortcut on receipt screen to immediately reset for the next transaction in queue.
+5. **Clean Supermarket Login Screen:**
+   - Finalized `resources/views/auth/login.blade.php` to clean Operator Username and Security Password fields with zero emoji, perfectly centered icons, and demo credentials hint in footer.
+
+**Files touched:**
+- `app/Http/Controllers/PosController.php`
+- `routes/web.php`
+- `resources/views/pos/index.blade.php`
+- `resources/views/pos/show.blade.php`
+- `resources/views/auth/login.blade.php`
+- `tests/Feature/CheckoutFlowTest.php`
+- `CHANGELOG.md`
+94/94 tests pass.
+
+---
+
+## 2026-09-23 — UI Polish & Precision Alignment (Login Icons, Security Operator Preset, Button Typography, Search Alignment)
+
+**What:**
+1. **Operator & Security Password Icons (`resources/views/auth/login.blade.php`):**
+   - Removed `margin-bottom: 1.1rem` inheritance collision on `.input-with-icon input`.
+   - Set mathematically centered geometry (`top: 50%; transform: translateY(-50%)`, `width: 18px; height: 18px; left: 0.95rem`) for both Operator username and Security Password lock icons.
+   - Symmetrically aligned show/hide password toggle button at `right: 0.85rem`.
+2. **Terminal Operator Selection Security Model (`resources/views/auth/login.blade.php`):**
+   - Transformed the auto-login button bar into a professional supermarket "Select Operator Station" preset (`Cashier Station`, `Manager Station`).
+   - Selecting a station pre-populates the operator username and immediately focuses the security password field for explicit credential verification, preserving demo speed without undermining supermarket security protocols.
+   - Preserved development credentials note in the security footer for testing convenience.
+3. **Button Typography & Color Consistency (`resources/views/layouts/app.blade.php` & `resources/views/dashboard.blade.php`):**
+   - Added explicit `color: #ffffff !important;` across `.btn`, `a.btn`, `a.btn:link`, `a.btn:visited`, `a.btn:hover`, `a.btn:focus`, and `a.btn:active`.
+   - Solved browser user-agent `:visited` color override that caused the Dashboard "New POS Sale" link font to appear inconsistent or dark.
+   - Added clean SVG register icon to Dashboard "New POS Sale" action button.
+4. **POS Product Search Magnifying Glass Icon (`resources/views/pos/index.blade.php`):**
+   - Removed 1.1rem bottom margin leakage on `.pos-search-input`.
+   - Vertically centered `.pos-search-icon` at exact 50% relative to the 48px input height with 0.95rem left padding.
+5. **Caches & Integrity:**
+   - Cleared compiled views (`view:clear`), route cache (`route:clear`), and config cache (`config:clear`).
+   - Verified 93/93 tests pass without regressions.
+
+**Files touched:**
+- `resources/views/auth/login.blade.php`
+- `resources/views/layouts/app.blade.php`
+- `resources/views/dashboard.blade.php`
+- `resources/views/pos/index.blade.php`
+- `CHANGELOG.md`
+93/93 tests pass.
+
+---
+
 ## 2026-09-23 — Terminal Login Redesign & Demo Quick-Switcher
 
 **What:**

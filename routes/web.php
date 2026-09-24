@@ -37,6 +37,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:Cashier,Manager')->group(function () {
         Route::get('/pos', [PosController::class, 'index'])->name('pos.index');
         Route::post('/pos', [PosController::class, 'store'])->name('pos.store');
+        Route::post('/pos/check-coupon', [PosController::class, 'checkCoupon'])->name('pos.check-coupon');
         Route::get('/pos/{saleTransaction}', [PosController::class, 'show'])->name('pos.show');
         Route::post('/pos/{saleTransaction}/refund', [PosController::class, 'refund'])->name('pos.refund');
         Route::get('/pos/refund/{refund}/slip', [PosController::class, 'slip'])->name('pos.refund.slip');

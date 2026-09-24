@@ -245,20 +245,29 @@
     .pos-search-box {
         position: relative;
         margin-bottom: 0.85rem;
+        display: block;
     }
     .pos-search-icon {
         position: absolute;
-        left: 0.85rem;
+        left: 1rem;
         top: 50%;
         transform: translateY(-50%);
+        width: 18px;
+        height: 18px;
         color: var(--muted);
         pointer-events: none;
-        display: flex;
+        display: inline-flex;
         align-items: center;
+        justify-content: center;
+        z-index: 2;
     }
-    .pos-search-input {
+    input.pos-search-input,
+    input#pos-search-input {
         width: 100%;
-        padding: 0.85rem 1rem 0.85rem 2.6rem;
+        height: 48px;
+        line-height: 44px;
+        padding: 0 1rem 0 3.1rem !important;
+        margin-bottom: 0 !important;
         background: var(--surface);
         border: 2px solid var(--rule);
         border-radius: var(--r);
@@ -268,10 +277,75 @@
         outline: none;
         transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
     }
-    .pos-search-input:focus {
+    input.pos-search-input:focus,
+    input#pos-search-input:focus {
         border-color: var(--accent);
         box-shadow: var(--ring);
     }
+
+    /* Category Filter Chips */
+    .pos-category-chips-bar {
+        display: flex;
+        gap: 0.35rem;
+        overflow-x: auto;
+        padding-bottom: 0.4rem;
+        margin-bottom: 0.65rem;
+        scrollbar-width: thin;
+    }
+    .pos-cat-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.3rem 0.65rem;
+        background: var(--surface);
+        border: 1.5px solid var(--rule-faint);
+        border-radius: var(--r-pill);
+        color: var(--muted);
+        font-family: inherit;
+        font-size: 0.74rem;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.15s var(--ease);
+    }
+    .pos-cat-chip:hover {
+        color: var(--text);
+        border-color: var(--rule);
+        background: var(--bg-tint);
+    }
+    .pos-cat-chip.active {
+        background: var(--text);
+        color: #fff;
+        border-color: var(--text);
+    }
+
+    /* Shortcuts helper bar */
+    .pos-shortcuts-bar {
+        display: flex;
+        gap: 0.85rem;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+        padding: 0.6rem 0.95rem;
+        background: var(--surface);
+        border: 1px solid var(--rule-faint);
+        border-radius: var(--r);
+        font-size: 0.76rem;
+        color: var(--muted);
+        box-shadow: var(--shadow-sm);
+    }
+    .pos-shortcut-key {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.15rem 0.45rem;
+        background: var(--bg-tint);
+        border: 1px solid var(--rule-faint);
+        border-radius: var(--r-sm);
+        font-weight: 800;
+        font-family: monospace;
+        color: var(--text);
+        font-size: 0.72rem;
+    }
+
     .pos-results-list {
         flex: 1;
         overflow-y: auto;
@@ -651,7 +725,17 @@
                     <input id="pos-search-input" class="pos-search-input" type="text" placeholder="Search / Barcode (Scan or Type)..." autocomplete="off" autofocus>
                 </div>
 
-                <hr class="pos-divider" style="margin-top: 0.25rem;">
+                {{-- Category Filter Chips --}}
+                @if (isset($categories) && $categories->count())
+                    <div class="pos-category-chips-bar" id="pos-category-chips">
+                        <button type="button" class="pos-cat-chip active" data-category="all">All</button>
+                        @foreach ($categories as $cat)
+                            <button type="button" class="pos-cat-chip" data-category="{{ $cat->category_id }}">{{ $cat->category_name }}</button>
+                        @endforeach
+                    </div>
+                @endif
+
+                <hr class="pos-divider" style="margin-top: 0.15rem;">
 
                 <div class="pos-section-title" style="margin-bottom: 0.5rem;">Search Results</div>
                 <div class="pos-results-list" id="search-results-list"></div>
@@ -683,9 +767,13 @@
                     <button type="button" class="pos-payment-option" data-method="card">Card</button>
                     <button type="button" class="pos-payment-option" data-method="e-wallet">E-Wallet</button>
                 </div>
-                <div>
+                <div class="pos-coupon-box" style="margin-top: 0.75rem;">
                     <label for="pos-coupon-code">Coupon Code (Optional)</label>
-                    <input id="pos-coupon-code" type="text" placeholder="Enter coupon code (e.g. SAVE50)" maxlength="40">
+                    <div style="display: flex; gap: 0.4rem; align-items: stretch;">
+                        <input id="pos-coupon-code" type="text" placeholder="e.g. SAVE50" maxlength="40" style="margin-bottom:0 !important; text-transform:uppercase;">
+                        <button type="button" class="btn btn-secondary" id="apply-coupon-btn" style="padding: 0 1rem; margin-bottom:0; flex-shrink:0;">Apply</button>
+                    </div>
+                    <div id="coupon-feedback" style="font-size: 0.78rem; font-weight: 600; margin-top: 0.35rem; display: none;"></div>
                 </div>
             </div>
 
@@ -753,6 +841,16 @@
                     Complete Sale
                 </button>
             </div>
+        </div>
+
+        {{-- POS Keyboard Shortcuts Bar --}}
+        <div class="pos-shortcuts-bar">
+            <span style="font-weight:700; color:var(--text); text-transform:uppercase; font-size:0.7rem; letter-spacing:0.04em;">Shortcuts:</span>
+            <span><span class="pos-shortcut-key">F2</span> Search / Scan</span>
+            <span><span class="pos-shortcut-key">F4</span> Cash Received</span>
+            <span><span class="pos-shortcut-key">F8</span> Payment Method</span>
+            <span><span class="pos-shortcut-key">Enter</span> Complete Sale</span>
+            <span><span class="pos-shortcut-key">Esc</span> Close Modals</span>
         </div>
     @endif
 </div>
@@ -839,7 +937,11 @@
     const paymentBoxTitle = document.getElementById('payment-box-title');
     const cashPaymentFields = document.getElementById('cash-payment-fields');
     const posCouponInput = document.getElementById('pos-coupon-code');
+    const applyCouponBtn = document.getElementById('apply-coupon-btn');
+    const couponFeedback = document.getElementById('coupon-feedback');
 
+    let appliedCouponDiscount = 0;
+    let appliedCouponCode = '';
     let currentPaymentMethod = 'cash';
     let currentDrawer = null;
 
@@ -932,9 +1034,10 @@
         });
 
         // Totals
-        const total = subtotal; // Promo/coupon computed server-side
+        const discount = appliedCouponDiscount;
+        const total = Math.max(0, subtotal - discount);
         subtotalVal.textContent = formatMoney(subtotal);
-        discountVal.textContent = '-₱0.00';
+        discountVal.textContent = discount > 0 ? ('-' + formatMoney(discount)) : '-₱0.00';
         totalVal.textContent = formatMoney(total);
 
         // Update Change
@@ -995,18 +1098,21 @@
         renderCart();
     }
 
-    // Live Product Search & Barcode Scan
+    // Live Product Search & Barcode Scan with Category Filtering
     let searchDebounce;
+    let selectedCategory = 'all';
+
     function renderSearchResults(query = '') {
         const q = query.trim().toLowerCase();
         searchResultsList.innerHTML = '';
 
-        const matched = q === ''
-            ? products.slice(0, 10)
-            : products.filter(p =>
-                p.name.toLowerCase().includes(q) ||
-                (p.barcode && p.barcode.toLowerCase().includes(q))
-            ).slice(0, 15);
+        const matched = products.filter(p => {
+            const matchesCat = selectedCategory === 'all' || String(p.category_id) === String(selectedCategory);
+            if (!matchesCat) return false;
+            if (q === '') return true;
+            return p.name.toLowerCase().includes(q) ||
+                (p.barcode && p.barcode.toLowerCase().includes(q));
+        }).slice(0, 20);
 
         if (matched.length === 0) {
             searchResultsList.innerHTML = '<div class="pos-cart-empty" style="padding:1.5rem 0;">No matching products found.</div>';
@@ -1026,7 +1132,7 @@
 
             const sub = document.createElement('div');
             sub.className = 'pos-product-sub';
-            sub.innerHTML = `<span>SKU: ${p.barcode || '—'}</span> <span>• Stock: ${p.stock}</span>`;
+            sub.innerHTML = `<span>SKU: ${p.barcode || '—'}</span> <span>• Stock: ${p.stock}</span> <span>• ${p.category_name || 'General'}</span>`;
 
             info.append(title, sub);
 
@@ -1051,6 +1157,16 @@
             searchResultsList.appendChild(row);
         });
     }
+
+    // Category chips click listener
+    document.querySelectorAll('.pos-cat-chip').forEach(chip => {
+        chip.addEventListener('click', function() {
+            document.querySelectorAll('.pos-cat-chip').forEach(c => c.classList.remove('active'));
+            this.classList.add('active');
+            selectedCategory = this.dataset.category;
+            renderSearchResults(searchInput.value);
+        });
+    });
 
     searchInput.addEventListener('input', function() {
         clearTimeout(searchDebounce);
@@ -1347,6 +1463,155 @@
             alert(data.message);
             closeModal('close-register-modal');
             checkDrawerStatus();
+        }
+    });
+
+    // Live Coupon Check & Apply
+    async function applyCoupon() {
+        if (!posCouponInput) return;
+        const code = posCouponInput.value.trim().toUpperCase();
+        if (!code) {
+            appliedCouponDiscount = 0;
+            appliedCouponCode = '';
+            if (couponFeedback) couponFeedback.style.display = 'none';
+            renderCart();
+            return;
+        }
+
+        const currentSubtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+        if (currentSubtotal <= 0) {
+            if (couponFeedback) {
+                couponFeedback.textContent = 'Add items to the receipt before applying a coupon.';
+                couponFeedback.style.color = 'var(--danger)';
+                couponFeedback.style.display = 'block';
+            }
+            return;
+        }
+
+        try {
+            if (applyCouponBtn) {
+                applyCouponBtn.disabled = true;
+                applyCouponBtn.textContent = '...';
+            }
+            const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
+            const res = await fetch('{{ route("pos.check-coupon") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    coupon_code: code,
+                    subtotal: currentSubtotal,
+                    customer_id: customerSelect?.value ? parseInt(customerSelect.value) : null
+                })
+            });
+
+            const data = await res.json();
+            if (res.ok && data.valid) {
+                appliedCouponDiscount = parseFloat(data.discount_amount || 0);
+                appliedCouponCode = data.code;
+                if (couponFeedback) {
+                    couponFeedback.textContent = data.message || `✓ Coupon applied (-₱${appliedCouponDiscount.toFixed(2)})`;
+                    couponFeedback.style.color = 'var(--success)';
+                    couponFeedback.style.display = 'block';
+                }
+            } else {
+                appliedCouponDiscount = 0;
+                appliedCouponCode = '';
+                if (couponFeedback) {
+                    couponFeedback.textContent = data.message || 'Invalid or ineligible coupon.';
+                    couponFeedback.style.color = 'var(--danger)';
+                    couponFeedback.style.display = 'block';
+                }
+            }
+        } catch (e) {
+            appliedCouponDiscount = 0;
+            appliedCouponCode = '';
+            if (couponFeedback) {
+                couponFeedback.textContent = 'Network error validating coupon.';
+                couponFeedback.style.color = 'var(--danger)';
+                couponFeedback.style.display = 'block';
+            }
+        } finally {
+            if (applyCouponBtn) {
+                applyCouponBtn.disabled = false;
+                applyCouponBtn.textContent = 'Apply';
+            }
+            renderCart();
+        }
+    }
+
+    if (applyCouponBtn) {
+        applyCouponBtn.addEventListener('click', applyCoupon);
+    }
+    if (posCouponInput) {
+        posCouponInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applyCoupon();
+            }
+        });
+    }
+
+    // POS Global Keyboard Shortcuts
+    window.addEventListener('keydown', (e) => {
+        // Esc: close modals or reset search
+        if (e.key === 'Escape') {
+            closeModal('open-register-modal');
+            closeModal('close-register-modal');
+            if (searchInput && document.activeElement === searchInput) {
+                searchInput.value = '';
+                renderSearchResults();
+            }
+            return;
+        }
+
+        // F2: Focus Search / Barcode
+        if (e.key === 'F2') {
+            e.preventDefault();
+            if (searchInput) {
+                searchInput.focus();
+                searchInput.select();
+            }
+            return;
+        }
+
+        // F4: Focus Cash Received input
+        if (e.key === 'F4') {
+            e.preventDefault();
+            if (currentPaymentMethod !== 'cash') {
+                const cashBtn = document.querySelector('.pos-payment-option[data-method="cash"]');
+                if (cashBtn) cashBtn.click();
+            }
+            if (amountPaidInput) {
+                amountPaidInput.focus();
+                amountPaidInput.select();
+            }
+            return;
+        }
+
+        // F8: Cycle Payment Methods (Cash -> Card -> E-Wallet -> Cash)
+        if (e.key === 'F8') {
+            e.preventDefault();
+            const methods = ['cash', 'card', 'e-wallet'];
+            const curIdx = methods.indexOf(currentPaymentMethod);
+            const nextMethod = methods[(curIdx + 1) % methods.length];
+            const nextBtn = document.querySelector(`.pos-payment-option[data-method="${nextMethod}"]`);
+            if (nextBtn) nextBtn.click();
+            return;
+        }
+
+        // Enter key inside payment inputs triggers Complete Sale
+        if (e.key === 'Enter') {
+            const active = document.activeElement;
+            if (active === amountPaidInput || active === cardApprovalCode || active === ewalletReferenceNo) {
+                e.preventDefault();
+                if (submitSaleBtn && !submitSaleBtn.disabled) {
+                    submitSaleBtn.click();
+                }
+            }
         }
     });
 

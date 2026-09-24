@@ -18,26 +18,11 @@
                 <p class="login-subtitle">Supermarket Terminal & Operations</p>
                 <div class="login-system-status">
                     <span class="status-pulse-dot"></span>
-                    <span>System Online &bull; Asia/Manila (PHT)</span>
+                    <span>Terminal Online &bull; Asia/Manila (PHT)</span>
                 </div>
             </div>
 
             @include('partials.errors')
-
-            {{-- 1-Click Demo Account Quick Switcher --}}
-            <div class="login-demo-bar">
-                <span class="demo-bar-label">Quick Sign-in:</span>
-                <div class="demo-buttons">
-                    <button type="button" class="demo-chip" onclick="fillDemo('cashier', 'password')">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        Cashier
-                    </button>
-                    <button type="button" class="demo-chip" onclick="fillDemo('manager', 'password')">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                        Manager
-                    </button>
-                </div>
-            </div>
 
             {{-- Login Form --}}
             <form method="POST" action="{{ route('login') }}" class="login-form" id="terminal-login-form">
@@ -45,7 +30,9 @@
                 <div class="login-group">
                     <label for="username">Operator Username</label>
                     <div class="input-with-icon">
-                        <svg class="field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        <span class="field-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        </span>
                         <input
                             id="username"
                             type="text"
@@ -62,31 +49,36 @@
                 <div class="login-group">
                     <label for="password">Security Password</label>
                     <div class="input-with-icon">
-                        <svg class="field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        <span class="field-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        </span>
                         <input
                             id="password"
                             type="password"
                             name="password"
-                            placeholder="Enter password"
+                            placeholder="Enter security password"
                             required
                             autocomplete="current-password"
                         >
-                        <button type="button" class="toggle-password-btn" id="toggle-pw-btn" onclick="togglePasswordVisibility()" title="Show/Hide Password">
-                            <svg id="eye-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        <button type="button" class="toggle-password-btn" id="toggle-pw-btn" onclick="togglePasswordVisibility()" aria-label="Toggle password visibility">
+                            <svg id="eye-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                         </button>
                     </div>
                 </div>
 
                 <button type="submit" class="login-btn" id="login-submit-btn">
                     <span>Sign In to Terminal</span>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 </button>
             </form>
 
             <div class="login-footer">
                 <div class="footer-security-note">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     <span>Authorized Personnel Only &bull; Shift Audited</span>
+                </div>
+                <div class="dev-demo-hint">
+                    Demo credentials: <strong>manager</strong> or <strong>cashier</strong> (password: <code>password</code>)
                 </div>
             </div>
         </div>
@@ -167,55 +159,6 @@
             box-shadow: 0 0 0 2px rgba(45, 138, 78, 0.25);
         }
 
-        /* Demo Quick Bar */
-        .login-demo-bar {
-            background: var(--surface-soft);
-            border: 1px solid var(--rule-faint);
-            border-radius: var(--r);
-            padding: 0.75rem 0.85rem;
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
-
-        .demo-bar-label {
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-        }
-
-        .demo-buttons {
-            display: flex;
-            gap: 0.4rem;
-        }
-
-        .demo-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.3rem;
-            padding: 0.35rem 0.65rem;
-            background: var(--surface);
-            border: 1.5px solid var(--rule);
-            border-radius: var(--r-pill);
-            color: var(--text);
-            font-family: inherit;
-            font-size: 0.76rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.15s var(--ease);
-        }
-
-        .demo-chip:hover {
-            background: var(--text);
-            color: #fff;
-            transform: translateY(-1px);
-        }
-
         /* Form */
         .login-form {
             display: flex;
@@ -223,9 +166,14 @@
             gap: 1.15rem;
         }
 
+        .login-group {
+            display: flex;
+            flex-direction: column;
+        }
+
         .login-group label {
             display: block;
-            margin-bottom: 0.35rem;
+            margin-bottom: 0.4rem;
             font-size: 0.75rem;
             font-weight: 700;
             text-transform: uppercase;
@@ -235,26 +183,37 @@
 
         .input-with-icon {
             position: relative;
-            display: flex;
-            align-items: center;
+            display: block;
+            width: 100%;
         }
 
         .field-icon {
             position: absolute;
-            left: 0.85rem;
+            left: 0.95rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 18px;
+            height: 18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             color: var(--muted);
             pointer-events: none;
+            z-index: 2;
         }
 
         .input-with-icon input {
             width: 100%;
-            padding: 0.85rem 2.6rem 0.85rem 2.6rem;
+            height: 48px;
+            padding: 0 2.6rem 0 2.75rem;
+            margin-bottom: 0 !important;
             border: 2px solid var(--rule);
             border-radius: var(--r-sm);
             background: var(--surface);
             color: var(--text);
             font-family: inherit;
             font-size: 0.95rem;
+            line-height: 44px;
             outline: none;
             transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
         }
@@ -271,17 +230,22 @@
 
         .toggle-password-btn {
             position: absolute;
-            right: 0.75rem;
+            right: 0.85rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 24px;
+            height: 24px;
             background: transparent;
             border: none;
             color: var(--muted);
             cursor: pointer;
-            padding: 0.35rem;
-            display: flex;
+            padding: 0;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
             border-radius: var(--r-sm);
             transition: color 0.15s;
+            z-index: 2;
         }
 
         .toggle-password-btn:hover {
@@ -326,15 +290,32 @@
             padding-top: 1.15rem;
             border-top: 1px solid var(--rule-faint);
             text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
         }
 
         .footer-security-note {
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 0.35rem;
             font-size: 0.75rem;
             color: var(--muted);
             font-weight: 600;
+        }
+
+        .dev-demo-hint {
+            font-size: 0.72rem;
+            color: var(--muted);
+        }
+
+        .dev-demo-hint code {
+            background: var(--bg-tint);
+            padding: 0.1rem 0.35rem;
+            border-radius: var(--r-sm);
+            font-family: monospace;
+            border: 1px solid var(--rule-faint);
         }
 
         /* Error box */
@@ -363,17 +344,6 @@
     </style>
 
     <script>
-        function fillDemo(user, pw) {
-            const userInput = document.getElementById('username');
-            const pwInput = document.getElementById('password');
-            if (userInput && pwInput) {
-                userInput.value = user;
-                pwInput.value = pw;
-                const submitBtn = document.getElementById('login-submit-btn');
-                if (submitBtn) submitBtn.focus();
-            }
-        }
-
         function togglePasswordVisibility() {
             const pw = document.getElementById('password');
             const icon = document.getElementById('eye-icon');

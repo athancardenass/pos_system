@@ -432,4 +432,45 @@ class CheckoutFlowTest extends TestCase
         $this->assertEquals('Visa', $sale->payment->payment_provider);
         $this->assertEquals('APPR-998822 (**** 1234)', $sale->payment->reference_number);
     }
+
+    public function test_check_coupon_endpoint_validates_and_returns_discount(): void
+    {
+        $coupon = \App\Models\Coupon::query()->create([
+            'code' => 'PREVIEW50',
+            'type' => 'fixed',
+            'value' => 50.00,
+            'min_purchase' => 100.00,
+            'is_active' => true,
+            'starts_at' => now()->subDay(),
+            'ends_at' => now()->addDay(),
+        ]);
+
+        $cashier = $this->employee('cashier');
+
+        // Valid check
+        $res = $this->actingAs($cashier)
+            ->postJson(route('pos.check-coupon'), [
+                'coupon_code' => 'PREVIEW50',
+                'subtotal' => 200.00,
+            ]);
+
+        $res->assertOk()
+            ->assertJson([
+                'valid' => true,
+                'code' => 'PREVIEW50',
+                'discount_amount' => 50.00,
+            ]);
+
+        // Below minimum purchase check
+        $resBelow = $this->actingAs($cashier)
+            ->postJson(route('pos.check-coupon'), [
+                'coupon_code' => 'PREVIEW50',
+                'subtotal' => 50.00,
+            ]);
+
+        $resBelow->assertStatus(422)
+            ->assertJson([
+                'valid' => false,
+            ]);
+    }
 }

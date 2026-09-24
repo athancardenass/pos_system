@@ -3,12 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\CashDrawer;
+use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Discount;
 use App\Models\Product;
 use App\Models\SaleTransaction;
 use App\Services\CheckoutService;
+use App\Services\PromotionService;
 use App\Services\RefundService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -24,8 +27,12 @@ class PosController extends Controller
     public function index(): View
     {
         $products = Product::query()
-            ->with('inventory')
+            ->with(['inventory', 'category'])
             ->orderBy('product_name')
+            ->get();
+
+        $categories = Category::query()
+            ->orderBy('category_name')
             ->get();
 
         $customers = Customer::query()
@@ -45,6 +52,8 @@ class PosController extends Controller
             'price' => (float) $p->unit_price,
             'stock' => $p->stockQuantity(),
             'barcode' => $p->barcode,
+            'category_id' => $p->category_id,
+            'category_name' => $p->category?->category_name ?? 'General',
         ]);
 
         $customersJson = $customers->map(fn ($c) => [
@@ -54,7 +63,39 @@ class PosController extends Controller
             'points' => (int) $c->loyalty_points,
         ]);
 
-        return view('pos.index', compact('products', 'customers', 'discounts', 'productsJson', 'customersJson'));
+        return view('pos.index', compact('products', 'categories', 'customers', 'discounts', 'productsJson', 'customersJson'));
+    }
+
+    public function checkCoupon(Request $request, PromotionService $promotionService): JsonResponse
+    {
+        $data = $request->validate([
+            'coupon_code' => 'required|string|max:40',
+            'subtotal' => 'required|numeric|min:0',
+            'customer_id' => 'nullable|integer',
+        ]);
+
+        try {
+            $coupon = $promotionService->validateCoupon(
+                $data['coupon_code'],
+                (float) $data['subtotal'],
+                $data['customer_id'] ?? null
+            );
+
+            $discountAmount = $promotionService->couponDiscount($coupon, (float) $data['subtotal']);
+
+            return response()->json([
+                'valid' => true,
+                'code' => $coupon->code,
+                'coupon_type' => $coupon->type,
+                'discount_amount' => round($discountAmount, 2),
+                'message' => "Coupon {$coupon->code} applied (-₱" . number_format($discountAmount, 2) . ")",
+            ]);
+        } catch (ValidationException $e) {
+            $error = $e->errors()['coupon_code'][0] ?? 'Coupon is not valid.';
+            return response()->json(['valid' => false, 'message' => $error], 422);
+        } catch (\Throwable $e) {
+            return response()->json(['valid' => false, 'message' => $e->getMessage()], 422);
+        }
     }
 
     public function store(Request $request): RedirectResponse
@@ -74,7 +115,7 @@ class PosController extends Controller
 
         $sale = $this->checkoutService->checkout($data, (int) auth()->id());
 
-        return redirect()->route('pos.show', $sale)->with('status', 'Sale completed.');
+        return redirect()->route('pos.show', ['saleTransaction' => $sale, 'auto_print' => 1])->with('status', 'Sale completed.');
     }
 
     public function show(SaleTransaction $saleTransaction): View

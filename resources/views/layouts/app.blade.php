@@ -138,28 +138,60 @@
         .card:hover { box-shadow: var(--shadow-pop); }
 
         /* --- Buttons --- */
-        button[type="submit"], .btn {
+        button[type="submit"], .btn,
+        a.btn, a.btn:link, a.btn:visited {
             --btn-bg: var(--text);
             --btn-bg-hover: #2B4D4E;
             display: inline-flex; align-items: center; gap: 0.4rem;
             padding: 0.6rem 1.15rem;
-            background: var(--btn-bg); color: #fff; border: none;
+            background: var(--btn-bg);
+            color: #ffffff !important;
+            border: none;
             border-radius: var(--r);
             font-family: inherit; font-size: 0.82rem; font-weight: 600;
             text-transform: uppercase; letter-spacing: 0.06em;
             cursor: pointer; text-decoration: none;
             box-shadow: 0 1px 2px rgba(32, 60, 61, 0.16);
-            transition: background-color 0.15s var(--ease), box-shadow 0.15s var(--ease), transform 0.15s var(--ease);
+            transition: background-color 0.15s var(--ease), box-shadow 0.15s var(--ease), transform 0.15s var(--ease), color 0.15s var(--ease);
         }
-        button[type="submit"]:hover, .btn:hover {
+        button[type="submit"]:hover, .btn:hover,
+        a.btn:hover {
             background-color: var(--btn-bg-hover);
+            color: #ffffff !important;
             box-shadow: 0 8px 18px -10px rgba(32, 60, 61, 0.75);
             transform: translateY(-1px);
         }
-        button[type="submit"]:active, .btn:active { transform: translateY(0); box-shadow: 0 1px 2px rgba(32, 60, 61, 0.2); }
-        button[type="submit"]:focus-visible, .btn:focus-visible { outline: none; box-shadow: var(--ring); }
-        .btn-secondary { --btn-bg: var(--surface); --btn-bg-hover: var(--bg-tint); color: var(--text); border: 2px solid var(--text); }
-        .btn-danger { --btn-bg: var(--danger); --btn-bg-hover: #A8403A; }
+        button[type="submit"]:active, .btn:active,
+        a.btn:active {
+            transform: translateY(0);
+            color: #ffffff !important;
+            box-shadow: 0 1px 2px rgba(32, 60, 61, 0.2);
+        }
+        button[type="submit"]:focus-visible, .btn:focus-visible,
+        a.btn:focus-visible {
+            outline: none;
+            color: #ffffff !important;
+            box-shadow: var(--ring);
+        }
+        button[type="submit"]:disabled, .btn:disabled, .btn.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            color: #ffffff !important;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+        .btn-secondary, a.btn-secondary, a.btn-secondary:link, a.btn-secondary:visited {
+            --btn-bg: var(--surface);
+            --btn-bg-hover: var(--bg-tint);
+            color: var(--text) !important;
+            border: 2px solid var(--text);
+        }
+        .btn-secondary:hover, a.btn-secondary:hover,
+        .btn-secondary:focus-visible, a.btn-secondary:focus-visible,
+        .btn-secondary:active, a.btn-secondary:active {
+            color: var(--text) !important;
+        }
+        .btn-danger { --btn-bg: var(--danger); --btn-bg-hover: #A8403A; color: #ffffff !important; }
         .btn-ghost { --btn-bg-hover: transparent; background: transparent; border: none; box-shadow: none; padding: 0.25rem 0.5rem; color: var(--danger); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; text-decoration: underline; text-underline-offset: 2px; }
         .btn-ghost:hover { transform: none; opacity: 0.7; }
         .qty-btn {
