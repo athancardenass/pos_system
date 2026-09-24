@@ -945,6 +945,70 @@
     let currentPaymentMethod = 'cash';
     let currentDrawer = null;
 
+    // Web Audio Synthesizer for Supermarket Feedback
+    let audioCtx = null;
+    function getAudioContext() {
+        if (!audioCtx) {
+            const AudioClass = window.AudioContext || window.webkitAudioContext;
+            if (AudioClass) audioCtx = new AudioClass();
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        return audioCtx;
+    }
+
+    function playBeep(type = 'scan') {
+        try {
+            const ctx = getAudioContext();
+            if (!ctx) return;
+
+            if (type === 'scan') {
+                // Classic 1760Hz supermarket scanner beep (70ms)
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1760, ctx.currentTime);
+                gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.07);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.07);
+            } else if (type === 'error') {
+                // Low double buzz for stock limit or invalid entry
+                [0, 0.1].forEach(delay => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, ctx.currentTime + delay);
+                    gain.gain.setValueAtTime(0.2, ctx.currentTime + delay);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.08);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(ctx.currentTime + delay);
+                    osc.stop(ctx.currentTime + delay + 0.08);
+                });
+            } else if (type === 'complete') {
+                // Cheerful 3-tone cash register chime
+                [523.25, 659.25, 783.99].forEach((freq, idx) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, ctx.currentTime + (idx * 0.08));
+                    gain.gain.setValueAtTime(0.22, ctx.currentTime + (idx * 0.08));
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (idx * 0.08) + 0.22);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(ctx.currentTime + (idx * 0.08));
+                    osc.stop(ctx.currentTime + (idx * 0.08) + 0.22);
+                });
+            }
+        } catch (e) {
+            // Audio policy blocked until first user gesture; fails silently
+        }
+    }
+
     function formatMoney(amount) {
         return '₱' + Number(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
@@ -1076,6 +1140,7 @@
         if (!product) return;
 
         if (product.stock <= 0) {
+            playBeep('error');
             alert('"' + product.name + '" is out of stock.');
             return;
         }
@@ -1083,6 +1148,7 @@
         const existing = cart.find(i => i.id === productId);
         if (existing) {
             if (existing.qty + qty > product.stock) {
+                playBeep('error');
                 alert('Stock limit reached for ' + product.name + '. (Available: ' + product.stock + ')');
                 return;
             }
@@ -1095,6 +1161,7 @@
                 qty: qty
             });
         }
+        playBeep('scan');
         renderCart();
     }
 
@@ -1303,6 +1370,7 @@
         if (currentPaymentMethod === 'cash') {
             paid = parseNumeric(amountPaidInput.value);
             if (paid < total - 0.001) {
+                playBeep('error');
                 alert('Amount received (' + formatMoney(paid) + ') is less than total due (' + formatMoney(total) + ').');
                 amountPaidInput.focus();
                 return;
@@ -1310,6 +1378,7 @@
         } else if (currentPaymentMethod === 'card') {
             const approval = cardApprovalCode ? cardApprovalCode.value.trim() : '';
             if (!approval) {
+                playBeep('error');
                 alert('Please enter the Card Terminal Auth / Approval Code before completing the sale.');
                 cardApprovalCode && cardApprovalCode.focus();
                 return;
@@ -1321,6 +1390,7 @@
         } else if (currentPaymentMethod === 'e-wallet') {
             const eRef = ewalletReferenceNo ? ewalletReferenceNo.value.trim() : '';
             if (!eRef) {
+                playBeep('error');
                 alert('Please enter the E-Wallet Reference / Transaction Number (e.g. GCash/Maya reference) before completing the sale.');
                 ewalletReferenceNo && ewalletReferenceNo.focus();
                 return;
@@ -1354,6 +1424,7 @@
             payloadSpan.append(pInput, qInput);
         });
 
+        playBeep('complete');
         document.getElementById('pos-store-form').submit();
     });
 
@@ -1555,8 +1626,46 @@
         });
     }
 
+    // Global Hardware Barcode Scanner Buffer & High-Speed Keystroke Catcher
+    let barcodeScanBuffer = '';
+    let lastScanKeyTimestamp = 0;
+
     // POS Global Keyboard Shortcuts
     window.addEventListener('keydown', (e) => {
+        const active = document.activeElement;
+        const now = Date.now();
+        const diff = now - lastScanKeyTimestamp;
+        lastScanKeyTimestamp = now;
+
+        // If delay between keystrokes is high (>120ms), reset hardware scanner buffer (indicates human typing)
+        if (diff > 120) {
+            barcodeScanBuffer = '';
+        }
+
+        // Buffer printable characters for hardware scanner (ignore shortcuts with Ctrl/Alt/Meta)
+        if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+            barcodeScanBuffer += e.key;
+        }
+
+        // Hardware scanner sends Enter key at end of barcode
+        if (e.key === 'Enter') {
+            const rawBarcode = barcodeScanBuffer.trim();
+            if (rawBarcode.length >= 4) {
+                const found = products.find(p => p.barcode && p.barcode.toLowerCase() === rawBarcode.toLowerCase());
+                if (found) {
+                    e.preventDefault();
+                    addToCart(found.id, 1);
+                    barcodeScanBuffer = '';
+                    if (active === searchInput) {
+                        searchInput.value = '';
+                        renderSearchResults();
+                    }
+                    return;
+                }
+            }
+            barcodeScanBuffer = '';
+        }
+
         // Esc: close modals or reset search
         if (e.key === 'Escape') {
             closeModal('open-register-modal');

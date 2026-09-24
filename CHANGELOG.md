@@ -7,6 +7,28 @@
 
 ---
 
+## 2026-09-23 — Global Barcode Catcher, Web Audio Synthesizer & Receipt Refund Policy
+
+**What:**
+1. **Global Hardware Barcode Catcher (`resources/views/pos/index.blade.php`):**
+   - Implemented high-speed keystroke buffering (<120ms burst window) listening globally on `window`.
+   - Allows physical handheld USB/Wireless barcode scanners to add scanned items to the cart from anywhere on the screen without clicking the search input.
+2. **Web Audio Synthesizer Feedback (`resources/views/pos/index.blade.php`):**
+   - Built zero-dependency procedural audio synth via Web Audio API:
+     - Classic 1760Hz supermarket scanner beep on valid item scan / add.
+     - Low double buzz error sound on out-of-stock or invalid payment/coupon entry.
+     - Cheerful 3-tone cash register chime upon completed sale submission.
+3. **Receipt 7-Day Refund Policy (`resources/views/pos/show.blade.php`):**
+   - Added official supermarket refund policy notice ("Exchange or refund allowed within 7 days with this official receipt") to the printed thermal receipt footer.
+
+**Files touched:**
+- `resources/views/pos/index.blade.php`
+- `resources/views/pos/show.blade.php`
+- `CHANGELOG.md`
+94/94 tests pass.
+
+---
+
 ## 2026-09-23 — Supermarket POS Features: Live Coupon Preview, Category Chips, Keyboard Shortcuts & Auto-Print
 
 **What:**

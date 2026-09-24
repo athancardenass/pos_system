@@ -153,9 +153,9 @@
 
             {{-- Footer --}}
             <div style="text-align: center; font-size: 0.75rem; color: var(--muted);">
-                <div style="font-weight: 600; margin-bottom: 0.25rem;">Thank you for shopping!</div>
-                <div>This receipt serves as your proof of purchase.</div>
-                <div style="margin-top: 0.5rem;">POS System · {{ now()->format('Y') }}</div>
+                <div style="font-weight: 700; margin-bottom: 0.25rem;">Thank you for shopping!</div>
+                <div>Exchange or refund allowed within 7 days with this official receipt.</div>
+                <div style="margin-top: 0.5rem; font-size: 0.7rem;">POS System &bull; {{ now()->format('Y') }}</div>
             </div>
         </div>
     </div>
