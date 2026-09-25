@@ -492,7 +492,7 @@
 <body>
     @auth
         <aside class="sidebar">
-            <a class="sidebar-brand" href="{{ route('dashboard') }}">
+            <a class="sidebar-brand" href="{{ $navEmployee?->hasRole('Cashier') ? route('pos.index') : route('dashboard') }}">
                 <span class="sidebar-brand-icon">P</span>
                 POS
             </a>

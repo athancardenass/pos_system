@@ -285,5 +285,20 @@ class RealisticDataSeeder extends Seeder
             }
             $po->update(['total_amount' => $poTotal]);
         }
+
+        // Restock all products above reorder threshold so initial catalog is healthy
+        foreach (Product::with('inventory')->get() as $prod) {
+            $current = (float) ($prod->inventory->stock_quantity ?? 0);
+            $reorder = (float) ($prod->reorder_level ?? 10);
+            if ($current <= $reorder) {
+                Inventory::updateOrCreate(
+                    ['product_id' => $prod->product_id],
+                    [
+                        'stock_quantity' => $reorder + rand(30, 60),
+                        'last_restocked' => now(),
+                    ]
+                );
+            }
+        }
     }
 }

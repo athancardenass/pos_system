@@ -774,6 +774,58 @@ him understand and explain the system to groupmates, and to stop seeing Laravel 
 
 **Note:** The suite runs on MySQL/MariaDB (`pos_system_test`). `->after()` and `->change()` require a real MySQL connection, so the SQLite `:memory:` config cannot execute these migrations.
 
+---
+
+## 2026-09-25 — Fix: POS blowout bug, seeder SM label cleanup, cashier role boundaries, and reports filter UX
+
+**What:**
+1. **POS Terminal UI Blowout Fix:** Resolved the horizontal grid expansion bug caused by the addition of 15 supermarket categories in `SMGroceryStoreSeeder`.
+2. **SM Label Removal:** Eliminated all "(SM)" / "SM Bonus" / "SMAC" / "SMDC" naming and sample branding from seeders, models, test cases, and database records.
+3. **Cashier Dashboard Restriction:** Enforced that Cashiers do not have dashboard access. Cashiers redirect directly to `/pos` on login and root access; `/dashboard` is role-gated to Manager only with 403 response for Cashier; Cashier sidebar navigation displays only POS and Customers.
+4. **Reports Preset Auto-Apply Fix:** Prevented the Daily/Weekly/Monthly/Yearly quick preset buttons in Manager Reports from auto-submitting the form. Clicking a preset now fills the `from` and `to` inputs and visually marks the active button, requiring the user to explicitly click "Apply".
+
+**Root cause:**
+- POS UI: `.pos-work-grid` and `.pos-panel` in `resources/views/pos/index.blade.php` lacked `min-width: 0`. When 26 category chips rendered side-by-side inside `.pos-category-chips-bar`, CSS Grid expanded the column to `min-content` (3,544px). The search input's `autofocus` scrolled the viewport 2,800px horizontally, hiding the cart/receipt and pushing the fixed sidebar over the right-side search panel.
+- Reports UI: Click listener on `.pos-quick-btn` in `resources/views/reports/index.blade.php` called `document.getElementById('report-filter-form').submit()` immediately on click, bypassing the "Apply" button.
+- Cashier Permissions: `config/roles.php` and `routes/web.php` included Cashier in `dashboard` module and navigation, and `LoginController` defaulted all users to `route('dashboard')`.
+
+**Changes:**
+- `resources/views/pos/index.blade.php`: Added `min-width: 0` to `.pos-work-grid`, `.pos-panel`, `.pos-container`, and `min-width: 0; max-width: 100%` to `.pos-category-chips-bar`.
+- `database/seeders/SMGroceryStoreSeeder.php`: Removed all "SM", "SM Bonus", "SMAC", and "SMDC" occurrences. Renamed category to `Value Essentials & Pantry Staples`, supplier to `Central Retail Distribution`, products to `Value ...`, loyalty customers, discounts, promotions, and coupons (`LOYALTY50`, `VALUE100`, `WEEKENDSALE`). Added 3 bakery items for the `Breakfast & Bakery` category.
+- `config/roles.php`: Removed `Cashier` from `dashboard` in both `modules` and `primary_navigation`.
+- `routes/web.php`: Role-gated `/dashboard` to `role:Manager`. Updated `/` redirect: Cashier goes to `pos.index`, Manager to `dashboard`.
+- `app/Http/Controllers/Auth/LoginController.php`: Redirects Cashier to `pos.index` and Manager to `dashboard` after login.
+- `resources/views/layouts/app.blade.php`: Brand logo links Cashier to `pos.index` and Manager to `dashboard`.
+- `resources/views/reports/index.blade.php`: Removed immediate `.submit()` on preset button click; added `.active` styling and toggle to `.pos-quick-btn`.
+- `tests/Feature/SMGroceryStoreSeederTest.php`: Updated assertions for renamed categories, suppliers, products, and coupons.
+- `tests/Feature/CrudAndPosTest.php`: Added test cases verifying Cashier 403 on `/dashboard`, redirect to `/pos`, Manager dashboard access, and Manager reports view.
+- `database/seeders/RealisticDataSeeder.php`: Restocked all products above reorder threshold so catalog starts healthy after simulated transaction run.
+- `note.txt`: Created comprehensive developer setup and troubleshooting guide for laptop deployment.
+
+**Verification:**
+- Ran `php artisan test`: 104 tests passed, 378 assertions (0 failures).
+- Ran automated HTTP & DOM checks via Python:
+  - Verified Cashier login redirects to `http://127.0.0.1:8000/pos`.
+  - Verified Cashier visiting `/dashboard` returns HTTP 403.
+  - Verified Cashier sidebar navigation has only `POS` and `Customers`.
+  - Verified Manager reports page renders quick filter buttons with no `.submit()` call in script.
+  - Verified `/pos` page `bodyScrollWidth` equals `bodyClientWidth` (no horizontal overflow or layout shift).
+- Verified catalog stock in DB: 0 products below reorder threshold.
+
+**Files touched:**
+- `app/Http/Controllers/Auth/LoginController.php`
+- `config/roles.php`
+- `database/seeders/RealisticDataSeeder.php`
+- `database/seeders/SMGroceryStoreSeeder.php`
+- `resources/views/layouts/app.blade.php`
+- `resources/views/pos/index.blade.php`
+- `resources/views/reports/index.blade.php`
+- `routes/web.php`
+- `tests/Feature/CrudAndPosTest.php`
+- `tests/Feature/SMGroceryStoreSeederTest.php`
+- `note.txt`
+- `CHANGELOG.md`
+
 ## Standing conventions
 
 - Code style: keep existing Laravel conventions (singular table names, `<entity>_id` PKs, `public $timestamps = false` on most models).

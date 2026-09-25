@@ -29,10 +29,10 @@ class SMGroceryStoreSeeder extends Seeder
     public function run(): void
     {
         // -------------------------------------------------------------
-        // 1. SM Supermarket Categories
+        // 1. Supermarket Categories
         // -------------------------------------------------------------
         $categoriesData = [
-            ['category_name' => 'SM Bonus & Value Essentials', 'description' => 'SM private label value pantry and household staples'],
+            ['category_name' => 'Value Essentials & Pantry Staples', 'description' => 'Private label value pantry and household staples'],
             ['category_name' => 'Fresh Produce & Fruits', 'description' => 'Fresh vegetables, farm fruits, and organic crops'],
             ['category_name' => 'Fresh Meat & Poultry', 'description' => 'Dressed chicken, premium pork cuts, and beef sirloin'],
             ['category_name' => 'Seafood Market', 'description' => 'Fresh bangus, tilapia, shrimp, and chilled fish'],
@@ -61,7 +61,7 @@ class SMGroceryStoreSeeder extends Seeder
         // 2. Major Philippine FMCG & Supermarket Suppliers
         // -------------------------------------------------------------
         $suppliersData = [
-            ['supplier_name' => 'SM Retail Central Distribution', 'contact_number' => '02-8831-1000', 'email' => 'orders@smretail.example.ph', 'address' => 'Pasay City, Metro Manila'],
+            ['supplier_name' => 'Central Retail Distribution', 'contact_number' => '02-8831-1000', 'email' => 'orders@centralretail.example.ph', 'address' => 'Pasay City, Metro Manila'],
             ['supplier_name' => 'Universal Robina Corporation (URC)', 'contact_number' => '02-8633-7631', 'email' => 'sales@urc.example.ph', 'address' => 'Pasig City, Metro Manila'],
             ['supplier_name' => 'San Miguel Food & Beverage Inc.', 'contact_number' => '02-8632-2000', 'email' => 'fmcg@sanmiguel.example.ph', 'address' => 'Mandaluyong City, Metro Manila'],
             ['supplier_name' => 'Monde Nissin Corporation', 'contact_number' => '02-8759-7500', 'email' => 'distribution@mondenissin.example.ph', 'address' => 'Santa Rosa, Laguna'],
@@ -83,51 +83,51 @@ class SMGroceryStoreSeeder extends Seeder
         }
 
         // -------------------------------------------------------------
-        // 3. SM Supermarket Product Catalog (60+ Authentic Philippine Goods)
+        // 3. Supermarket Product Catalog (60+ Authentic Philippine Goods)
         // -------------------------------------------------------------
         // Note: Using 480... Philippines GS1 country code prefix with calculated EAN-13 check digit.
         $catalog = [
-            // SM Bonus Line
+            // Value Essentials Line
             [
-                'name' => 'SM Bonus Jasmine Rice 5kg',
+                'name' => 'Value Jasmine Rice 5kg',
                 'barcode' => $this->makeEan13('480000100001'),
-                'cat' => 'SM Bonus & Value Essentials',
-                'sup' => 'SM Retail Central Distribution',
+                'cat' => 'Value Essentials & Pantry Staples',
+                'sup' => 'Central Retail Distribution',
                 'price' => 265.00, 'cost' => 210.00, 'reorder' => 15, 'unit' => 'bag', 'stock' => 80,
             ],
             [
-                'name' => 'SM Bonus Purified Water 500ml',
+                'name' => 'Value Purified Water 500ml',
                 'barcode' => $this->makeEan13('480000100002'),
-                'cat' => 'SM Bonus & Value Essentials',
-                'sup' => 'SM Retail Central Distribution',
+                'cat' => 'Value Essentials & Pantry Staples',
+                'sup' => 'Central Retail Distribution',
                 'price' => 11.50, 'cost' => 6.50, 'reorder' => 50, 'unit' => 'bottle', 'stock' => 240,
             ],
             [
-                'name' => 'SM Bonus Pure Vegetable Oil 1L',
+                'name' => 'Value Pure Vegetable Oil 1L',
                 'barcode' => $this->makeEan13('480000100003'),
-                'cat' => 'SM Bonus & Value Essentials',
-                'sup' => 'SM Retail Central Distribution',
+                'cat' => 'Value Essentials & Pantry Staples',
+                'sup' => 'Central Retail Distribution',
                 'price' => 89.00, 'cost' => 68.00, 'reorder' => 20, 'unit' => 'bottle', 'stock' => 90,
             ],
             [
-                'name' => 'SM Bonus Refined White Sugar 1kg',
+                'name' => 'Value Refined White Sugar 1kg',
                 'barcode' => $this->makeEan13('480000100004'),
-                'cat' => 'SM Bonus & Value Essentials',
-                'sup' => 'SM Retail Central Distribution',
+                'cat' => 'Value Essentials & Pantry Staples',
+                'sup' => 'Central Retail Distribution',
                 'price' => 78.00, 'cost' => 60.00, 'reorder' => 25, 'unit' => 'pack', 'stock' => 110,
             ],
             [
-                'name' => 'SM Bonus Dishwashing Liquid Lemon 500ml',
+                'name' => 'Value Dishwashing Liquid Lemon 500ml',
                 'barcode' => $this->makeEan13('480000100005'),
-                'cat' => 'SM Bonus & Value Essentials',
-                'sup' => 'SM Retail Central Distribution',
+                'cat' => 'Value Essentials & Pantry Staples',
+                'sup' => 'Central Retail Distribution',
                 'price' => 49.50, 'cost' => 32.00, 'reorder' => 20, 'unit' => 'bottle', 'stock' => 85,
             ],
             [
-                'name' => 'SM Bonus Bleach Regular 1L',
+                'name' => 'Value Bleach Regular 1L',
                 'barcode' => $this->makeEan13('480000100006'),
-                'cat' => 'SM Bonus & Value Essentials',
-                'sup' => 'SM Retail Central Distribution',
+                'cat' => 'Value Essentials & Pantry Staples',
+                'sup' => 'Central Retail Distribution',
                 'price' => 38.00, 'cost' => 24.00, 'reorder' => 15, 'unit' => 'bottle', 'stock' => 70,
             ],
 
@@ -136,35 +136,35 @@ class SMGroceryStoreSeeder extends Seeder
                 'name' => 'Cavendish Banana Fresh (per kg)',
                 'barcode' => $this->makeEan13('480000200001'),
                 'cat' => 'Fresh Produce & Fruits',
-                'sup' => 'SM Retail Central Distribution',
+                'sup' => 'Central Retail Distribution',
                 'price' => 75.00, 'cost' => 48.00, 'reorder' => 15, 'unit' => 'kg', 'stock' => 50,
             ],
             [
                 'name' => 'Fuji Apple Sweet (per piece)',
                 'barcode' => $this->makeEan13('480000200002'),
                 'cat' => 'Fresh Produce & Fruits',
-                'sup' => 'SM Retail Central Distribution',
+                'sup' => 'Central Retail Distribution',
                 'price' => 25.00, 'cost' => 16.00, 'reorder' => 30, 'unit' => 'pc', 'stock' => 120,
             ],
             [
                 'name' => 'Red Onion Native (per kg)',
                 'barcode' => $this->makeEan13('480000200003'),
                 'cat' => 'Fresh Produce & Fruits',
-                'sup' => 'SM Retail Central Distribution',
+                'sup' => 'Central Retail Distribution',
                 'price' => 140.00, 'cost' => 95.00, 'reorder' => 10, 'unit' => 'kg', 'stock' => 40,
             ],
             [
                 'name' => 'Garlic Native Whole (per kg)',
                 'barcode' => $this->makeEan13('480000200004'),
                 'cat' => 'Fresh Produce & Fruits',
-                'sup' => 'SM Retail Central Distribution',
+                'sup' => 'Central Retail Distribution',
                 'price' => 130.00, 'cost' => 85.00, 'reorder' => 10, 'unit' => 'kg', 'stock' => 35,
             ],
             [
                 'name' => 'Carabao Ripe Mango (per kg)',
                 'barcode' => $this->makeEan13('480000200005'),
                 'cat' => 'Fresh Produce & Fruits',
-                'sup' => 'SM Retail Central Distribution',
+                'sup' => 'Central Retail Distribution',
                 'price' => 160.00, 'cost' => 110.00, 'reorder' => 10, 'unit' => 'kg', 'stock' => 30,
             ],
             [
@@ -185,7 +185,7 @@ class SMGroceryStoreSeeder extends Seeder
                 'name' => 'Fresh Bangus Milkfish Medium (per kg)',
                 'barcode' => $this->makeEan13('480000200008'),
                 'cat' => 'Seafood Market',
-                'sup' => 'SM Retail Central Distribution',
+                'sup' => 'Central Retail Distribution',
                 'price' => 210.00, 'cost' => 155.00, 'reorder' => 8, 'unit' => 'kg', 'stock' => 25,
             ],
 
@@ -201,7 +201,7 @@ class SMGroceryStoreSeeder extends Seeder
                 'name' => 'CDO Idol Cheesedog 500g',
                 'barcode' => $this->makeEan13('480000300002'),
                 'cat' => 'Dairy, Chilled & Eggs',
-                'sup' => 'SM Retail Central Distribution',
+                'sup' => 'Central Retail Distribution',
                 'price' => 115.00, 'cost' => 88.00, 'reorder' => 15, 'unit' => 'pack', 'stock' => 50,
             ],
             [
@@ -236,7 +236,7 @@ class SMGroceryStoreSeeder extends Seeder
                 'name' => 'Yakult Probiotic Drink (Pack of 5)',
                 'barcode' => $this->makeEan13('480000300007'),
                 'cat' => 'Dairy, Chilled & Eggs',
-                'sup' => 'SM Retail Central Distribution',
+                'sup' => 'Central Retail Distribution',
                 'price' => 58.00, 'cost' => 44.00, 'reorder' => 30, 'unit' => 'pack', 'stock' => 120,
             ],
             [
@@ -252,7 +252,7 @@ class SMGroceryStoreSeeder extends Seeder
                 'name' => 'Sinandomeng Special Rice 10kg',
                 'barcode' => $this->makeEan13('480000400001'),
                 'cat' => 'Rice, Grains & Cooking Condiments',
-                'sup' => 'SM Retail Central Distribution',
+                'sup' => 'Central Retail Distribution',
                 'price' => 520.00, 'cost' => 430.00, 'reorder' => 10, 'unit' => 'sack', 'stock' => 40,
             ],
             [
@@ -338,7 +338,7 @@ class SMGroceryStoreSeeder extends Seeder
                 'name' => 'Mega Sardines in Tomato Sauce Red 155g',
                 'barcode' => $this->makeEan13('480000500004'),
                 'cat' => 'Canned Goods & Preserves',
-                'sup' => 'SM Retail Central Distribution',
+                'sup' => 'Central Retail Distribution',
                 'price' => 24.50, 'cost' => 17.50, 'reorder' => 40, 'unit' => 'can', 'stock' => 180,
             ],
             [
@@ -352,7 +352,7 @@ class SMGroceryStoreSeeder extends Seeder
                 'name' => 'SPAM Classic Luncheon Meat 340g',
                 'barcode' => $this->makeEan13('480000500006'),
                 'cat' => 'Canned Goods & Preserves',
-                'sup' => 'SM Retail Central Distribution',
+                'sup' => 'Central Retail Distribution',
                 'price' => 195.00, 'cost' => 155.00, 'reorder' => 15, 'unit' => 'can', 'stock' => 60,
             ],
             [
@@ -454,7 +454,7 @@ class SMGroceryStoreSeeder extends Seeder
                 'name' => 'Choc-Nut Peanut Milk Chocolate (24s)',
                 'barcode' => $this->makeEan13('480000700007'),
                 'cat' => 'Snacks, Chips & Biscuits',
-                'sup' => 'SM Retail Central Distribution',
+                'sup' => 'Central Retail Distribution',
                 'price' => 48.00, 'cost' => 34.00, 'reorder' => 20, 'unit' => 'pack', 'stock' => 80,
             ],
 
@@ -463,21 +463,21 @@ class SMGroceryStoreSeeder extends Seeder
                 'name' => 'Coca-Cola 1.5L PET Bottle',
                 'barcode' => $this->makeEan13('480000800001'),
                 'cat' => 'Beverages, Juices & Coffee',
-                'sup' => 'SM Retail Central Distribution',
+                'sup' => 'Central Retail Distribution',
                 'price' => 68.00, 'cost' => 50.00, 'reorder' => 30, 'unit' => 'bottle', 'stock' => 120,
             ],
             [
                 'name' => 'Sprite 1.5L PET Bottle',
                 'barcode' => $this->makeEan13('480000800002'),
                 'cat' => 'Beverages, Juices & Coffee',
-                'sup' => 'SM Retail Central Distribution',
+                'sup' => 'Central Retail Distribution',
                 'price' => 68.00, 'cost' => 50.00, 'reorder' => 25, 'unit' => 'bottle', 'stock' => 90,
             ],
             [
                 'name' => 'Royal Tru-Orange 1.5L PET Bottle',
                 'barcode' => $this->makeEan13('480000800003'),
                 'cat' => 'Beverages, Juices & Coffee',
-                'sup' => 'SM Retail Central Distribution',
+                'sup' => 'Central Retail Distribution',
                 'price' => 68.00, 'cost' => 50.00, 'reorder' => 25, 'unit' => 'bottle', 'stock' => 85,
             ],
             [
@@ -498,7 +498,7 @@ class SMGroceryStoreSeeder extends Seeder
                 'name' => 'Kopiko Blanca Coffee Mix 30g (Pack of 10)',
                 'barcode' => $this->makeEan13('480000800006'),
                 'cat' => 'Beverages, Juices & Coffee',
-                'sup' => 'SM Retail Central Distribution',
+                'sup' => 'Central Retail Distribution',
                 'price' => 85.00, 'cost' => 64.00, 'reorder' => 30, 'unit' => 'pack', 'stock' => 110,
             ],
             [
@@ -556,7 +556,7 @@ class SMGroceryStoreSeeder extends Seeder
                 'name' => 'Zonrox Bleach Original 1L',
                 'barcode' => $this->makeEan13('480000900005'),
                 'cat' => 'Household & Cleaning Supplies',
-                'sup' => 'SM Retail Central Distribution',
+                'sup' => 'Central Retail Distribution',
                 'price' => 48.00, 'cost' => 34.00, 'reorder' => 20, 'unit' => 'bottle', 'stock' => 80,
             ],
 
@@ -572,7 +572,7 @@ class SMGroceryStoreSeeder extends Seeder
                 'name' => 'Palmolive Naturals Shampoo 180ml',
                 'barcode' => $this->makeEan13('480001000002'),
                 'cat' => 'Personal Care & Grooming',
-                'sup' => 'SM Retail Central Distribution',
+                'sup' => 'Central Retail Distribution',
                 'price' => 112.00, 'cost' => 84.00, 'reorder' => 20, 'unit' => 'bottle', 'stock' => 65,
             ],
             [
@@ -586,7 +586,7 @@ class SMGroceryStoreSeeder extends Seeder
                 'name' => 'Colgate Total Clean Mint Toothpaste 150g',
                 'barcode' => $this->makeEan13('480001000004'),
                 'cat' => 'Personal Care & Grooming',
-                'sup' => 'SM Retail Central Distribution',
+                'sup' => 'Central Retail Distribution',
                 'price' => 135.00, 'cost' => 102.00, 'reorder' => 25, 'unit' => 'tube', 'stock' => 80,
             ],
             [
@@ -607,8 +607,31 @@ class SMGroceryStoreSeeder extends Seeder
                 'name' => 'Johnsons Baby Powder Blossom 200g',
                 'barcode' => $this->makeEan13('480001100002'),
                 'cat' => 'Baby Care Essentials',
-                'sup' => 'SM Retail Central Distribution',
+                'sup' => 'Central Retail Distribution',
                 'price' => 95.00, 'cost' => 70.00, 'reorder' => 20, 'unit' => 'bottle', 'stock' => 70,
+            ],
+
+            // Breakfast & Bakery Essentials
+            [
+                'name' => 'Gardenia Classic White Bread 400g',
+                'barcode' => $this->makeEan13('480001200001'),
+                'cat' => 'Breakfast & Bakery',
+                'sup' => 'Universal Robina Corporation (URC)',
+                'price' => 65.00, 'cost' => 48.00, 'reorder' => 20, 'unit' => 'pack', 'stock' => 45,
+            ],
+            [
+                'name' => 'Eden Sandwich Spread 220ml',
+                'barcode' => $this->makeEan13('480001200002'),
+                'cat' => 'Breakfast & Bakery',
+                'sup' => 'Monde Nissin Corporation',
+                'price' => 82.00, 'cost' => 60.00, 'reorder' => 15, 'unit' => 'pouch', 'stock' => 50,
+            ],
+            [
+                'name' => 'Nestle Koko Krunch Cereal 170g',
+                'barcode' => $this->makeEan13('480001200003'),
+                'cat' => 'Breakfast & Bakery',
+                'sup' => 'Nestle Philippines Inc.',
+                'price' => 98.00, 'cost' => 72.00, 'reorder' => 15, 'unit' => 'box', 'stock' => 35,
             ],
         ];
 
@@ -668,15 +691,15 @@ class SMGroceryStoreSeeder extends Seeder
         }
 
         // -------------------------------------------------------------
-        // 4. SM Advantage Card (SMAC) Loyalty Customers
+        // 4. Loyalty Customers
         // -------------------------------------------------------------
-        $smacCustomers = [
+        $loyaltyCustomers = [
             [
                 'first_name' => 'Maria Clara',
                 'last_name' => 'Santos',
                 'contact_number' => '09171234888',
                 'email' => 'mariaclara.santos@email.ph',
-                'address' => 'Unit 402 Tower B, SMDC Light Residences, Mandaluyong City',
+                'address' => 'Unit 402 Tower B, Light Residences, Mandaluyong City',
                 'loyalty_points' => 485,
                 'total_purchases' => 48500.00,
                 'date_of_birth' => '1988-06-12',
@@ -720,7 +743,7 @@ class SMGroceryStoreSeeder extends Seeder
                 'last_name' => 'Salonga-Mendoza',
                 'contact_number' => '09177778899',
                 'email' => 'lea.mendoza@email.ph',
-                'address' => '77 SMDC Grass Residences, Quezon City',
+                'address' => '77 Grass Residences, Quezon City',
                 'loyalty_points' => 1250,
                 'total_purchases' => 125000.00,
                 'date_of_birth' => '1982-03-22',
@@ -728,7 +751,7 @@ class SMGroceryStoreSeeder extends Seeder
             ],
         ];
 
-        foreach ($smacCustomers as $cust) {
+        foreach ($loyaltyCustomers as $cust) {
             Customer::query()->updateOrCreate(
                 ['contact_number' => $cust['contact_number']],
                 $cust,
@@ -736,12 +759,12 @@ class SMGroceryStoreSeeder extends Seeder
         }
 
         // -------------------------------------------------------------
-        // 5. SM Supermarket Promotions & Store Discounts
+        // 5. Promotions & Store Discounts
         // -------------------------------------------------------------
         $discounts = [
             ['discount_name' => 'Senior Citizen 20%', 'discount_type' => 'percentage', 'discount_value' => 20, 'start_date' => now()->subYear(), 'end_date' => now()->addYears(2)],
             ['discount_name' => 'PWD Discount 20%', 'discount_type' => 'percentage', 'discount_value' => 20, 'start_date' => now()->subYear(), 'end_date' => now()->addYears(2)],
-            ['discount_name' => 'SMAC Member Special 5%', 'discount_type' => 'percentage', 'discount_value' => 5, 'start_date' => now()->subMonths(6), 'end_date' => now()->addYear()],
+            ['discount_name' => 'Loyalty Member Special 5%', 'discount_type' => 'percentage', 'discount_value' => 5, 'start_date' => now()->subMonths(6), 'end_date' => now()->addYear()],
         ];
 
         foreach ($discounts as $d) {
@@ -753,7 +776,7 @@ class SMGroceryStoreSeeder extends Seeder
 
         // Auto-promotions
         Promotion::query()->updateOrCreate(
-            ['name' => 'SM 3-Day Super Sale 10% Off'],
+            ['name' => 'Super Weekend Sale 10% Off'],
             [
                 'type' => 'percentage',
                 'value' => 10.00,
@@ -782,12 +805,12 @@ class SMGroceryStoreSeeder extends Seeder
         }
 
         // -------------------------------------------------------------
-        // 6. SM Supermarket Coupons
+        // 6. Store Coupons
         // -------------------------------------------------------------
         $coupons = [
             [
-                'code' => 'SMAC50',
-                'description' => '₱50 off min ₱500 for SMAC cardholders',
+                'code' => 'LOYALTY50',
+                'description' => '₱50 off min ₱500 for loyalty cardholders',
                 'type' => 'fixed',
                 'value' => 50.00,
                 'min_purchase' => 500.00,
@@ -798,8 +821,8 @@ class SMGroceryStoreSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'code' => 'SMBONUS100',
-                'description' => '₱100 off min ₱1,000 on SM Bonus groceries',
+                'code' => 'VALUE100',
+                'description' => '₱100 off min ₱1,000 on value essentials groceries',
                 'type' => 'fixed',
                 'value' => 100.00,
                 'min_purchase' => 1000.00,
@@ -810,8 +833,8 @@ class SMGroceryStoreSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'code' => 'SM3DAYSALE',
-                'description' => '10% discount during SM 3-Day Super Sale weekend',
+                'code' => 'WEEKENDSALE',
+                'description' => '10% discount during Super Weekend Sale',
                 'type' => 'percentage',
                 'value' => 10.00,
                 'min_purchase' => 800.00,

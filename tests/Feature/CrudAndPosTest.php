@@ -133,6 +133,50 @@ class CrudAndPosTest extends TestCase
         $this->assertEquals(8.000, $product->fresh()->inventory->stock_quantity);
     }
 
+    public function test_cashier_cannot_access_dashboard_and_redirects_to_pos(): void
+    {
+        $cashier = $this->employee('cashier');
+
+        // Cashier cannot access /dashboard
+        $this->actingAs($cashier)
+            ->get(route('dashboard'))
+            ->assertStatus(403);
+
+        // Cashier accessing root / redirects to /pos
+        $this->actingAs($cashier)
+            ->get('/')
+            ->assertRedirect(route('pos.index'));
+
+        // Manager can access /dashboard
+        $manager = $this->employee('manager');
+        $this->actingAs($manager)
+            ->get(route('dashboard'))
+            ->assertStatus(200);
+
+        // Manager accessing root / redirects to /dashboard
+        $this->actingAs($manager)
+            ->get('/')
+            ->assertRedirect(route('dashboard'));
+    }
+
+    public function test_manager_reports_access_and_cashier_forbidden(): void
+    {
+        $cashier = $this->employee('cashier');
+        $this->actingAs($cashier)
+            ->get(route('reports.index'))
+            ->assertStatus(403);
+
+        $manager = $this->employee('manager');
+        $this->actingAs($manager)
+            ->get(route('reports.index'))
+            ->assertStatus(200)
+            ->assertSee('Daily')
+            ->assertSee('Weekly')
+            ->assertSee('Monthly')
+            ->assertSee('Yearly')
+            ->assertSee('Apply');
+    }
+
     private function employee(string $username): Employee
     {
         return Employee::query()->where('username', $username)->firstOrFail();

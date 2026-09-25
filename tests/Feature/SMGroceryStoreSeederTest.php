@@ -29,7 +29,7 @@ class SMGroceryStoreSeederTest extends TestCase
     public function test_sm_categories_are_seeded(): void
     {
         $this->assertDatabaseHas('category', [
-            'category_name' => 'SM Bonus & Value Essentials',
+            'category_name' => 'Value Essentials & Pantry Staples',
         ]);
         $this->assertDatabaseHas('category', [
             'category_name' => 'Fresh Produce & Fruits',
@@ -45,7 +45,7 @@ class SMGroceryStoreSeederTest extends TestCase
     public function test_sm_suppliers_are_seeded(): void
     {
         $this->assertDatabaseHas('supplier', [
-            'supplier_name' => 'SM Retail Central Distribution',
+            'supplier_name' => 'Central Retail Distribution',
         ]);
         $this->assertDatabaseHas('supplier', [
             'supplier_name' => 'Universal Robina Corporation (URC)',
@@ -60,16 +60,16 @@ class SMGroceryStoreSeederTest extends TestCase
 
     public function test_sm_products_have_valid_ean13_barcodes_and_inventory(): void
     {
-        $smBonusRice = Product::query()->where('product_name', 'SM Bonus Jasmine Rice 5kg')->first();
-        $this->assertNotNull($smBonusRice);
-        $this->assertEquals(13, strlen($smBonusRice->barcode));
+        $valueRice = Product::query()->where('product_name', 'Value Jasmine Rice 5kg')->first();
+        $this->assertNotNull($valueRice);
+        $this->assertEquals(13, strlen($valueRice->barcode));
         $this->assertEquals(
-            substr($smBonusRice->barcode, -1),
-            Product::ean13Checksum(substr($smBonusRice->barcode, 0, 12))
+            substr($valueRice->barcode, -1),
+            Product::ean13Checksum(substr($valueRice->barcode, 0, 12))
         );
 
         // Inventory check
-        $this->assertGreaterThan(0, $smBonusRice->stockQuantity());
+        $this->assertGreaterThan(0, $valueRice->stockQuantity());
 
         // Check iconic goods
         $this->assertDatabaseHas('product', [
@@ -100,20 +100,20 @@ class SMGroceryStoreSeederTest extends TestCase
     public function test_sm_promotions_and_coupons_are_seeded(): void
     {
         $this->assertDatabaseHas('coupon', [
-            'code' => 'SMAC50',
+            'code' => 'LOYALTY50',
             'is_active' => true,
         ]);
         $this->assertDatabaseHas('coupon', [
-            'code' => 'SMBONUS100',
+            'code' => 'VALUE100',
             'is_active' => true,
         ]);
         $this->assertDatabaseHas('coupon', [
-            'code' => 'SM3DAYSALE',
+            'code' => 'WEEKENDSALE',
             'is_active' => true,
         ]);
 
         $this->assertDatabaseHas('promotion', [
-            'name' => 'SM 3-Day Super Sale 10% Off',
+            'name' => 'Super Weekend Sale 10% Off',
             'is_active' => true,
         ]);
     }

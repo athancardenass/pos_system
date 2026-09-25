@@ -9,6 +9,8 @@
         display: flex;
         flex-direction: column;
         gap: 1.25rem;
+        min-width: 0;
+        max-width: 100%;
     }
 
     /* Top Bar */
@@ -90,7 +92,7 @@
     /* POS 2-Column Grid (Main Work Area) */
     .pos-work-grid {
         display: grid;
-        grid-template-columns: 1.25fr 1fr;
+        grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
         gap: 1.25rem;
         align-items: stretch;
     }
@@ -109,6 +111,7 @@
         box-shadow: var(--shadow-card);
         display: flex;
         flex-direction: column;
+        min-width: 0;
     }
     .pos-section-title {
         font-size: 0.75rem;
@@ -291,6 +294,8 @@
         padding-bottom: 0.4rem;
         margin-bottom: 0.65rem;
         scrollbar-width: thin;
+        min-width: 0;
+        max-width: 100%;
     }
     .pos-cat-chip {
         display: inline-flex;

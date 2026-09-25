@@ -50,6 +50,11 @@
             color: var(--text); transition: all 0.15s;
         }
         .pos-quick-btn:hover { border-color: var(--accent); }
+        .pos-quick-btn.active {
+            background: var(--text);
+            color: #fff;
+            border-color: var(--text);
+        }
     </style>
     @endpush
 
@@ -57,6 +62,9 @@
     <script>
         document.querySelectorAll('.pos-quick-btn').forEach(btn => {
             btn.addEventListener('click', () => {
+                document.querySelectorAll('.pos-quick-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
                 const today = new Date();
                 let from = new Date();
                 const to = new Date();
@@ -80,7 +88,6 @@
                 const fmt = d => d.toISOString().split('T')[0];
                 document.getElementById('from').value = fmt(from);
                 document.getElementById('to').value = fmt(to);
-                document.getElementById('report-filter-form').submit();
             });
         });
     </script>

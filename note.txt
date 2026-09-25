@@ -1,0 +1,108 @@
+================================================================================
+                    POS SYSTEM - SETUP & TROUBLESHOOTING GUIDE
+================================================================================
+
+1. PREREQUISITES
+--------------------------------------------------------------------------------
+- XAMPP with PHP 8.2+ or 8.3+ and MariaDB/MySQL
+- Composer installed globally
+- Node.js (v18+ or v20+) & npm
+- Git
+
+2. INITIAL SETUP ON NEW LAPTOP / WORKSTATION
+--------------------------------------------------------------------------------
+Open terminal in your project directory (e.g. C:\xampp\htdocs\pos_system):
+
+1. Install PHP dependencies:
+   composer install
+
+2. Install & build frontend assets:
+   npm install
+   npm run build
+
+3. Configure Environment (.env):
+   If .env doesn't exist:
+   cp .env.example .env
+   php artisan key:generate
+
+   Verify your .env database settings:
+   DB_CONNECTION=mysql
+   DB_HOST=127.0.0.1
+   DB_PORT=3306
+   DB_DATABASE=pos_system
+   DB_USERNAME=root
+   DB_PASSWORD=
+
+4. Create Database:
+   Start Apache and MySQL from XAMPP Control Panel.
+   Open terminal or phpMyAdmin (http://localhost/phpmyadmin) and create:
+   CREATE DATABASE pos_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+5. Run Migrations & Seeders:
+   To run fresh migrations and seed standard demo data:
+   php artisan migrate:fresh --seed
+
+   To seed the full grocery supermarket catalog (authentic retail goods):
+   php artisan db:seed --class=SMGroceryStoreSeeder
+
+   Quick One-Liner for Clean Setup:
+   php artisan migrate:fresh --seed && php artisan db:seed --class=SMGroceryStoreSeeder
+
+3. RUNNING THE SYSTEM
+--------------------------------------------------------------------------------
+Start local development server:
+php artisan serve
+
+Open in browser:
+http://127.0.0.1:8000
+
+4. DEFAULT LOGIN CREDENTIALS
+--------------------------------------------------------------------------------
+Role: Manager (Full administrative & dashboard access)
+  Username: manager
+  Password: password
+
+Role: Cashier (Sales floor & POS terminal access)
+  Username: cashier
+  Password: password
+
+5. COMMON TROUBLESHOOTING & FIXES
+--------------------------------------------------------------------------------
+Issue A: "[2002] Connection refused" / "SQLSTATE[HY000] [2002]"
+Cause: MariaDB/MySQL service is not running.
+Fix:
+- Open XAMPP Control Panel and click "Start" beside MySQL.
+- Check if port 3306 is occupied by another service.
+
+Issue B: "419 Page Expired" on Login or CSRF Token Mismatch
+Fix:
+- Clear application caches:
+  php artisan config:clear
+  php artisan cache:clear
+  php artisan session:clear
+- Check your .env file: ensure APP_URL=http://127.0.0.1:8000.
+- Clear browser cookies for 127.0.0.1.
+
+Issue C: Stale CSS or UI Glitches / Port 8000 Conflicts
+Fix:
+- In Windows terminal: check if a ghost process is holding port 8000:
+  netstat -ano | findstr :8000
+  taskkill /PID <PID> /F
+- Start a clean server:
+  php artisan serve
+- If assets were modified:
+  npm run build
+
+Issue D: Stock Re-stocking / Low Stock Reset
+Fix:
+- To restock all products above their reorder thresholds:
+  php artisan db:seed --class=RealisticDataSeeder
+  or
+  php artisan db:seed --class=SMGroceryStoreSeeder
+
+Issue E: Running Automated Tests
+Fix:
+- Run entire PHPUnit test suite:
+  php artisan test
+
+================================================================================

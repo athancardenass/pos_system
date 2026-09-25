@@ -7,7 +7,7 @@ return [
     | The old 'Admin' role has been merged into Manager (manager = everything).
     */
     'modules' => [
-        'dashboard' => ['Manager', 'Cashier'],
+        'dashboard' => ['Manager'],
         'pos.index' => ['Manager', 'Cashier'],
         'customers.index' => ['Manager', 'Cashier'],
         'categories.index' => ['Manager'],
@@ -39,7 +39,7 @@ return [
         'coupons.index' => ['Manager'],
         'discounts.index' => ['Manager'],
         'reports.index' => ['Manager'],
-        'dashboard' => ['Manager', 'Cashier'],
+        'dashboard' => ['Manager'],
         'employees.index' => ['Manager'],
         'audit-logs.index' => ['Manager'],
     ],

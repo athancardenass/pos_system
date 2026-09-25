@@ -19,9 +19,13 @@ use App\Http\Controllers\SupplierController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return auth()->check()
-        ? redirect()->route('dashboard')
-        : redirect()->route('login');
+    if (! auth()->check()) {
+        return redirect()->route('login');
+    }
+
+    return auth()->user()->hasRole('Cashier')
+        ? redirect()->route('pos.index')
+        : redirect()->route('dashboard');
 });
 
 Route::middleware('guest')->group(function () {
@@ -32,7 +36,7 @@ Route::middleware('guest')->group(function () {
 Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth')->name('logout');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::get('/dashboard', DashboardController::class)->middleware('role:Manager')->name('dashboard');
 
     Route::middleware('role:Cashier,Manager')->group(function () {
         Route::get('/pos', [PosController::class, 'index'])->name('pos.index');
