@@ -16,7 +16,7 @@ use App\Models\SaleTransaction;
 use App\Models\Supplier;
 use Illuminate\Database\Seeder;
 
-class SMGroceryStoreSeeder extends Seeder
+class GroceryStoreSeeder extends Seeder
 {
     /**
      * Compute a 13-digit EAN-13 barcode using a 12-digit base.
@@ -205,7 +205,7 @@ class SMGroceryStoreSeeder extends Seeder
                 'price' => 115.00, 'cost' => 88.00, 'reorder' => 15, 'unit' => 'pack', 'stock' => 50,
             ],
             [
-                'name' => 'Magnolia Fresh Milk 1L',
+                'name' => 'Magnolia Pure Fresh Milk 1L',
                 'barcode' => $this->makeEan13('480000300003'),
                 'cat' => 'Dairy, Chilled & Eggs',
                 'sup' => 'San Miguel Food & Beverage Inc.',

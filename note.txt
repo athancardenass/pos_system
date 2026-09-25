@@ -4,21 +4,22 @@
 
 1. PREREQUISITES
 --------------------------------------------------------------------------------
-- XAMPP with PHP 8.2+ or 8.3+ and MariaDB/MySQL
+- XAMPP with PHP 8.2+ or 8.3+ and MariaDB/MySQL (:3306)
 - Composer installed globally
 - Node.js (v18+ or v20+) & npm
 - Git
 
 2. INITIAL SETUP ON NEW LAPTOP / WORKSTATION
 --------------------------------------------------------------------------------
-Open terminal in your project directory (e.g. C:\xampp\htdocs\pos_system):
+Open PowerShell or Terminal in your project directory (e.g. C:\xampp\htdocs\pos_system):
 
 1. Install PHP dependencies:
    composer install
 
-2. Install & build frontend assets:
+2. Install & build frontend assets (PowerShell compatible):
    npm install
    npm run build
+   (or in one line in PowerShell: npm install; npm run build)
 
 3. Configure Environment (.env):
    If .env doesn't exist:
@@ -38,15 +39,20 @@ Open terminal in your project directory (e.g. C:\xampp\htdocs\pos_system):
    Open terminal or phpMyAdmin (http://localhost/phpmyadmin) and create:
    CREATE DATABASE pos_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-5. Run Migrations & Seeders:
-   To run fresh migrations and seed standard demo data:
+5. Run Migrations & Seeders (PowerShell Compatible):
+   Note: Windows PowerShell does NOT support '&&'. Use ';' or run sequentially:
+
+   Step A: Run fresh migrations and seed baseline accounts/data:
    php artisan migrate:fresh --seed
 
-   To seed the full grocery supermarket catalog (authentic retail goods):
-   php artisan db:seed --class=SMGroceryStoreSeeder
+   Step B: Seed the full grocery store catalog (authentic Philippine retail goods):
+   php artisan db:seed --class=GroceryStoreSeeder
 
-   Quick One-Liner for Clean Setup:
-   php artisan migrate:fresh --seed && php artisan db:seed --class=SMGroceryStoreSeeder
+   PowerShell One-Liner (use ';' instead of '&&'):
+   php artisan migrate:fresh --seed; php artisan db:seed --class=GroceryStoreSeeder
+
+   Command Prompt (CMD) One-Liner:
+   php artisan migrate:fresh --seed && php artisan db:seed --class=GroceryStoreSeeder
 
 3. RUNNING THE SYSTEM
 --------------------------------------------------------------------------------
@@ -72,25 +78,23 @@ Issue A: "[2002] Connection refused" / "SQLSTATE[HY000] [2002]"
 Cause: MariaDB/MySQL service is not running.
 Fix:
 - Open XAMPP Control Panel and click "Start" beside MySQL.
-- Check if port 3306 is occupied by another service.
+- Ensure port 3306 is not blocked.
 
 Issue B: "419 Page Expired" on Login or CSRF Token Mismatch
 Fix:
-- Clear application caches:
-  php artisan config:clear
-  php artisan cache:clear
-  php artisan session:clear
+- Clear all application & framework caches:
+  php artisan optimize:clear
 - Check your .env file: ensure APP_URL=http://127.0.0.1:8000.
-- Clear browser cookies for 127.0.0.1.
+- Clear browser cookies for 127.0.0.1 / localhost.
 
 Issue C: Stale CSS or UI Glitches / Port 8000 Conflicts
 Fix:
-- In Windows terminal: check if a ghost process is holding port 8000:
-  netstat -ano | findstr :8000
-  taskkill /PID <PID> /F
+- In Windows PowerShell / CMD: check if a ghost process is holding port 8000:
+  Get-Process -Id (Get-NetTCPConnection -LocalPort 8000).OwningProcess | Stop-Process -Force
+  (or in CMD: netstat -ano | findstr :8000  =>  taskkill /PID <PID> /F)
 - Start a clean server:
   php artisan serve
-- If assets were modified:
+- If CSS/JS was modified, re-compile:
   npm run build
 
 Issue D: Stock Re-stocking / Low Stock Reset
@@ -98,9 +102,14 @@ Fix:
 - To restock all products above their reorder thresholds:
   php artisan db:seed --class=RealisticDataSeeder
   or
-  php artisan db:seed --class=SMGroceryStoreSeeder
+  php artisan db:seed --class=GroceryStoreSeeder
 
-Issue E: Running Automated Tests
+Issue E: Clear Cache & Reset Duplications
+Fix:
+- Clear all Laravel caches in one command:
+  php artisan optimize:clear
+
+Issue F: Running Automated Tests
 Fix:
 - Run entire PHPUnit test suite:
   php artisan test

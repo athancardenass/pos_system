@@ -11,11 +11,11 @@ use App\Models\Product;
 use App\Models\Promotion;
 use App\Models\Supplier;
 use Database\Seeders\DatabaseSeeder;
-use Database\Seeders\SMGroceryStoreSeeder;
+use Database\Seeders\GroceryStoreSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-class SMGroceryStoreSeederTest extends TestCase
+class GroceryStoreSeederTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -23,7 +23,7 @@ class SMGroceryStoreSeederTest extends TestCase
     {
         parent::setUp();
         $this->seed(DatabaseSeeder::class);
-        $this->seed(SMGroceryStoreSeeder::class);
+        $this->seed(GroceryStoreSeeder::class);
     }
 
     public function test_sm_categories_are_seeded(): void
