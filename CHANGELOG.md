@@ -7,6 +7,60 @@
 
 ---
 
+## 2026-09-25 — SM Grocery Store Seeder, SaleService Refactor, Refund Window UI & Credit Slip Polish
+
+**What:**
+1. **SM Grocery Store Seeder (`database/seeders/SMGroceryStoreSeeder.php`):**
+   - Created comprehensive Philippine SM Supermarket / SM Hypermarket demo catalog.
+   - 15 authentic supermarket categories (SM Bonus & Value Essentials, Fresh Produce, Meat & Poultry, Seafood, Dairy, Rice & Condiments, Noodles, Snacks, Beverages, Household, Personal Care, Baby Care).
+   - 11 top Philippine FMCG distributors & suppliers (SM Retail Central Distribution, URC, San Miguel, Monde Nissin, Nestle, Unilever, P&G, NutriAsia, Century Pacific, Del Monte, Oishi).
+   - 60+ authentic Filipino grocery goods with verified EAN-13 barcodes (GS1 480 prefix + calculated checksum), realistic pricing, units of measure, and active inventory.
+   - SM Advantage Card (SMAC) loyalty customer accounts with active points.
+   - SM Supermarket promotions & coupons (`SMAC50`, `SMBONUS100`, `SM3DAYSALE`, `SAVEBIG15`).
+   - Covered by 5 new automated feature tests in `tests/Feature/SMGroceryStoreSeederTest.php`.
+2. **SaleService Refactoring (`app/Services/SaleService.php`):**
+   - Extracted catalog preparation and receipt eager-loading query logic from `PosController` into a dedicated domain service.
+   - PosController methods `index()` and `show()` now delegate to `SaleService::getPosIndexData()` and `SaleService::loadSaleForReceipt()`.
+   - Added refund window helper calculations: `refundDaysRemaining()` and `isOutsideRefundWindow()`.
+   - Covered by 3 new unit tests in `tests/Unit/SaleServiceTest.php`.
+3. **Refund Window Status UI (`resources/views/pos/show.blade.php`):**
+   - Added dynamic return window indicators on receipt footer and refund modal.
+   - Displays real-time eligibility countdown ("Refund window active: X days remaining") or expiration banner ("Return policy expired: X days old &bull; Manager override required").
+   - Added policy override warning notice inside the refund form when a transaction exceeds the 7-day limit.
+4. **Credit Slip Polish (`resources/views/pos/refund-slip.blade.php`):**
+   - Upgraded refund credit slip with official Philippine supermarket layout, BIR VAT Reg TIN, formatted slip numbering (`CS-00000X`), returned merchandise breakdown, and tender reimbursement note.
+   - Added formal customer acknowledgment and authorized store manager signature lines.
+   - Optimized thermal print styling for receipt and credit slip issuance.
+5. **Academic Case Study & System Documentation Deliverables:**
+   - Generated `POS_System_Documentation.docx` and `POS_Case_Study.docx` in Word document format with academic structure, architecture diagrams, database ER summaries, and evaluation metrics.
+
+**Files touched:**
+- `database/seeders/SMGroceryStoreSeeder.php`
+- `app/Services/SaleService.php`
+- `app/Http/Controllers/PosController.php`
+- `resources/views/pos/show.blade.php`
+- `resources/views/pos/refund-slip.blade.php`
+- `tests/Feature/SMGroceryStoreSeederTest.php`
+- `tests/Unit/SaleServiceTest.php`
+- `CHANGELOG.md`
+- `SYSTEM_DOCUMENTATION.md`
+- `POS_System_Documentation.docx`
+- `POS_Case_Study.docx`
+
+---
+
+## 2026-09-23 — System Architecture & Technical Documentation
+
+**What:**
+- Generated comprehensive technical and architectural specification document: `SYSTEM_DOCUMENTATION.md`.
+- Documents executive summary, architecture diagram, domain services (`CheckoutService`, `PromotionService`, `RefundService`, `CashDrawerService`), multi-method payment verification, RBAC security model, database schema data dictionary, and semester integration horizon (CRM/HRMS/Procurement).
+
+**Files touched:**
+- `SYSTEM_DOCUMENTATION.md`
+- `CHANGELOG.md`
+
+---
+
 ## 2026-09-23 — Global Barcode Catcher, Web Audio Synthesizer & Receipt Refund Policy
 
 **What:**

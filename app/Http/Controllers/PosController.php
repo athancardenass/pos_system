@@ -11,6 +11,7 @@ use App\Models\SaleTransaction;
 use App\Services\CheckoutService;
 use App\Services\PromotionService;
 use App\Services\RefundService;
+use App\Services\SaleService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,49 +22,15 @@ class PosController extends Controller
 {
     public function __construct(
         private readonly CheckoutService $checkoutService,
+        private readonly SaleService $saleService,
     ) {
     }
 
     public function index(): View
     {
-        $products = Product::query()
-            ->with(['inventory', 'category'])
-            ->orderBy('product_name')
-            ->get();
+        $data = $this->saleService->getPosIndexData();
 
-        $categories = Category::query()
-            ->orderBy('category_name')
-            ->get();
-
-        $customers = Customer::query()
-            ->where('customer_status', 'active')
-            ->orderBy('last_name')
-            ->get();
-
-        $discounts = Discount::query()
-            ->orderBy('discount_name')
-            ->get()
-            ->filter(fn (Discount $discount) => $discount->isActive())
-            ->values();
-
-        $productsJson = $products->map(fn ($p) => [
-            'id' => $p->product_id,
-            'name' => $p->product_name,
-            'price' => (float) $p->unit_price,
-            'stock' => $p->stockQuantity(),
-            'barcode' => $p->barcode,
-            'category_id' => $p->category_id,
-            'category_name' => $p->category?->category_name ?? 'General',
-        ]);
-
-        $customersJson = $customers->map(fn ($c) => [
-            'id' => $c->customer_id,
-            'name' => $c->fullName(),
-            'contact' => $c->contact_number,
-            'points' => (int) $c->loyalty_points,
-        ]);
-
-        return view('pos.index', compact('products', 'categories', 'customers', 'discounts', 'productsJson', 'customersJson'));
+        return view('pos.index', $data);
     }
 
     public function checkCoupon(Request $request, PromotionService $promotionService): JsonResponse
@@ -120,18 +87,9 @@ class PosController extends Controller
 
     public function show(SaleTransaction $saleTransaction): View
     {
-        $saleTransaction->load([
-            'customer', 'employee', 'discount', 'payment', 'receipt',
-            'refunds.employee', 'refunds.items',
-            'appliedPromotions.promotion', 'couponRedemptions.coupon',
-            // Product AND the refunded-qty aggregate ride along on the lines, so the
-            // receipt loop's refundableQuantity() calls cost zero extra queries (N+1).
-            'saleDetails' => fn ($query) => $query
-                ->with('product')
-                ->withSum('refundItems as refunded_qty', 'quantity'),
-        ]);
+        $sale = $this->saleService->loadSaleForReceipt($saleTransaction);
 
-        return view('pos.show', ['sale' => $saleTransaction]);
+        return view('pos.show', ['sale' => $sale]);
     }
 
     public function slip(\App\Models\SaleRefund $refund): View

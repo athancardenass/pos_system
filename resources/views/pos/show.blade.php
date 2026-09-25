@@ -152,9 +152,24 @@
             <div style="border-top: 2px dashed var(--rule); margin: 1.25rem 0;"></div>
 
             {{-- Footer --}}
+            @php
+                $daysOld = $sale->transaction_date ? (int) $sale->transaction_date->diffInDays(now()) : 0;
+                $windowDays = \App\Services\RefundService::WINDOW_DAYS;
+                $daysRemaining = max(0, $windowDays - $daysOld);
+                $isOutsideWindow = $daysOld > $windowDays;
+            @endphp
             <div style="text-align: center; font-size: 0.75rem; color: var(--muted);">
                 <div style="font-weight: 700; margin-bottom: 0.25rem;">Thank you for shopping!</div>
-                <div>Exchange or refund allowed within 7 days with this official receipt.</div>
+                <div>Exchange or refund allowed within {{ $windowDays }} days with this official receipt.</div>
+                @if (! $sale->isFullyRefunded())
+                    <div style="margin-top: 0.45rem; font-size: 0.72rem; font-weight: 600; color: {{ $isOutsideWindow ? 'var(--accent)' : 'var(--success)' }};">
+                        @if ($isOutsideWindow)
+                            <span>Return policy expired ({{ $daysOld }} days old) &bull; Manager override required</span>
+                        @else
+                            <span>Refund window active: {{ $daysRemaining }} {{ \Illuminate\Support\Str::plural('day', $daysRemaining) }} remaining</span>
+                        @endif
+                    </div>
+                @endif
                 <div style="margin-top: 0.5rem; font-size: 0.7rem;">POS System &bull; {{ now()->format('Y') }}</div>
             </div>
         </div>
@@ -163,7 +178,17 @@
     @if (! $sale->isFullyRefunded())
         <div id="refund-panel" style="display: none; max-width: 560px; margin: 1.5rem auto 0;">
             <div class="card">
-                <h2 style="margin-bottom: 1rem;">Refund this sale</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                    <h2 style="margin: 0;">Refund this sale</h2>
+                    <span style="font-size: 0.78rem; font-weight: 700; padding: 0.25rem 0.65rem; border-radius: var(--r-pill); background: {{ $isOutsideWindow ? 'var(--accent-soft)' : 'var(--success-soft)' }}; color: {{ $isOutsideWindow ? 'var(--accent)' : 'var(--success)' }}; border: 1px solid currentColor;">
+                        {{ $isOutsideWindow ? 'Outside 7-Day Window (' . $daysOld . 'd old) — Manager Override' : $daysRemaining . ' days left to refund' }}
+                    </span>
+                </div>
+                @if ($isOutsideWindow)
+                    <div style="background: var(--accent-soft); border-left: 3px solid var(--accent); padding: 0.75rem 1rem; border-radius: var(--r-sm); margin-bottom: 1rem; font-size: 0.85rem; color: var(--text);">
+                        <strong>Policy Notice:</strong> This transaction is {{ $daysOld }} days old, which exceeds the standard {{ $windowDays }}-day return policy. Only a <strong>Manager</strong> can authorize this refund, and it will be recorded in the audit log as a policy override.
+                    </div>
+                @endif
                 <form method="POST" action="{{ route('pos.refund', $sale) }}">
                     @csrf
                     <div class="form-grid">
