@@ -5,6 +5,11 @@
 
 > **AGENTS.md lock:** agent never runs `git commit`/`push`; group controls VCS.
 
+## 2026-10-04 — Clarify employee edit form
+**What:** Grouped employee account fields into login credentials, role/status, and manager approval PIN sections; clarified that blank password/PIN fields preserve the existing values.
+**Files touched:** `resources/views/employees/_form.blade.php`, `CHANGELOG.md`.
+**Why:** Make employee editing easier to understand and distinguish sign-in credentials from the manager-only approval PIN.
+
 ## 2026-10-04 — Fix employee password validation rules
 **What:** Split the conditional password-presence rule into individual Laravel validation rules.
 **Files touched:** `app/Http/Controllers/EmployeeController.php`, `CHANGELOG.md`.
