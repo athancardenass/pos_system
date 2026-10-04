@@ -3,17 +3,19 @@
 @section('title', 'Edit product')
 
 @section('content')
-    <div class="page-head">
+    <div class="page-head form-page-head">
         <h1>Edit product</h1>
         <a class="btn btn-secondary" href="{{ route('products.index') }}">Back</a>
     </div>
-    <div class="card">
+    <div class="card form-page-card">
         @include('partials.errors')
         <form method="POST" action="{{ route('products.update', $product) }}">
             @csrf
             @method('PUT')
             @include('products._form')
-            <button type="submit">Update</button>
+            <div class="form-actions">
+                <button type="submit">Update product</button>
+            </div>
         </form>
     </div>
 @endsection

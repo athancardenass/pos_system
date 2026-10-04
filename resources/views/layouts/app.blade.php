@@ -146,6 +146,46 @@
             padding-bottom: 0.8rem; border-bottom: 1px solid var(--rule-faint);
             flex-wrap: wrap;
         }
+        /* Shared form workspace styling for edit pages and New Discount. */
+        .form-page-head {
+            min-height: 82px; padding: 0.9rem 1.2rem; border: 0; border-radius: var(--r-lg);
+            background: #203C3D; color: #fff; box-shadow: 0 5px 14px rgba(32,60,61,.12);
+        }
+        .form-page-head h1 { color: #fff; font-weight: 800; letter-spacing: -0.025em; }
+        .form-page-head p.muted { color: rgba(255,255,255,.78); }
+        .form-page-head .eyebrow { color: #B8D9C4; }
+        .form-page-head .btn-secondary,
+        .form-page-head a.btn-secondary:link,
+        .form-page-head a.btn-secondary:visited {
+            --btn-bg: #fff; --btn-bg-hover: #E7F2EB;
+            min-height: 36px; background: #fff; color: #203C3D !important;
+            border: 1px solid rgba(255,255,255,.42); font-weight: 800;
+        }
+        .form-page-card.card {
+            display: block; max-width: 1240px; margin: 0 auto 1rem; padding: 1.2rem;
+            overflow: visible; border: 1px solid rgba(32,60,61,.1); border-radius: var(--r-lg);
+            background: var(--surface); box-shadow: var(--shadow-card);
+        }
+        .form-page-card.card:hover { box-shadow: var(--shadow-card); }
+        .form-page-card .form-actions {
+            justify-content: flex-end; margin-top: 1.1rem; padding-top: .9rem;
+            border-top: 1px solid var(--rule-faint);
+        }
+        .form-page-card .form-actions .btn-secondary,
+        .form-page-card .form-actions a.btn-secondary:link,
+        .form-page-card .form-actions a.btn-secondary:visited {
+            --btn-bg: #203C3D; --btn-bg-hover: #2B4D4E;
+            min-height: 40px; padding: .58rem 1rem; background: #203C3D;
+            color: #fff !important; border: 1px solid #203C3D; font-weight: 800;
+        }
+        .form-page-card button[type="submit"] { min-height: 40px; font-weight: 800; }
+        .form-page-record { margin-bottom: 1rem; padding: .7rem .9rem; border-radius: var(--r); background: #E7F2EB; color: #244A3A; font-weight: 800; }
+        @media (max-width: 600px) {
+            .form-page-head { align-items: flex-start; flex-direction: column; padding: 1rem; }
+            .form-page-card.card { padding: 1rem; }
+            .form-page-card .form-actions { justify-content: stretch; }
+            .form-page-card .form-actions > * { flex: 1 1 100%; justify-content: center; }
+        }
 
         /* --- Card --- */
         .card {

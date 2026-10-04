@@ -4,31 +4,34 @@
 
 @push('styles')
 <style>
-    .ewallet-review { display: grid; max-width: 1040px; gap: 14px; margin: 0 auto; }
-    .ewallet-review-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
-    .ewallet-review-heading h1 { margin: 0; color: var(--text); font-size: 1.45rem; }
-    .ewallet-review-heading p { margin: 5px 0 0; color: var(--muted); }
-    .ewallet-payment-summary { display: grid; grid-template-columns: minmax(170px, .6fr) minmax(0, 1.4fr); align-items: center; gap: 16px 24px; padding: 18px 20px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-card); }
+    .ewallet-review { display: grid; max-width: 1240px; gap: 12px; margin: 0 auto; }
+    .ewallet-review-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 88px; padding: 16px 20px; border-radius: 14px; background: #203C3D; color: #fff; box-shadow: 0 5px 14px rgba(32,60,61,.12); }
+    .ewallet-review-heading h1 { margin: 0; color: #fff; font-size: 1.3rem; font-weight: 800; letter-spacing: -.025em; }
+    .ewallet-review-heading p { margin: 5px 0 0; color: rgba(255,255,255,.78); font-size: .84rem; }
+    .ewallet-review-eyebrow { margin: 0 0 3px !important; color: #B8D9C4 !important; font-size: .66rem !important; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
+    .ewallet-review-heading .btn-secondary { min-height: 36px; border-color: rgba(255,255,255,.42); background: #fff; color: #203C3D; font-weight: 800; }
+    .ewallet-payment-summary { display: grid; grid-template-columns: minmax(170px, .6fr) minmax(0, 1.4fr); align-items: center; gap: 14px 20px; padding: 16px 18px; border: 1px solid rgba(32,60,61,.08); border-radius: 14px; background: #203C3D; box-shadow: 0 4px 12px rgba(32,60,61,.1); }
     .ewallet-payment-amount { display: grid; gap: 3px; }
-    .ewallet-payment-amount span { color: var(--muted); font-size: .78rem; font-weight: 650; }
-    .ewallet-payment-amount strong { color: var(--text); font-size: clamp(1.65rem, 4vw, 2.1rem); font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.035em; line-height: 1.1; }
+    .ewallet-payment-amount span { color: #B8D9C4; font-size: .76rem; font-weight: 750; }
+    .ewallet-payment-amount strong { color: #fff; font-size: clamp(1.65rem, 4vw, 2.1rem); font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.035em; line-height: 1.1; }
     .ewallet-payment-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 0; }
-    .ewallet-payment-facts div { min-width: 0; display: grid; gap: 4px; }
-    .ewallet-payment-facts dt { color: var(--muted); font-size: .68rem; font-weight: 650; }
-    .ewallet-payment-facts dd { min-width: 0; margin: 0; color: var(--text); font-size: .8rem; font-weight: 700; overflow-wrap: anywhere; }
+    .ewallet-payment-facts div { min-width: 0; display: grid; gap: 4px; padding: 9px 10px; border: 1px solid rgba(255,255,255,.15); border-radius: 9px; background: rgba(255,255,255,.08); }
+    .ewallet-payment-facts dt { color: #B8D9C4; font-size: .67rem; font-weight: 750; }
+    .ewallet-payment-facts dd { min-width: 0; margin: 0; color: #fff; font-size: .79rem; font-weight: 750; overflow-wrap: anywhere; }
     .ewallet-review-grid { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 14px; align-items: start; }
-    .ewallet-review-panel { min-width: 0; padding: 17px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-card); }
-    .ewallet-review-panel h2 { margin: 0 0 12px; color: var(--text); font-size: .98rem; }
+    .ewallet-review-panel { min-width: 0; padding: 16px; border: 1px solid var(--rule-faint); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-card); }
+    .ewallet-review-panel h2 { margin: 0 0 12px; color: #203C3D; font-size: .96rem; font-weight: 800; }
     .ewallet-details { display: grid; grid-template-columns: minmax(108px, .7fr) minmax(0, 1.3fr); gap: 9px 14px; margin: 0; }
     .ewallet-details dt { color: var(--muted); font-size: .78rem; }
     .ewallet-details dd { min-width: 0; margin: 0; color: var(--text); font-size: .82rem; font-weight: 650; overflow-wrap: anywhere; }
+    .ewallet-review-table-wrap { overflow-x: auto; border: 1px solid var(--rule-faint); border-radius: 10px; }
     .ewallet-review-table { width: 100%; border-collapse: separate; border-spacing: 0; }
     .ewallet-review-table th, .ewallet-review-table td { padding: 9px 7px; border-bottom: 1px solid var(--rule-faint); text-align: left; font-size: .8rem; }
-    .ewallet-review-table th { color: var(--muted); font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .045em; }
+    .ewallet-review-table th { background: #203C3D; color: #fff; font-size: .66rem; font-weight: 800; text-transform: uppercase; letter-spacing: .045em; box-shadow: inset 0 -1px rgba(255,255,255,.16), 0 2px 5px rgba(32,60,61,.13); }
     .ewallet-review-table td:last-child, .ewallet-review-table th:last-child { text-align: right; white-space: nowrap; }
     .ewallet-review-table tfoot td { border-bottom: 0; font-weight: 800; }
-    .ewallet-status-pill { display: inline-flex; padding: 4px 8px; border-radius: 999px; background: var(--surface-active); color: var(--text); font-size: .7rem; font-weight: 750; text-transform: capitalize; }
-    .ewallet-status-note { margin: 0; padding: 10px 12px; border-radius: 9px; background: var(--surface-active); color: var(--text); font-size: .79rem; line-height: 1.5; }
+    .ewallet-status-pill { display: inline-flex; padding: 4px 8px; border-radius: 999px; background: #FFF0CF; color: #755317; font-size: .7rem; font-weight: 800; text-transform: capitalize; }
+    .ewallet-status-note { margin: 0; padding: 10px 12px; border: 1px solid rgba(24,118,94,.1); border-radius: 9px; background: #E7F2EB; color: #244A3A; font-size: .79rem; font-weight: 600; line-height: 1.5; }
     .ewallet-action-stack { display: grid; gap: 11px; margin-top: 14px; }
     .ewallet-action-stack form { display: grid; gap: 10px; }
     .ewallet-action-stack label { color: var(--text); font-size: .82rem; }
@@ -47,6 +50,8 @@
     .ewallet-result-actions { display: flex; flex-wrap: wrap; gap: 8px; }
     .payment-reference-value { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
     .payment-reference-reveal { min-height: 28px; padding: 4px 8px; font-size: .68rem; }
+    .ewallet-action-stack [data-ewallet-primary-action] { width: 100%; justify-content: center; min-height: 42px; font-weight: 800; }
+    .ewallet-result { padding: 12px; border: 1px solid rgba(24,118,94,.12); border-radius: 11px; background: #F4F8F5; }
     @media (max-width: 760px) {
         .ewallet-review-grid { grid-template-columns: 1fr; }
         .ewallet-payment-summary { grid-template-columns: 1fr; }
@@ -54,6 +59,7 @@
     }
     @media (max-width: 520px) {
         .ewallet-review-heading { align-items: stretch; flex-direction: column; }
+        .ewallet-review-heading .btn-secondary { align-self: flex-start; }
         .ewallet-payment-summary, .ewallet-review-panel { padding: 14px; }
         .ewallet-payment-facts { grid-template-columns: 1fr 1fr; gap: 10px; }
         .ewallet-details { grid-template-columns: minmax(95px, .65fr) minmax(0, 1.35fr); gap: 8px; }
@@ -71,6 +77,7 @@
 <section class="ewallet-review" aria-label="E-wallet payment review">
     <header class="ewallet-review-heading">
         <div>
+            <p class="ewallet-review-eyebrow">Payment review</p>
             <h1>Review e-wallet payment</h1>
             <p>Match the reference and amount against the completed transaction in the merchant app.</p>
         </div>
@@ -121,7 +128,7 @@
 
         <section class="ewallet-review-panel" aria-labelledby="ewallet-cart-title">
             <h2 id="ewallet-cart-title">Cart summary</h2>
-            <table class="ewallet-review-table">
+            <div class="ewallet-review-table-wrap"><table class="ewallet-review-table">
                 <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
                 <tbody>
                     @foreach ($itemSnapshots as $item)
@@ -134,7 +141,7 @@
                     @endforeach
                 </tbody>
                 <tfoot><tr><td colspan="3">Amount submitted</td><td>₱{{ number_format((float) $pending->submitted_amount, 2) }}</td></tr></tfoot>
-            </table>
+            </table></div>
 
             @if ($canReview)
                 <div class="ewallet-action-stack">

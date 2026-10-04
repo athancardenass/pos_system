@@ -5,6 +5,22 @@
 
 > **AGENTS.md lock:** agent never runs `git commit`/`push`; group controls VCS.
 
+## 2026-10-04 — Apply unified style to edit forms
+
+**What:** Added a shared Slate Grav header and compact white form panel style to all edit forms and the New Discount form. Organized inventory quantity input and aligned its save action with the other forms.
+
+**Files touched:** `resources/views/layouts/app.blade.php`, `resources/views/suppliers/edit.blade.php`, `resources/views/categories/edit.blade.php`, `resources/views/promotions/edit.blade.php`, `resources/views/employees/edit.blade.php`, `resources/views/inventory/edit.blade.php`, `resources/views/customers/edit.blade.php`, `resources/views/coupons/edit.blade.php`, `resources/views/discounts/edit.blade.php`, `resources/views/discounts/create.blade.php`, `resources/views/products/edit.blade.php`, `CHANGELOG.md`.
+
+**Why:** Make editing and discount creation screens visually consistent with the approved modern payment/settings screens while preserving existing routes, fields, and save behavior.
+
+## 2026-10-04 — Refresh payment review and settings screens
+
+**What:** Updated Pending E-Wallet and Pending Card list/review screens with slate headers, clearer pending states, responsive summaries, and consistent action styling. Reorganized VAT and receipt settings into clearer compact sections.
+
+**Files touched:** `resources/views/pos/pending-ewallet/index.blade.php`, `resources/views/pos/pending-ewallet/show.blade.php`, `resources/views/pos/pending-card/index.blade.php`, `resources/views/pos/pending-card/show.blade.php`, `resources/views/settings/vat.blade.php`, `resources/views/settings/receipt.blade.php`, `CHANGELOG.md`.
+
+**Why:** Make payment review and store settings easier to scan and consistent with the Slate Grav and soft green interface direction while preserving existing form actions and review behavior.
+
 ## 2026-10-04 — Align employee password fields
 **What:** Made the login username span its own row so the new and confirmation password fields align side by side.
 **Files touched:** `resources/views/employees/_form.blade.php`, `CHANGELOG.md`.
@@ -1477,12 +1493,3 @@ him understand and explain the system to groupmates, and to stop seeing Laravel 
 **Files touched:** `resources/views/layouts/app.blade.php`, `CHANGELOG.md`.
 
 **Why:** Ensure shared Edit links in Customer and Employee tables render in Slate Grav with the intended compact button shape.
-
-## 2026-10-04 — Create BI and data warehousing presentation
-
-**What:** Created an 11-slide PowerPoint covering business intelligence, data warehouses, ETL, OLAP storage models, star schemas and data mining.
-
-**Files touched:** presentations/Business_Intelligence_and_Data_Warehousing_Final_v2.pptx, CHANGELOG.md.
-
-**Why:** Convert the supplied topic screenshots into a clear, editable teaching presentation.
-

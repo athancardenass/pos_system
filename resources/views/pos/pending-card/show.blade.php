@@ -4,38 +4,40 @@
 
 @push('styles')
 <style>
-    .card-review { display: grid; max-width: 1040px; gap: 14px; margin: 0 auto; }
-    .card-review-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
-    .card-review-heading h1 { margin: 0; color: var(--text); font-size: 1.45rem; }
-    .card-review-heading p { margin: 5px 0 0; color: var(--muted); }
-    .card-review-summary { display: grid; grid-template-columns: minmax(170px, .6fr) minmax(0, 1.4fr); align-items: center; gap: 16px 24px; padding: 18px 20px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-card); }
+    .card-review { display: grid; max-width: 1240px; gap: 12px; margin: 0 auto; }
+    .card-review-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 88px; padding: 16px 20px; border-radius: 14px; background: #203C3D; color: #fff; box-shadow: 0 5px 14px rgba(32,60,61,.12); }
+    .card-review-heading h1 { margin: 0; color: #fff; font-size: 1.3rem; font-weight: 800; letter-spacing: -.025em; }
+    .card-review-heading p { margin: 5px 0 0; color: rgba(255,255,255,.78); font-size: .84rem; }
+    .card-review-eyebrow { margin: 0 0 3px !important; color: #B8D9C4 !important; font-size: .66rem !important; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
+    .card-review-heading .btn-secondary { min-height: 36px; border-color: rgba(255,255,255,.42); background: #fff; color: #203C3D; font-weight: 800; }
+    .card-review-summary { display: grid; grid-template-columns: minmax(170px, .6fr) minmax(0, 1.4fr); align-items: center; gap: 14px 20px; padding: 16px 18px; border: 1px solid rgba(32,60,61,.08); border-radius: 14px; background: #203C3D; box-shadow: 0 4px 12px rgba(32,60,61,.1); }
     .card-review-amount { display: grid; gap: 3px; }
-    .card-review-amount span { color: var(--muted); font-size: .78rem; font-weight: 650; }
-    .card-review-amount strong { color: var(--text); font-size: clamp(1.65rem, 4vw, 2.1rem); font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.035em; line-height: 1.1; }
+    .card-review-amount span { color: #B8D9C4; font-size: .76rem; font-weight: 750; }
+    .card-review-amount strong { color: #fff; font-size: clamp(1.65rem, 4vw, 2.1rem); font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.035em; line-height: 1.1; }
     .card-review-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 0; }
-    .card-review-facts div { min-width: 0; display: grid; gap: 4px; }
-    .card-review-facts dt { color: var(--muted); font-size: .68rem; font-weight: 650; }
-    .card-review-facts dd { min-width: 0; margin: 0; color: var(--text); font-size: .8rem; font-weight: 700; overflow-wrap: anywhere; }
+    .card-review-facts div { min-width: 0; display: grid; gap: 4px; padding: 9px 10px; border: 1px solid rgba(255,255,255,.15); border-radius: 9px; background: rgba(255,255,255,.08); }
+    .card-review-facts dt { color: #B8D9C4; font-size: .67rem; font-weight: 750; }
+    .card-review-facts dd { min-width: 0; margin: 0; color: #fff; font-size: .79rem; font-weight: 750; overflow-wrap: anywhere; }
     .card-review-grid { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 14px; align-items: start; }
-    .card-review-panel { min-width: 0; padding: 17px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-card); }
-    .card-review-panel h2 { margin: 0 0 12px; color: var(--text); font-size: .98rem; }
+    .card-review-panel { min-width: 0; padding: 16px; border: 1px solid var(--rule-faint); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-card); }
+    .card-review-panel h2 { margin: 0 0 12px; color: #203C3D; font-size: .96rem; font-weight: 800; }
     .card-review-details { display: grid; grid-template-columns: minmax(108px, .7fr) minmax(0, 1.3fr); gap: 9px 14px; margin: 0; }
     .card-review-details dt { color: var(--muted); font-size: .78rem; }
     .card-review-details dd { min-width: 0; margin: 0; color: var(--text); font-size: .82rem; font-weight: 650; overflow-wrap: anywhere; }
     .card-review-table { width: 100%; border-collapse: separate; border-spacing: 0; }
     .card-review-table th, .card-review-table td { padding: 9px 7px; border-bottom: 1px solid var(--rule-faint); text-align: left; font-size: .8rem; }
-    .card-review-table th { color: var(--muted); font-size: .66rem; font-weight: 700; letter-spacing: .045em; text-transform: uppercase; }
+    .card-review-table th { background: #203C3D; color: #fff; font-size: .66rem; font-weight: 800; letter-spacing: .045em; text-transform: uppercase; box-shadow: inset 0 -1px rgba(255,255,255,.16), 0 2px 5px rgba(32,60,61,.13); }
     .card-review-table td:last-child, .card-review-table th:last-child { text-align: right; white-space: nowrap; }
     .card-review-table tfoot td { border-bottom: 0; font-weight: 800; }
-    .card-review-status { display: inline-flex; padding: 4px 8px; border-radius: 999px; background: var(--surface-active); color: var(--text); font-size: .7rem; font-weight: 750; text-transform: capitalize; }
-    .card-review-note { margin: 0; padding: 10px 12px; border-radius: 9px; background: var(--surface-active); color: var(--text); font-size: .79rem; line-height: 1.5; }
+    .card-review-status { display: inline-flex; padding: 4px 8px; border-radius: 999px; background: #FFF0CF; color: #755317; font-size: .7rem; font-weight: 800; text-transform: capitalize; }
+    .card-review-note { margin: 0; padding: 10px 12px; border: 1px solid rgba(24,118,94,.1); border-radius: 9px; background: #E7F2EB; color: #244A3A; font-size: .79rem; font-weight: 600; line-height: 1.5; }
     .card-review-actions { display: grid; gap: 11px; margin-top: 14px; }
     .card-review-actions form { display: grid; gap: 10px; }
     .card-review-actions label { color: var(--text); font-size: .82rem; }
     .card-review-actions textarea { width: 100%; min-height: 70px; resize: vertical; }
     .card-review-check { display: flex; align-items: flex-start; gap: 9px; }
     .card-review-check input { width: 17px; height: 17px; flex: 0 0 auto; margin-top: 2px; accent-color: var(--accent); }
-    .card-review-result { display: grid; gap: 11px; }
+    .card-review-result { display: grid; gap: 11px; padding: 12px; border: 1px solid rgba(24,118,94,.12); border-radius: 11px; background: #F4F8F5; }
     .card-review-result h2 { margin: 0; font-size: 1.12rem; }
     .card-review-result p { margin: 0; color: var(--muted); font-size: .84rem; line-height: 1.5; }
     .card-review-result-actions { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -43,12 +45,15 @@
     .payment-reference-reveal { min-height: 28px; padding: 4px 8px; font-size: .68rem; }
     .card-approval-reference { margin-top: 12px; }
     .payment-reference-value [data-reference-value] { font-variant-numeric: tabular-nums; }
+    .card-review-actions [data-card-primary-action] { width: 100%; justify-content: center; min-height: 42px; font-weight: 800; }
+    .card-review-table-wrap { overflow-x: auto; border: 1px solid var(--rule-faint); border-radius: 10px; }
     @media (max-width: 760px) {
         .card-review-grid, .card-review-summary { grid-template-columns: 1fr; }
         .card-review-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     @media (max-width: 520px) {
         .card-review-heading { align-items: stretch; flex-direction: column; }
+        .card-review-heading .btn-secondary { align-self: flex-start; }
         .card-review-summary, .card-review-panel { padding: 14px; }
         .card-review-result-actions > a { flex: 1 1 100%; justify-content: center; }
     }
@@ -64,6 +69,7 @@
 <section class="card-review" aria-label="Card payment review">
     <header class="card-review-heading">
         <div>
+            <p class="card-review-eyebrow">Payment review</p>
             <h1>Review Card payment</h1>
             <p>Compare the approval code and amount against the Card terminal record.</p>
         </div>
@@ -113,7 +119,7 @@
 
         <section class="card-review-panel" aria-labelledby="card-cart-title">
             <h2 id="card-cart-title">Cart summary</h2>
-            <table class="card-review-table">
+            <div class="card-review-table-wrap"><table class="card-review-table">
                 <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
                 <tbody>
                     @foreach ($itemSnapshots as $item)
@@ -126,7 +132,7 @@
                     @endforeach
                 </tbody>
                 <tfoot><tr><td colspan="3">Amount submitted</td><td>₱{{ number_format((float) $pending->submitted_amount, 2) }}</td></tr></tfoot>
-            </table>
+            </table></div>
 
             @if ($canReview)
                 <div class="card-review-actions">
