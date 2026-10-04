@@ -112,7 +112,7 @@ class DashboardController extends Controller
                 ->get();
 
             // Recent transactions
-            $stats['recent_sales'] = SaleTransaction::with(['customer', 'employee'])
+            $stats['recent_sales'] = SaleTransaction::with(['customer', 'employee', 'receipt'])
                 ->latest('transaction_date')
                 ->limit(5)
                 ->get();

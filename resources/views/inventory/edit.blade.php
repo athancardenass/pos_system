@@ -14,7 +14,7 @@
             @csrf
             @method('PUT')
             <label for="stock_quantity">Stock quantity</label>
-            <input id="stock_quantity" type="number" min="0" name="stock_quantity" value="{{ old('stock_quantity', $inventory->stock_quantity) }}" required>
+            <input id="stock_quantity" type="number" min="0" step="0.001" name="stock_quantity" value="{{ old('stock_quantity', $inventory->stock_quantity) }}" required>
             <button type="submit">Save</button>
         </form>
     </div>

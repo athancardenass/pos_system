@@ -31,7 +31,7 @@ class InventoryController extends Controller
     public function update(Request $request, Inventory $inventory): RedirectResponse
     {
         $data = $request->validate([
-            'stock_quantity' => 'required|integer|min:0',
+            'stock_quantity' => 'required|numeric|min:0|decimal:0,3',
         ]);
 
         $inventory->update([

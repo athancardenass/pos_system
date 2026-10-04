@@ -21,6 +21,7 @@ class SaleRefundItem extends Model
     protected function casts(): array
     {
         return [
+            'quantity' => 'decimal:3',
             'amount' => 'decimal:2',
         ];
     }

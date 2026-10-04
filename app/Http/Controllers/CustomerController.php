@@ -71,7 +71,7 @@ class CustomerController extends Controller
             'contact_number' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:100',
             'address' => 'nullable|string|max:255',
-            'date_of_birth' => 'nullable|date',
+            'date_of_birth' => 'nullable|date_format:Y-m-d|after_or_equal:1900-01-01|before_or_equal:today',
             'customer_status' => 'required|in:active,inactive',
         ]);
     }

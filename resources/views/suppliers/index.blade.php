@@ -5,13 +5,13 @@
 @section('content')
     <div class="page-head">
         <h1>Suppliers</h1>
-        <a class="btn" href="{{ route('suppliers.create') }}">New supplier</a>
+        <x-ui.button :href="route('suppliers.create')">New supplier</x-ui.button>
     </div>
     <div class="card">
         @if ($suppliers->isEmpty())
             <p class="empty">No suppliers yet.</p>
         @else
-            <table>
+<x-ui.table>
                 <thead>
                     <tr>
                         <th>Name</th>
@@ -27,17 +27,17 @@
                             <td>{{ $supplier->contact_number }}</td>
                             <td class="muted">{{ $supplier->email }}</td>
                             <td class="actions">
-                                <a class="btn-ghost" href="{{ route('suppliers.edit', $supplier) }}">Edit</a>
+                                <x-ui.button variant="slate" size="compact" :href="route('suppliers.edit', $supplier)">Edit</x-ui.button>
                                 <form class="inline-form" method="POST" action="{{ route('suppliers.destroy', $supplier) }}" onsubmit="return confirm('Delete this supplier?')">
                                     @csrf
                                     @method('DELETE')
-                                    <button class="btn-ghost btn-danger" type="submit">Delete</button>
+                                    <x-ui.button variant="danger" type="submit" size="compact">Delete</x-ui.button>
                                 </form>
                             </td>
                         </tr>
                     @endforeach
                 </tbody>
-            </table>
+</x-ui.table>
             {{ $suppliers->links('partials.pagination') }}
         @endif
     </div>

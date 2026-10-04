@@ -138,7 +138,7 @@ class PromotionEngineTest extends TestCase
             'code' => 'FLAT100', 'type' => 'fixed', 'value' => 100, 'is_active' => true,
         ]);
 
-        $this->actingAs($this->employee('cashier'))
+        $this->actingAs($this->employee('manager'))
             ->post(route('pos.store'), [
                 'discount_id' => $discount->discount_id,
                 'coupon_code' => 'flat100',
@@ -174,7 +174,7 @@ class PromotionEngineTest extends TestCase
             'start_date' => now()->subDay(), 'end_date' => now()->addDay(),
         ]);
 
-        $this->actingAs($this->employee('cashier'))->post(route('pos.store'), [
+        $this->actingAs($this->employee('manager'))->post(route('pos.store'), [
             'discount_id' => $discount->discount_id,
             'payment_method' => 'cash',
             'amount_paid' => 90.00,
@@ -441,12 +441,17 @@ class PromotionEngineTest extends TestCase
             }
         }
 
-        // The register gets exactly one coupon field, and it is a boxed labelled input.
-        $pos = $this->actingAs($this->employee('cashier'))->get(route('pos.index'));
-        $this->assertSame(1, substr_count($pos->getContent(), 'name="coupon_code"'));
+        // The redesigned register omits Promotions and Coupons, retaining Discount only.
+        $pos = $this->actingAs($this->employee('manager'))->get(route('pos.index'))->assertOk();
+        $posHtml = $pos->getContent();
+        $this->assertStringNotContainsString('name="coupon_code"', $posHtml);
+        $this->assertStringNotContainsString('id="pos-coupon-code"', $posHtml);
+        $this->assertStringNotContainsString('Promotions', $posHtml);
+        $this->assertStringNotContainsString('Coupons', $posHtml);
+        $this->assertStringContainsString('Discount', $posHtml);
     }
 
-    public function test_receipt_prints_promotion_and_coupon_savings_separately(): void
+    public function test_receipt_hides_promotions_and_coupons_but_shows_existing_discount(): void
     {
         $product = $this->product('Receipt Item', 100.00);
         $discount = Discount::query()->create([
@@ -461,7 +466,7 @@ class PromotionEngineTest extends TestCase
             'code' => 'RECEIPT', 'type' => 'fixed', 'value' => 10, 'is_active' => true,
         ]);
 
-        $this->actingAs($this->employee('cashier'))->post(route('pos.store'), [
+        $this->actingAs($this->employee('manager'))->post(route('pos.store'), [
             'discount_id' => $discount->discount_id,
             'coupon_code' => 'RECEIPT',
             'payment_method' => 'cash',
@@ -477,20 +482,17 @@ class PromotionEngineTest extends TestCase
             ->get(route('pos.show', $sale))
             ->assertOk();
 
-        // Every saving is its own line, and the manual line must not be re-derived from
-        // subtotal - total (that would swallow the promo and coupon too).
-        $receipt->assertSee('Twelve percent')
-            ->assertSee('−₱12.00')
+        $receipt->assertDontSee('Twelve percent')
+            ->assertDontSee('Coupon RECEIPT')
+            ->assertDontSee('−₱12.00')
+            ->assertDontSee('−₱10.00')
+            ->assertSee('DISC-'.str_pad((string) $discount->discount_id, 3, '0', STR_PAD_LEFT))
             ->assertSee('−₱5.00')
-            ->assertSee('Coupon RECEIPT')
-            ->assertSee('−₱10.00')
             ->assertSee('73.00');
 
-        // The two NEW savings rows (promotion + coupon) use the shared receipt classes
-        // added to the layout; the pre-existing manual-discount row keeps its old markup.
         $this->assertEquals(
-            2,
-            substr_count($receipt->getContent(), 'class="receipt-line receipt-save"')
+            1,
+            substr_count($receipt->getContent(), 'class="receipt-discount"')
         );
     }
 

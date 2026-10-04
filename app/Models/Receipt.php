@@ -17,12 +17,16 @@ class Receipt extends Model
         'transaction_id',
         'receipt_number',
         'issued_date',
+        'register_id',
+        'sequence_number',
+        'settings_snapshot',
     ];
 
     protected function casts(): array
     {
         return [
             'issued_date' => 'datetime',
+            'settings_snapshot' => 'array',
         ];
     }
 

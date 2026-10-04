@@ -5,13 +5,13 @@
 @section('content')
     <div class="page-head">
         <h1>Products</h1>
-        <a class="btn" href="{{ route('products.create') }}">New product</a>
+        <x-ui.button :href="route('products.create')">New product</x-ui.button>
     </div>
     <div class="card">
         @if ($products->isEmpty())
             <p class="empty">No products yet.</p>
         @else
-            <table>
+<x-ui.table>
                 <thead>
                     <tr>
                         <th>Name</th>
@@ -33,18 +33,18 @@
                                 {{ $product->stockQuantity() }}
                             </td>
                             <td class="actions">
-                                <a class="btn-ghost" href="{{ route('products.edit', $product) }}">Edit</a>
+                                <x-ui.button variant="slate" size="compact" :href="route('products.edit', $product)">Edit</x-ui.button>
                                 <button type="button" class="btn-ghost print-barcode-btn" data-id="{{ $product->product_id }}" data-name="{{ $product->product_name }}" data-barcode="{{ $product->barcode }}" data-price="{{ number_format($product->unit_price, 2) }}">Print Label</button>
                                 <form class="inline-form" method="POST" action="{{ route('products.destroy', $product) }}" onsubmit="return confirm('Delete this product?')">
                                     @csrf
                                     @method('DELETE')
-                                    <button class="btn-ghost btn-danger" type="submit">Delete</button>
+                                    <x-ui.button variant="danger" type="submit" size="compact">Delete</x-ui.button>
                                 </form>
                             </td>
                         </tr>
                     @endforeach
                 </tbody>
-            </table>
+</x-ui.table>
             {{ $products->links('partials.pagination') }}
         @endif
     </div>

@@ -27,7 +27,7 @@
                 </div>
             </div>
             <h2>Line items</h2>
-            <table>
+<x-ui.table>
                 <thead>
                     <tr>
                         <th>Product</th>
@@ -45,11 +45,11 @@
                                 @endforeach
                             </select>
                         </td>
-                        <td><input type="number" min="1" name="items[0][quantity]" value="1" required></td>
+                        <td><input type="number" min="0.001" step="0.001" name="items[0][quantity]" value="1" required></td>
                         <td><input type="number" min="0" step="0.01" name="items[0][unit_cost]" value="0" required></td>
                     </tr>
                 </tbody>
-            </table>
+</x-ui.table>
             <div class="form-actions">
                 <button class="btn btn-secondary" type="button" id="add-line">Add line</button>
                 <button type="submit">Create order</button>
@@ -83,7 +83,8 @@
 
         const qty = document.createElement('input');
         qty.type = 'number';
-        qty.min = '1';
+        qty.min = '0.001';
+        qty.step = '0.001';
         qty.name = `items[${index}][quantity]`;
         qty.value = '1';
         qty.required = true;

@@ -13,10 +13,19 @@ class Payment extends Model
 
     public $timestamps = false;
 
+    protected $hidden = [
+        'reference_number',
+        'reference_ciphertext',
+        'reference_fingerprint',
+    ];
+
     protected $fillable = [
         'transaction_id',
         'payment_method',
         'reference_number',
+        'reference_ciphertext',
+        'reference_fingerprint',
+        'card_last4',
         'payment_provider',
         'amount_paid',
         'change_amount',
@@ -32,8 +41,27 @@ class Payment extends Model
         ];
     }
 
+    public function setReferenceNumberAttribute(mixed $value): void
+    {
+        $this->attributes['reference_number'] = null;
+    }
+
     public function saleTransaction(): BelongsTo
     {
         return $this->belongsTo(SaleTransaction::class, 'transaction_id', 'transaction_id');
+    }
+
+    public function revealedReference(): ?string
+    {
+        return app(\App\Services\PaymentReferenceService::class)->decrypt($this->reference_ciphertext);
+    }
+
+    public function maskedReference(): string
+    {
+        return app(\App\Services\PaymentReferenceService::class)->mask(
+            (string) $this->payment_method,
+            $this->revealedReference(),
+            $this->card_last4,
+        );
     }
 }

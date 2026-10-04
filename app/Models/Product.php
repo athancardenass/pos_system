@@ -75,9 +75,9 @@ class Product extends Model
         return $this->hasMany(ReorderSignal::class, 'product_id', 'product_id');
     }
 
-    public function stockQuantity(): int
+    public function stockQuantity(): float
     {
-        return (int) ($this->inventory?->stock_quantity ?? 0);
+        return (float) ($this->inventory?->stock_quantity ?? 0);
     }
 
     public function isInUse(): bool

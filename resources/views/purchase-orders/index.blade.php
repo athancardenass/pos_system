@@ -5,13 +5,13 @@
 @section('content')
     <div class="page-head">
         <h1>Purchase orders</h1>
-        <a class="btn" href="{{ route('purchase-orders.create') }}">New order</a>
+        <x-ui.button :href="route('purchase-orders.create')">New order</x-ui.button>
     </div>
     <div class="card">
         @if ($orders->isEmpty())
             <p class="empty">No purchase orders yet.</p>
         @else
-            <table>
+<x-ui.table>
                 <thead>
                     <tr>
                         <th>#</th>
@@ -27,12 +27,12 @@
                             <td><a href="{{ route('purchase-orders.show', $order) }}" style="font-weight: 700;">{{ $order->purchase_id }}</a></td>
                             <td>{{ $order->supplier->supplier_name ?? '—' }}</td>
                             <td>{{ optional($order->order_date)->format('Y-m-d') }}</td>
-                            <td><span class="badge {{ $order->status === 'pending' ? 'badge-pending' : ($order->status === 'received' ? 'badge-active' : 'badge-inactive') }}">{{ $order->status }}</span></td>
+                            <td><x-ui.badge :variant="$order->status === 'pending' ? 'pending' : ($order->status === 'received' ? 'active' : 'inactive')">{{ $order->status }}</x-ui.badge></td>
                             <td style="font-weight: 700;">{{ number_format($order->total_amount, 2) }}</td>
                         </tr>
                     @endforeach
                 </tbody>
-            </table>
+</x-ui.table>
             {{ $orders->links('partials.pagination') }}
         @endif
     </div>

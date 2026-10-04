@@ -5,13 +5,13 @@
 @section('content')
     <div class="page-head">
         <h1>Coupons</h1>
-        <a class="btn" href="{{ route('coupons.create') }}">New coupon</a>
+        <x-ui.button :href="route('coupons.create')">New coupon</x-ui.button>
     </div>
     <div class="card">
         @if ($coupons->isEmpty())
             <p class="empty">No coupons yet.</p>
         @else
-            <table>
+<x-ui.table>
                 <thead>
                     <tr>
                         <th>Code</th>
@@ -39,29 +39,29 @@
                             </td>
                             <td>
                                 @if (! $coupon->is_active)
-                                    <span class="badge badge-inactive">Inactive</span>
+                                    <x-ui.badge variant="inactive">Inactive</x-ui.badge>
                                 @elseif ($coupon->isExhausted())
-                                    <span class="badge badge-inactive">Used up</span>
+                                    <x-ui.badge variant="inactive">Used up</x-ui.badge>
                                 @elseif ($coupon->isLive())
-                                    <span class="badge badge-active">Active</span>
+                                    <x-ui.badge variant="active">Active</x-ui.badge>
                                 @else
-                                    <span class="badge badge-inactive">Expired</span>
+                                    <x-ui.badge variant="inactive">Expired</x-ui.badge>
                                 @endif
                             </td>
                             <td class="actions">
                                 <div class="actions">
-                                    <a class="btn-ghost" href="{{ route('coupons.edit', $coupon) }}">Edit</a>
+                                    <x-ui.button variant="slate" size="compact" :href="route('coupons.edit', $coupon)">Edit</x-ui.button>
                                     <form class="inline-form" method="POST" action="{{ route('coupons.destroy', $coupon) }}" onsubmit="return confirm('Delete this coupon?')">
                                         @csrf
                                         @method('DELETE')
-                                        <button class="btn-ghost btn-danger" type="submit">Delete</button>
+                                        <x-ui.button variant="danger" type="submit" size="compact">Delete</x-ui.button>
                                     </form>
                                 </div>
                             </td>
                         </tr>
                     @endforeach
                 </tbody>
-            </table>
+</x-ui.table>
             {{ $coupons->links('partials.pagination') }}
         @endif
     </div>

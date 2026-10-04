@@ -38,10 +38,15 @@ class PurchaseOrderController extends Controller
     {
         $data = $request->validate([
             'supplier_id' => 'required|exists:supplier,supplier_id',
-            'order_date' => 'required|date',
+            'order_date' => [
+                'required',
+                'date_format:Y-m-d',
+                'after_or_equal:'.now()->subDays(7)->toDateString(),
+                'before_or_equal:'.now()->addDays(30)->toDateString(),
+            ],
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:product,product_id',
-            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.quantity' => 'required|numeric|gt:0|decimal:0,3',
             'items.*.unit_cost' => 'required|numeric|min:0',
         ]);
 

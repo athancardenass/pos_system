@@ -6,10 +6,12 @@ use App\Models\Customer;
 use App\Models\Discount;
 use App\Models\Employee;
 use App\Models\Inventory;
+use App\Models\PendingCardVerification;
 use App\Models\Product;
 use App\Models\SaleTransaction;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class CheckoutFlowTest extends TestCase
@@ -94,7 +96,108 @@ class CheckoutFlowTest extends TestCase
         $this->assertEquals(7, $product->fresh()->inventory->stock_quantity);
     }
 
-    public function test_checkout_creates_payment_record(): void
+    public function test_pos_register_preserves_fractional_stock_and_unit_of_measure(): void
+    {
+        $product = Product::query()->create([
+            'product_name' => 'Apple Fuji (per kg)',
+            'barcode' => '4006381000998',
+            'unit_price' => 200.00,
+            'cost_price' => 100.00,
+            'reorder_level' => 5,
+            'unit_of_measure' => 'kg',
+        ]);
+        Inventory::query()->create([
+            'product_id' => $product->product_id,
+            'stock_quantity' => 0.75,
+        ]);
+
+        $this->actingAs($this->employee('cashier'))
+            ->get(route('pos.index'))
+            ->assertOk()
+            ->assertSee('"unit_of_measure":"kg"', false)
+            ->assertSee('"stock":0.75', false)
+            ->assertSee('id="exact-amount-btn"', false)
+            ->assertSee('id="hold-sale-btn"', false)
+            ->assertSee('id="held-transactions-modal"', false)
+            ->assertSee('id="resume-held-confirm-modal"', false)
+            ->assertSee('saveHeldState(state)', false)
+            ->assertSee('still on this register. They will remain saved', false);
+
+        $this->assertSame(0.75, $product->fresh()->stockQuantity());
+    }
+
+    public function test_cashier_can_fetch_current_stock_snapshot_for_held_cart_resume(): void
+    {
+        $product = Product::query()->create([
+            'product_name' => 'Banana (per kg)',
+            'barcode' => '4006381000992',
+            'unit_price' => 90.00,
+            'cost_price' => 45.00,
+            'reorder_level' => 5,
+            'unit_of_measure' => 'kg',
+        ]);
+        Inventory::query()->create([
+            'product_id' => $product->product_id,
+            'stock_quantity' => 0.75,
+        ]);
+
+        $this->actingAs($this->employee('cashier'))
+            ->getJson(route('pos.stock'))
+            ->assertOk()
+            ->assertJsonPath("stocks.{$product->product_id}.stock", 0.75)
+            ->assertJsonPath("stocks.{$product->product_id}.unit_of_measure", 'kg');
+
+        $this->assertSame(0.75, $product->fresh()->stockQuantity());
+    }
+
+    public function test_checkout_accepts_fractional_kilogram_quantity_and_rejects_overstock(): void
+    {
+        $product = Product::query()->create([
+            'product_name' => 'Chicken Breast',
+            'barcode' => '4006381000999',
+            'unit_price' => 200.00,
+            'cost_price' => 100.00,
+            'reorder_level' => 5,
+            'unit_of_measure' => 'kg',
+        ]);
+        Inventory::query()->create([
+            'product_id' => $product->product_id,
+            'stock_quantity' => 0.75,
+        ]);
+
+        $cashier = $this->employee('cashier');
+        $saleCountBefore = SaleTransaction::query()->count();
+        $this->actingAs($cashier)
+            ->from(route('pos.index'))
+            ->post(route('pos.store'), [
+                'payment_method' => 'cash',
+                'amount_paid' => 160.00,
+                'items' => [
+                    ['product_id' => $product->product_id, 'quantity' => 0.8],
+                ],
+            ])
+            ->assertRedirect(route('pos.index'))
+            ->assertSessionHasErrors('items');
+
+        $this->assertDatabaseCount('sale_transaction', $saleCountBefore);
+        $this->assertEquals(0.75, $product->fresh()->stockQuantity());
+
+        $this->actingAs($cashier)
+            ->post(route('pos.store'), [
+                'payment_method' => 'cash',
+                'amount_paid' => 50.00,
+                'items' => [
+                    ['product_id' => $product->product_id, 'quantity' => 0.25],
+                ],
+            ])
+            ->assertRedirect();
+
+        $sale = SaleTransaction::query()->latest('transaction_id')->firstOrFail();
+        $this->assertEquals(0.25, $sale->saleDetails()->firstOrFail()->quantity);
+        $this->assertEquals(0.5, $product->fresh()->stockQuantity());
+    }
+
+    public function test_card_checkout_waits_for_manager_terminal_verification_before_creating_payment(): void
     {
         $product = Product::query()->create([
             'product_name' => 'Test Item',
@@ -108,20 +211,38 @@ class CheckoutFlowTest extends TestCase
             'stock_quantity' => 10,
         ]);
 
-        $this->actingAs($this->employee('cashier'))
+        $cashier = $this->employee('cashier');
+        $manager = $this->employee('manager');
+        $salesBefore = SaleTransaction::query()->count();
+        $this->actingAs($cashier)
             ->post(route('pos.store'), [
                 'payment_method' => 'card',
-                'amount_paid' => 100.00,
+                'payment_provider' => 'Visa',
+                'reference_number' => 'AUTH-12345',
+                'amount_paid' => 75.00,
                 'items' => [
                     ['product_id' => $product->product_id, 'quantity' => 1],
                 ],
-            ]);
+            ])
+            ->assertRedirect();
+
+        $pending = PendingCardVerification::query()->firstOrFail();
+        $this->assertSame(PendingCardVerification::STATUS_PENDING, $pending->status);
+        $this->assertSame(9.0, (float) Inventory::query()->where('product_id', $product->product_id)->value('stock_quantity'));
+        $this->assertSame($salesBefore, SaleTransaction::query()->count());
+
+        $this->actingAs($manager)
+            ->post(route('pos.pending-card.verify', $pending), ['terminal_checked' => '1'])
+            ->assertRedirect();
 
         $sale = SaleTransaction::query()->latest('transaction_id')->first();
         $this->assertNotNull($sale->payment);
-        $this->assertEquals(100.00, $sale->payment->amount_paid);
-        $this->assertEquals(25.00, $sale->payment->change_amount);
+        $this->assertEquals(75.00, $sale->payment->amount_paid);
+        $this->assertEquals(0.00, $sale->payment->change_amount);
         $this->assertEquals('card', $sale->payment->payment_method);
+        $this->assertSame('AUTH-12345', $sale->payment->revealedReference());
+        $this->assertNotNull($sale->payment->reference_ciphertext);
+        $this->assertNull($sale->payment->reference_number);
     }
 
     public function test_checkout_creates_receipt(): void
@@ -174,9 +295,26 @@ class CheckoutFlowTest extends TestCase
             'end_date' => now()->addDay(),
         ]);
 
-        $this->actingAs($this->employee('cashier'))
+        $manager = $this->employee('manager');
+        $manager->manager_pin_hash = Hash::make('2468');
+        $manager->save();
+        $cashier = $this->employee('cashier');
+        $authorization = $this->actingAs($cashier)->postJson(route('manager-authorization.authorize'), [
+            'action' => 'discount_apply',
+            'pin' => '2468',
+            'register_id' => 'REG 01',
+            'details' => [
+                'discount_id' => $discount->discount_id,
+                'discount_name' => '10% Off',
+                'discount_amount' => 10.00,
+            ],
+        ])->assertOk();
+
+        $this->actingAs($cashier)
             ->post(route('pos.store'), [
                 'discount_id' => $discount->discount_id,
+                'manager_authorization_token' => $authorization->json('token'),
+                'register_id' => 'REG 01',
                 'payment_method' => 'cash',
                 'amount_paid' => 100.00,
                 'items' => [
@@ -279,6 +417,34 @@ class CheckoutFlowTest extends TestCase
         $this->assertEquals($beforeCount, SaleTransaction::query()->count());
     }
 
+    public function test_checkout_accepts_exact_cash_tender(): void
+    {
+        $product = Product::query()->create([
+            'product_name' => 'Exact Tender Item',
+            'barcode' => Product::generateBarcode(),
+            'unit_price' => 125.00,
+            'cost_price' => 60.00,
+            'reorder_level' => 2,
+        ]);
+        Inventory::query()->create([
+            'product_id' => $product->product_id,
+            'stock_quantity' => 3,
+        ]);
+
+        $response = $this->actingAs($this->employee('cashier'))
+            ->post(route('pos.store'), [
+                'payment_method' => 'cash',
+                'amount_paid' => '125.00',
+                'items' => [['product_id' => $product->product_id, 'quantity' => 1]],
+            ]);
+
+        $response->assertRedirect();
+        $sale = SaleTransaction::query()->latest('transaction_id')->firstOrFail();
+        $this->assertSame('completed', $sale->status);
+        $this->assertEquals(125.00, (float) $sale->total_amount);
+        $this->assertEquals(125.00, (float) $sale->payment->amount_paid);
+    }
+
     public function test_checkout_requires_at_least_one_item(): void
     {
         $beforeCount = SaleTransaction::query()->count();
@@ -347,7 +513,7 @@ class CheckoutFlowTest extends TestCase
 
         $this->actingAs($this->employee('cashier'))
             ->post(route('pos.store'), [
-                'payment_method' => 'e-wallet',
+                'payment_method' => 'cash',
                 'amount_paid' => 50.00,
                 'items' => [
                     ['product_id' => $product->product_id, 'quantity' => 2],
@@ -401,7 +567,7 @@ class CheckoutFlowTest extends TestCase
         $this->assertEquals(110.00, $sale->subtotal);
     }
 
-    public function test_card_and_ewallet_store_reference_number_correctly(): void
+    public function test_card_checkout_encrypts_approval_code_and_keeps_only_card_last_four(): void
     {
         $product = Product::query()->create([
             'product_name' => 'Card Item',
@@ -427,10 +593,149 @@ class CheckoutFlowTest extends TestCase
             ])
             ->assertRedirect();
 
+        $pending = PendingCardVerification::query()->firstOrFail();
+        $this->assertSame('1234', $pending->card_last4);
+        $this->assertStringNotContainsString('APPR-998822', $pending->reference_ciphertext);
+        $this->actingAs($this->employee('manager'))
+            ->post(route('pos.pending-card.verify', $pending), ['terminal_checked' => '1'])
+            ->assertRedirect();
+
         $sale = SaleTransaction::query()->latest('transaction_id')->first();
         $this->assertEquals('card', $sale->payment->payment_method);
         $this->assertEquals('Visa', $sale->payment->payment_provider);
-        $this->assertEquals('APPR-998822 (**** 1234)', $sale->payment->reference_number);
+        $this->assertEquals('APPR-998822', $sale->payment->revealedReference());
+        $this->assertSame('1234', $sale->payment->card_last4);
+        $this->assertNull($sale->payment->reference_number);
+    }
+
+    public function test_checkout_rejects_unsupported_payment_methods_and_fractional_cents(): void
+    {
+        $product = Product::query()->create([
+            'product_name' => 'Validation Item',
+            'barcode' => '4006381333931',
+            'unit_price' => 10.00,
+            'cost_price' => 5.00,
+            'reorder_level' => 1,
+        ]);
+        Inventory::query()->create([
+            'product_id' => $product->product_id,
+            'stock_quantity' => 10,
+        ]);
+
+        $cashier = $this->employee('cashier');
+        $items = [['product_id' => $product->product_id, 'quantity' => 1]];
+        $beforeCount = SaleTransaction::query()->count();
+
+        $this->actingAs($cashier)
+            ->post(route('pos.store'), [
+                'payment_method' => 'crypto',
+                'amount_paid' => '10.00',
+                'items' => $items,
+            ])
+            ->assertSessionHasErrors('payment_method');
+
+        $this->actingAs($cashier)
+            ->post(route('pos.store'), [
+                'payment_method' => 'cash',
+                'amount_paid' => '10.001',
+                'items' => $items,
+            ])
+            ->assertSessionHasErrors('amount_paid');
+
+        $this->assertDatabaseCount('sale_transaction', $beforeCount);
+    }
+
+    public function test_card_and_ewallet_require_payment_reference_and_provider(): void
+    {
+        $product = Product::query()->create([
+            'product_name' => 'Validation Item',
+            'barcode' => '4006381333931',
+            'unit_price' => 10.00,
+            'cost_price' => 5.00,
+            'reorder_level' => 1,
+        ]);
+        Inventory::query()->create([
+            'product_id' => $product->product_id,
+            'stock_quantity' => 10,
+        ]);
+
+        $cashier = $this->employee('cashier');
+        $items = [['product_id' => $product->product_id, 'quantity' => 1]];
+        $beforeCount = SaleTransaction::query()->count();
+
+        foreach (['card', 'e-wallet'] as $method) {
+            $this->actingAs($cashier)
+                ->post(route('pos.store'), [
+                    'payment_method' => $method,
+                    'amount_paid' => '10.00',
+                    'items' => $items,
+                ])
+                ->assertSessionHasErrors(['reference_number', 'payment_provider']);
+        }
+
+        $this->actingAs($cashier)
+            ->post(route('pos.store'), [
+                'payment_method' => 'card',
+                'payment_provider' => 'Unknown Network',
+                'reference_number' => 'AUTH-1001',
+                'amount_paid' => '10.00',
+                'items' => $items,
+            ])
+            ->assertSessionHasErrors('payment_provider');
+
+        $this->actingAs($cashier)
+            ->post(route('pos.store'), [
+                'payment_method' => 'card',
+                'payment_provider' => 'Visa',
+                'reference_number' => '4111111111111111',
+                'card_last4' => '1111',
+                'amount_paid' => '10.00',
+                'items' => $items,
+            ])
+            ->assertSessionHasErrors('reference_number');
+
+        $this->actingAs($cashier)
+            ->post(route('pos.store'), [
+                'payment_method' => 'card',
+                'payment_provider' => 'Visa',
+                'reference_number' => '4111-1111-1111-1111',
+                'amount_paid' => '10.00',
+                'items' => $items,
+            ])
+            ->assertSessionHasErrors('reference_number');
+
+        $this->actingAs($cashier)
+            ->post(route('pos.store'), [
+                'payment_method' => 'card',
+                'payment_provider' => 'Visa',
+                'reference_number' => '1234',
+                'amount_paid' => '10.00',
+                'items' => $items,
+            ])
+            ->assertSessionHasErrors('reference_number');
+
+        $this->actingAs($cashier)
+            ->post(route('pos.store'), [
+                'payment_method' => 'card',
+                'payment_provider' => 'Visa',
+                'reference_number' => 'AUTH-1002',
+                'card_last4' => '12A4',
+                'amount_paid' => '10.00',
+                'items' => $items,
+            ])
+            ->assertSessionHasErrors('card_last4');
+
+        $this->actingAs($cashier)
+            ->post(route('pos.store'), [
+                'payment_method' => 'e-wallet',
+                'payment_provider' => 'Unknown Wallet',
+                'reference_number' => 'WALLET-1001',
+                'amount_paid' => '10.00',
+                'items' => $items,
+            ])
+            ->assertSessionHasErrors('payment_provider');
+
+        $this->assertDatabaseCount('sale_transaction', $beforeCount);
     }
 
     public function test_check_coupon_endpoint_validates_and_returns_discount(): void

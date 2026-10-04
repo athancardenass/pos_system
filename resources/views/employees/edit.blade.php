@@ -4,7 +4,10 @@
 
 @section('content')
     <div class="page-head">
-        <h1>Edit employee</h1>
+        <div>
+            <h1>Edit employee</h1>
+            <p class="muted">Update the employee profile, account access, and status.</p>
+        </div>
         <a class="btn btn-secondary" href="{{ route('employees.index') }}">Back</a>
     </div>
     <div class="card">
@@ -14,7 +17,7 @@
             @method('PUT')
             @include('employees._form')
             <div class="form-actions">
-                <button type="submit">Update</button>
+                <button type="submit">Save employee changes</button>
             </div>
         </form>
     </div>

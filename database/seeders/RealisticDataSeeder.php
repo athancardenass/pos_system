@@ -146,12 +146,21 @@ class RealisticDataSeeder extends Seeder
         // Discounts
         $discounts = [
             ['discount_name' => 'Senior Citizen 20%', 'discount_type' => 'percentage', 'discount_value' => 20, 'start_date' => now()->subMonth(), 'end_date' => now()->addMonths(6)],
-            ['discount_name' => 'PWD 15%', 'discount_type' => 'percentage', 'discount_value' => 15, 'start_date' => now()->subMonth(), 'end_date' => now()->addMonths(6)],
+            ['discount_name' => 'PWD Discount 20%', 'discount_type' => 'percentage', 'discount_value' => 20, 'start_date' => now()->subMonth(), 'end_date' => now()->addMonths(6)],
             ['discount_name' => 'Holiday Sale 50 off', 'discount_type' => 'fixed', 'discount_value' => 50, 'start_date' => now()->subWeek(), 'end_date' => now()->addWeek()],
         ];
 
         $discModels = [];
+        $existingPwdDiscount = Discount::query()
+            ->whereRaw('LOWER(discount_name) LIKE ?', ['%pwd%'])
+            ->orderBy('discount_id')
+            ->first();
         foreach ($discounts as $disc) {
+            if (str_contains(strtolower($disc['discount_name']), 'pwd') && $existingPwdDiscount) {
+                $discModels[] = $existingPwdDiscount;
+                continue;
+            }
+
             $discModels[] = Discount::firstOrCreate(
                 ['discount_name' => $disc['discount_name']],
                 $disc

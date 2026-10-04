@@ -32,6 +32,7 @@ class Employee extends Model implements Authenticatable
 
     protected $hidden = [
         'password',
+        'manager_pin_hash',
     ];
 
     protected function casts(): array

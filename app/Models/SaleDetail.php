@@ -37,25 +37,25 @@ class SaleDetail extends Model
     }
 
     /** Quantity of this line already refunded across all refunds. */
-    public function refundedQuantity(): int
+    public function refundedQuantity(): float
     {
         // When the caller eager-aggregated the sum (PosController::show loads
         // withSum('refundItems as refunded_qty', 'quantity')), use that number —
         // the key exists even when SUM() is NULL (no refund rows => 0), so no
         // per-line query is needed (N+1 fix, behavior identical).
         if (array_key_exists('refunded_qty', $this->getAttributes())) {
-            return (int) $this->refunded_qty;
+            return round((float) $this->refunded_qty, 3);
         }
 
         // Live per-row query otherwise: callers like RefundService run this INSIDE
         // the locked refund transaction and must see the freshest totals, so this
         // path is deliberately kept exactly as it was.
-        return (int) $this->refundItems()->sum('quantity');
+        return round((float) $this->refundItems()->sum('quantity'), 3);
     }
 
     /** Quantity still refundable on this line. */
-    public function refundableQuantity(): int
+    public function refundableQuantity(): float
     {
-        return max(0, (int) $this->quantity - $this->refundedQuantity());
+        return round(max(0.0, (float) $this->quantity - $this->refundedQuantity()), 3);
     }
 }

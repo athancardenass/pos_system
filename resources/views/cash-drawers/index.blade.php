@@ -15,7 +15,7 @@
         <p class="empty">No closed cash drawer sessions recorded yet.</p>
     @else
         <div class="table-wrap">
-            <table>
+            <x-ui.table>
                 <thead>
                     <tr>
                         <th>Responsible Cashier</th>
@@ -53,17 +53,17 @@
                             </td>
                             <td style="text-align: center;">
                                 @if ($isBalanced)
-                                    <span class="badge badge-balanced">Balanced (₱0.00)</span>
+                                    <x-ui.badge variant="balanced">Balanced (₱0.00)</x-ui.badge>
                                 @elseif ($isOverage)
-                                    <span class="badge badge-overage">+₱{{ number_format($diff, 2) }} Overage</span>
+                                    <x-ui.badge variant="overage">+₱{{ number_format($diff, 2) }} Overage</x-ui.badge>
                                 @else
-                                    <span class="badge badge-shortage">-₱{{ number_format(abs($diff), 2) }} Shortage</span>
+                                    <x-ui.badge variant="shortage">-₱{{ number_format(abs($diff), 2) }} Shortage</x-ui.badge>
                                 @endif
                             </td>
                         </tr>
                     @endforeach
                 </tbody>
-            </table>
+            </x-ui.table>
         </div>
     @endif
 </div>

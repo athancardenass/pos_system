@@ -5,13 +5,13 @@
 @section('content')
     <div class="page-head">
         <h1>Categories</h1>
-        <a class="btn" href="{{ route('categories.create') }}">New category</a>
+        <x-ui.button :href="route('categories.create')">New category</x-ui.button>
     </div>
     <div class="card">
         @if ($categories->isEmpty())
             <p class="empty">No categories yet.</p>
         @else
-            <table>
+<x-ui.table>
                 <thead>
                     <tr>
                         <th>Name</th>
@@ -25,17 +25,17 @@
                             <td style="font-weight: 700;">{{ $category->category_name }}</td>
                             <td class="muted">{{ $category->description }}</td>
                             <td class="actions">
-                                <a class="btn-ghost" href="{{ route('categories.edit', $category) }}">Edit</a>
+                                <x-ui.button variant="slate" size="compact" :href="route('categories.edit', $category)">Edit</x-ui.button>
                                 <form class="inline-form" method="POST" action="{{ route('categories.destroy', $category) }}" onsubmit="return confirm('Delete this category?')">
                                     @csrf
                                     @method('DELETE')
-                                    <button class="btn-ghost btn-danger" type="submit">Delete</button>
+                                    <x-ui.button variant="danger" type="submit" size="compact">Delete</x-ui.button>
                                 </form>
                             </td>
                         </tr>
                     @endforeach
                 </tbody>
-            </table>
+</x-ui.table>
             {{ $categories->links('partials.pagination') }}
         @endif
     </div>
