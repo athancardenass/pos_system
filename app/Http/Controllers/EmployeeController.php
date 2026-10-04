@@ -127,7 +127,11 @@ class EmployeeController extends Controller
 
     private function validated(Request $request, ?Employee $employee = null): array
     {
-        $passwordRule = $employee ? 'nullable|string|min:8' : 'required|string|min:8';
+        $request->merge([
+            'username' => trim((string) $request->input('username', '')),
+        ]);
+
+        $passwordPresenceRule = $employee ? 'nullable' : 'required';
         $roleId = $request->input('role_id');
         $isManagerRole = Role::query()
             ->where('role_id', $roleId)
@@ -141,7 +145,7 @@ class EmployeeController extends Controller
             'first_name' => 'required|string|max:50',
             'last_name' => 'required|string|max:50',
             'username' => 'required|string|max:50|unique:employee,username,'.($employee?->employee_id ?? 'NULL').',employee_id',
-            'password' => $passwordRule,
+            'password' => [$passwordPresenceRule, 'string', 'min:8', 'confirmed'],
             'contact_number' => 'nullable|string|max:20',
             'hire_date' => 'required|date_format:Y-m-d|after_or_equal:1900-01-01|before_or_equal:today',
             'status' => 'required|in:active,inactive',

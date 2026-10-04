@@ -28,43 +28,66 @@
     <section class="employee-form-section" aria-labelledby="employee-access-heading">
         <div class="employee-form-heading">
             <h2 id="employee-access-heading">Account access</h2>
-            <p>Sign-in details, role, and account status.</p>
+            <p>Choose how this employee signs in and what access the account has.</p>
         </div>
-        <div class="form-grid employee-fields">
-            <div>
-                <label for="username">Username</label>
-                <input id="username" name="username" class="input-lg bordered" value="{{ old('username', $employee?->username) }}" required>
+        <div class="employee-form-subsection">
+            <div class="employee-form-subheading">
+                <h3>Login credentials</h3>
+                <p>{{ $employee ? 'Leave both password fields blank to keep the current password.' : 'Use at least 8 characters for the password.' }}</p>
             </div>
-            <div>
-                <label for="password">Password @if($employee)<span class="muted">(leave blank to keep)</span>@endif</label>
-                <input id="password" type="password" name="password" class="input-lg bordered" @required(! $employee) autocomplete="new-password">
-            </div>
-            <div>
-                <label for="role_id">Role</label>
-                <select id="role_id" name="role_id" required>
-                    @foreach ($roles as $role)
-                        <option value="{{ $role->role_id }}" data-role-name="{{ strtolower($role->role_name) }}" @selected(old('role_id', $employee?->role_id) == $role->role_id)>{{ $role->role_name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div>
-                <label for="status">Status</label>
-                <select id="status" name="status" required>
-                    @foreach (['active', 'inactive'] as $status)
-                        <option value="{{ $status }}" @selected(old('status', $employee?->status ?? 'active') === $status)>{{ ucfirst($status) }}</option>
-                    @endforeach
-                </select>
+            <div class="form-grid employee-fields employee-login-fields">
+                <div class="employee-login-username">
+                    <label for="username">Login username</label>
+                    <input id="username" name="username" class="input-lg bordered" value="{{ old('username', $employee?->username) }}" required autocomplete="username">
+                </div>
+                <div>
+                    <label for="password">{{ $employee ? 'New password' : 'Password' }}</label>
+                    <input id="password" type="password" name="password" class="input-lg bordered" @required(! $employee) autocomplete="new-password">
+                </div>
+                <div>
+                    <label for="password_confirmation">{{ $employee ? 'Confirm new password' : 'Confirm password' }}</label>
+                    <input id="password_confirmation" type="password" name="password_confirmation" class="input-lg bordered" @required(! $employee) autocomplete="new-password">
+                </div>
             </div>
         </div>
-        <div class="form-grid employee-fields employee-manager-pin-fields" id="employee-manager-pin-fields" data-required="{{ ! $employee || blank($employee->manager_pin_hash) ? 'true' : 'false' }}" hidden>
-            <div>
-                <label for="manager_pin">Manager PIN</label>
-                <input id="manager_pin" type="password" name="manager_pin" class="input-lg bordered" inputmode="numeric" pattern="[0-9]{4,6}" minlength="4" maxlength="6" autocomplete="new-password" aria-describedby="manager-pin-help">
-                <p class="muted" id="manager-pin-help">Use 4–6 digits. The PIN is stored as a one-way hash and cannot be viewed later. Leave blank to keep an existing PIN.</p>
+        <div class="employee-form-subsection">
+            <div class="employee-form-subheading">
+                <h3>Role and account status</h3>
+                <p>Inactive accounts cannot sign in.</p>
             </div>
-            <div>
-                <label for="manager_pin_confirmation">Confirm manager PIN</label>
-                <input id="manager_pin_confirmation" type="password" name="manager_pin_confirmation" class="input-lg bordered" inputmode="numeric" pattern="[0-9]{4,6}" minlength="4" maxlength="6" autocomplete="new-password">
+            <div class="form-grid employee-fields">
+                <div>
+                    <label for="role_id">Role</label>
+                    <select id="role_id" name="role_id" required>
+                        @foreach ($roles as $role)
+                            <option value="{{ $role->role_id }}" data-role-name="{{ strtolower($role->role_name) }}" @selected(old('role_id', $employee?->role_id) == $role->role_id)>{{ $role->role_name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label for="status">Account status</label>
+                    <select id="status" name="status" required>
+                        @foreach (['active', 'inactive'] as $status)
+                            <option value="{{ $status }}" @selected(old('status', $employee?->status ?? 'active') === $status)>{{ ucfirst($status) }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="employee-form-subsection employee-manager-pin-fields" id="employee-manager-pin-fields" data-required="{{ ! $employee || blank($employee->manager_pin_hash) ? 'true' : 'false' }}" hidden>
+            <div class="employee-form-subheading">
+                <h3>Manager approval PIN</h3>
+                <p id="manager-pin-help">{{ $employee && filled($employee->manager_pin_hash) ? 'Used only to approve sensitive actions, not to sign in. Leave both fields blank to keep the current PIN.' : 'Used only to approve sensitive actions, not to sign in. Set and confirm a 4–6 digit PIN.' }}</p>
+            </div>
+            <div class="form-grid employee-fields">
+                <div>
+                    <label for="manager_pin">New manager PIN</label>
+                    <input id="manager_pin" type="password" name="manager_pin" class="input-lg bordered" inputmode="numeric" pattern="[0-9]{4,6}" minlength="4" maxlength="6" autocomplete="new-password" aria-describedby="manager-pin-help">
+                </div>
+                <div>
+                    <label for="manager_pin_confirmation">Confirm manager PIN</label>
+                    <input id="manager_pin_confirmation" type="password" name="manager_pin_confirmation" class="input-lg bordered" inputmode="numeric" pattern="[0-9]{4,6}" minlength="4" maxlength="6" autocomplete="new-password" aria-describedby="manager-pin-help">
+                </div>
             </div>
         </div>
     </section>
@@ -73,7 +96,11 @@
 @push('styles')
 <style>
     .employee-manager-pin-fields[hidden] { display: none !important; }
-    .employee-manager-pin-fields p { margin: 6px 0 0; font-size: .78rem; line-height: 1.45; }
+    .employee-form-subsection + .employee-form-subsection { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--rule-faint); }
+    .employee-form-subheading { margin-bottom: .65rem; }
+    .employee-form-subheading h3 { margin: 0; color: var(--text); font-size: .85rem; font-weight: 800; }
+    .employee-form-subheading p { margin: .2rem 0 0; color: var(--muted); font-size: .76rem; line-height: 1.45; }
+    .employee-login-username { grid-column: 1 / -1; }
 </style>
 @endpush
 
