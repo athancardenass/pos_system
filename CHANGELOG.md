@@ -5,6 +5,11 @@
 
 > **AGENTS.md lock:** agent never runs `git commit`/`push`; group controls VCS.
 
+## 2026-10-04 — Fix employee password validation rules
+**What:** Split the conditional password-presence rule into individual Laravel validation rules.
+**Files touched:** `app/Http/Controllers/EmployeeController.php`, `CHANGELOG.md`.
+**Why:** Prevent Laravel from interpreting `nullable|string|min:8` as a nonexistent validator method.
+
 ## 2026-10-04 — Confirm employee password changes
 **What:** Added password confirmation to employee create/edit validation and trimmed username input before unique validation and saving.
 **Files touched:** `app/Http/Controllers/EmployeeController.php`, `resources/views/employees/_form.blade.php`, `CHANGELOG.md`.
