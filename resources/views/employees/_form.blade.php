@@ -35,8 +35,8 @@
                 <h3>Login credentials</h3>
                 <p>{{ $employee ? 'Leave both password fields blank to keep the current password.' : 'Use at least 8 characters for the password.' }}</p>
             </div>
-            <div class="form-grid employee-fields">
-                <div>
+            <div class="form-grid employee-fields employee-login-fields">
+                <div class="employee-login-username">
                     <label for="username">Login username</label>
                     <input id="username" name="username" class="input-lg bordered" value="{{ old('username', $employee?->username) }}" required autocomplete="username">
                 </div>
@@ -100,6 +100,7 @@
     .employee-form-subheading { margin-bottom: .65rem; }
     .employee-form-subheading h3 { margin: 0; color: var(--text); font-size: .85rem; font-weight: 800; }
     .employee-form-subheading p { margin: .2rem 0 0; color: var(--muted); font-size: .76rem; line-height: 1.45; }
+    .employee-login-username { grid-column: 1 / -1; }
 </style>
 @endpush
 

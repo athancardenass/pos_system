@@ -5,6 +5,11 @@
 
 > **AGENTS.md lock:** agent never runs `git commit`/`push`; group controls VCS.
 
+## 2026-10-04 — Align employee password fields
+**What:** Made the login username span its own row so the new and confirmation password fields align side by side.
+**Files touched:** `resources/views/employees/_form.blade.php`, `CHANGELOG.md`.
+**Why:** Remove the unbalanced half-empty row in the employee edit form.
+
 ## 2026-10-04 — Clarify employee edit form
 **What:** Grouped employee account fields into login credentials, role/status, and manager approval PIN sections; clarified that blank password/PIN fields preserve the existing values.
 **Files touched:** `resources/views/employees/_form.blade.php`, `CHANGELOG.md`.
