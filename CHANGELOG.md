@@ -5,6 +5,11 @@
 
 > **AGENTS.md lock:** agent never runs `git commit`/`push`; group controls VCS.
 
+## 2026-10-04 — Confirm employee password changes
+**What:** Added password confirmation to employee create/edit validation and trimmed username input before unique validation and saving.
+**Files touched:** `app/Http/Controllers/EmployeeController.php`, `resources/views/employees/_form.blade.php`, `CHANGELOG.md`.
+**Why:** Prevent silent password-entry mismatches and invisible leading/trailing whitespace in usernames from locking an employee out after an edit.
+
 ## 2026-10-04 — Show shift times and style pending payment table headers
 **What:** Added server-backed opened/last-closed times to the POS shift button and Slate Grav headers with white bold text and subtle depth to the Pending E-Wallet and Pending Card tables. Added cash drawer status coverage and aligned assertions with the current server-side customer search, discount picker, and link markup.
 **Files touched:** `app/Http/Controllers/CashDrawerController.php`, `app/Services/CashDrawerService.php`, `resources/views/pos/index.blade.php`, `resources/views/pos/pending-ewallet/index.blade.php`, `resources/views/pos/pending-card/index.blade.php`, `tests/Feature/CashDrawerFlowTest.php`, `tests/Feature/VatSettingsTest.php`, `tests/Unit/SaleServiceTest.php`, `CHANGELOG.md`.

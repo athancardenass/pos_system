@@ -40,6 +40,10 @@
                 <input id="password" type="password" name="password" class="input-lg bordered" @required(! $employee) autocomplete="new-password">
             </div>
             <div>
+                <label for="password_confirmation">Confirm password</label>
+                <input id="password_confirmation" type="password" name="password_confirmation" class="input-lg bordered" @required(! $employee) autocomplete="new-password">
+            </div>
+            <div>
                 <label for="role_id">Role</label>
                 <select id="role_id" name="role_id" required>
                     @foreach ($roles as $role)
