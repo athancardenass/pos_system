@@ -5,6 +5,30 @@
 
 > **AGENTS.md lock:** agent never runs `git commit`/`push`; group controls VCS.
 
+## 2026-10-04 — Add subtle depth to info notices
+
+**What:** Added a soft raised shadow and light surface highlight to informational flash notices.
+
+**Files touched:** `resources/views/layouts/app.blade.php`, `CHANGELOG.md`.
+
+**Why:** Make notices such as pending purchase order alerts read as raised content rather than recessed panels.
+
+## 2026-10-04 — Tighten Receipt Settings layout
+
+**What:** Reduced the page width and header height, arranged store name and TIN in a balanced row, and gave address and receipt footer fields full-width placement.
+
+**Files touched:** `resources/views/settings/receipt.blade.php`, `CHANGELOG.md`.
+
+**Why:** Remove oversized spacing and uneven field columns while keeping the existing settings and save behavior.
+
+## 2026-10-04 — Remove peach tint from form content
+
+**What:** Set form sections and any tables inside edit/new-discount panels to white, with a subtle neutral-green hover.
+
+**Files touched:** `resources/views/layouts/app.blade.php`, `CHANGELOG.md`.
+
+**Why:** Keep edit and New Discount content clean white while retaining the Slate Grav headers.
+
 ## 2026-10-04 — Apply unified style to edit forms
 
 **What:** Added a shared Slate Grav header and compact white form panel style to all edit forms and the New Discount form. Organized inventory quantity input and aligned its save action with the other forms.

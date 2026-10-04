@@ -167,6 +167,13 @@
             background: var(--surface); box-shadow: var(--shadow-card);
         }
         .form-page-card.card:hover { box-shadow: var(--shadow-card); }
+        .form-page-card .employee-form-section,
+        .form-page-card .discount-form-section {
+            border-color: rgba(32,60,61,.12); background: #fff; box-shadow: var(--shadow-sm);
+        }
+        .form-page-card table { background: #fff; }
+        .form-page-card tbody tr:nth-child(even) { background: #fff; }
+        .form-page-card tbody tr:hover { background: #F3F7F4; }
         .form-page-card .form-actions {
             justify-content: flex-end; margin-top: 1.1rem; padding-top: .9rem;
             border-top: 1px solid var(--rule-faint);
@@ -533,7 +540,10 @@
         .flash-ok { background: rgba(45, 138, 78, 0.08); border-color: rgba(43, 128, 80, 0.24); color: var(--success-ink); }
         .flash-error, .flash-danger { background: var(--danger-soft); border-color: rgba(174, 63, 59, 0.24); color: var(--danger); }
         .flash-warning { background: var(--warn-soft); border-color: rgba(173, 128, 80, 0.28); color: var(--warn-ink); }
-        .flash-info { background: rgba(24, 118, 94, 0.06); border-color: rgba(24, 118, 94, 0.22); color: var(--text); }
+        .flash-info {
+            background: #F1F7F3; border-color: rgba(24, 118, 94, 0.2); color: var(--text);
+            box-shadow: 0 3px 8px rgba(32,60,61,.1), inset 0 1px rgba(255,255,255,.9);
+        }
         .error, .error li { color: var(--danger); }
 
         /* --- Pagination --- */
