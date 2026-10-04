@@ -40,11 +40,11 @@ class RefundService
      * - writes a sale_refund record (+ per-line sale_refund_item rows)
      * - flips sale status to 'refunded' only when every line is fully refunded
      *
-     * @param  array<int,int>  $items  sale_detail_id => quantity to refund (empty = full sale)
+     * @param  array<int,float|int|string>  $items  sale_detail_id => quantity to refund (empty = full sale)
      *
      * @throws ValidationException on invalid input or permission denial
      */
-    public function refund(SaleTransaction $sale, array $items, string $reason, ?string $notes = null): SaleRefund
+    public function refund(SaleTransaction $sale, array $items, string $reason, ?string $notes = null, ?array $authorization = null): SaleRefund
     {
         $employee = auth()->user();
 
@@ -80,7 +80,7 @@ class RefundService
             $windowOverride = true;
         }
 
-        return DB::transaction(function () use ($sale, $items, $reason, $notes, $employee, $windowOverride): SaleRefund {
+        return DB::transaction(function () use ($sale, $items, $reason, $notes, $employee, $windowOverride, $authorization): SaleRefund {
             // Lock + reload the sale so two concurrent refunds serialize (TOCTOU-safe).
             $sale = SaleTransaction::query()->lockForUpdate()->findOrFail($sale->transaction_id);
 
@@ -94,7 +94,23 @@ class RefundService
             if (empty($items)) {
                 $items = $details->map(fn (SaleDetail $d) => $d->refundableQuantity())->all();
             }
-            $items = array_filter(array_map('intval', $items), fn ($q) => $q > 0);
+            $normalizedItems = [];
+            foreach ($items as $detailId => $quantity) {
+                if (! is_numeric($quantity) || ! is_finite((float) $quantity)) {
+                    throw ValidationException::withMessages(['items' => 'Refund quantities must be valid numbers.']);
+                }
+
+                $quantity = (float) $quantity;
+                $roundedQuantity = round($quantity, 3);
+                if (abs($quantity - $roundedQuantity) > 0.0000001) {
+                    throw ValidationException::withMessages(['items' => 'Refund quantities can have at most three decimal places.']);
+                }
+
+                if ($roundedQuantity > 0) {
+                    $normalizedItems[(int) $detailId] = $roundedQuantity;
+                }
+            }
+            $items = $normalizedItems;
 
             if (empty($items)) {
                 throw ValidationException::withMessages(['items' => 'Nothing selected to refund.']);
@@ -111,15 +127,16 @@ class RefundService
                 if (! $detail) {
                     throw ValidationException::withMessages(['items' => 'Invalid refund line.']);
                 }
-                if ($qty > $detail->refundableQuantity()) {
+                $refundableQuantity = $detail->refundableQuantity();
+                if ($qty - $refundableQuantity > 0.0000001) {
                     throw ValidationException::withMessages([
-                        'items' => "Only {$detail->refundableQuantity()} of {$detail->product?->product_name} remaining to refund.",
+                        'items' => "Only {$refundableQuantity} of {$detail->product?->product_name} remaining to refund.",
                     ]);
                 }
 
                 // Pro-rate: line paid-share × refunded fraction of that line.
                 $linePaid = round((float) $detail->subtotal * $paidRatio, 2);
-                $amount = round($linePaid * ($qty / max(1, (int) $detail->quantity)), 2);
+                $amount = round($linePaid * ($qty / max(0.001, (float) $detail->quantity)), 2);
                 $refundAmount += $amount;
 
                 $lines[] = ['detail' => $detail, 'qty' => $qty, 'amount' => $amount];
@@ -173,13 +190,37 @@ class RefundService
                 $sale->update(['status' => 'refunded', 'refunded_at' => now()]);
             }
 
-            AuditLogger::record(
-                $isFull ? 'refund' : 'partial_refund',
-                'sale_transaction',
-                $sale->transaction_id,
-                ($isFull ? 'Refunded' : 'Partial refund of').' sale #'.$sale->transaction_id
-                    .' (₱'.number_format($refundAmount, 2).', reason: '.$reason.')',
-            );
+            $auditDescription = ($isFull ? 'Refunded' : 'Partially refunded').' sale #'.$sale->transaction_id
+                .' (₱'.number_format($refundAmount, 2).', reason: '.$reason.').';
+            if ($authorization) {
+                AuditLogger::recordSensitive(
+                    $isFull ? 'refund' : 'partial_refund',
+                    (int) $authorization['requested_by_employee_id'],
+                    (int) $authorization['approved_by_employee_id'],
+                    $authorization['register_id'] ?? null,
+                    [
+                        'refund_id' => (int) $refund->refund_id,
+                        'refund_amount' => $refundAmount,
+                        'reason' => $reason,
+                        'notes' => filled($notes) ? $notes : null,
+                        'items' => array_map(fn (array $line) => [
+                            'sale_detail_id' => (int) $line['detail']->sale_detail_id,
+                            'quantity' => (float) $line['qty'],
+                            'amount' => (float) $line['amount'],
+                        ], $lines),
+                    ],
+                    'sale_transaction',
+                    (int) $sale->transaction_id,
+                    $auditDescription,
+                );
+            } else {
+                AuditLogger::record(
+                    $isFull ? 'refund' : 'partial_refund',
+                    'sale_transaction',
+                    $sale->transaction_id,
+                    $auditDescription,
+                );
+            }
 
             return $refund;
         });

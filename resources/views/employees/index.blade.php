@@ -5,10 +5,10 @@
 @section('content')
     <div class="page-head">
         <h1>Employees</h1>
-        <a class="btn" href="{{ route('employees.create') }}">New employee</a>
+        <x-ui.button :href="route('employees.create')">New employee</x-ui.button>
     </div>
     <div class="card">
-        <table>
+        <x-ui.table class="employee-table">
             <thead>
                 <tr>
                     <th>Name</th>
@@ -24,19 +24,19 @@
                         <td style="font-weight: 700;">{{ $employee->first_name }} {{ $employee->last_name }}</td>
                         <td>{{ $employee->username }}</td>
                         <td>{{ $employee->role->role_name ?? '—' }}</td>
-                        <td><span class="badge {{ $employee->status === 'active' ? 'badge-active' : 'badge-inactive' }}">{{ $employee->status }}</span></td>
+                        <td><x-ui.badge :variant="$employee->status === 'active' ? 'active' : 'inactive'">{{ $employee->status }}</x-ui.badge></td>
                         <td class="actions">
-                            <a class="btn-ghost" href="{{ route('employees.edit', $employee) }}">Edit</a>
+                            <x-ui.button variant="slate" size="compact" :href="route('employees.edit', $employee)">Edit</x-ui.button>
                             <form class="inline-form" method="POST" action="{{ route('employees.destroy', $employee) }}" onsubmit="return confirm('Delete this employee?')">
                                 @csrf
                                 @method('DELETE')
-                                <button class="btn-ghost btn-danger" type="submit">Delete</button>
+                                <x-ui.button variant="danger" type="submit" size="compact">Delete</x-ui.button>
                             </form>
                         </td>
                     </tr>
                 @endforeach
             </tbody>
-        </table>
+        </x-ui.table>
         {{ $employees->links('partials.pagination') }}
     </div>
 @endsection

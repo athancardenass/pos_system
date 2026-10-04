@@ -100,19 +100,22 @@ class ProductController extends Controller
             'description' => 'nullable|string|max:255',
             'barcode' => [
                 'required',
-                'string',
-                'max:50',
+                'digits:13',
                 'unique:product,barcode,' . ($product?->product_id ?? 'NULL') . ',product_id',
                 function (string $attribute, mixed $value, \Closure $fail): void {
-                    if (preg_match('/^\d{13}$/', $value)) {
-                        $sum = 0;
-                        for ($i = 0; $i < 12; $i++) {
-                            $sum += (int) $value[$i] * ($i % 2 === 0 ? 1 : 3);
-                        }
-                        $check = (10 - ($sum % 10)) % 10;
-                        if ($check !== (int) $value[12]) {
-                            $fail('The barcode is not a valid EAN-13 (check digit is wrong). Use the Generate button to create a valid one.');
-                        }
+                    if (! is_string($value) || ! preg_match('/^\d{13}$/', $value)) {
+                        $fail('The barcode must be a 13-digit EAN-13 code. Use the Generate button to create a valid one.');
+
+                        return;
+                    }
+
+                    $sum = 0;
+                    for ($i = 0; $i < 12; $i++) {
+                        $sum += (int) $value[$i] * ($i % 2 === 0 ? 1 : 3);
+                    }
+                    $check = (10 - ($sum % 10)) % 10;
+                    if ($check !== (int) $value[12]) {
+                        $fail('The barcode is not a valid EAN-13 (check digit is wrong). Use the Generate button to create a valid one.');
                     }
                 },
             ],

@@ -20,8 +20,15 @@ class SaleTransaction extends Model
         'transaction_date',
         'subtotal',
         'total_amount',
+        'vat_rate',
         'promo_discount',
         'coupon_discount',
+        'senior_pwd_type',
+        'senior_pwd_name',
+        'senior_pwd_id_number',
+        'discount_snapshot',
+        'tax_snapshot',
+        'checkout_idempotency_key',
         'payment_method',
         'status',
         'refunded_at',
@@ -34,8 +41,11 @@ class SaleTransaction extends Model
             'refunded_at' => 'datetime',
             'subtotal' => 'decimal:2',
             'total_amount' => 'decimal:2',
+            'vat_rate' => 'decimal:4',
             'promo_discount' => 'decimal:2',
             'coupon_discount' => 'decimal:2',
+            'discount_snapshot' => 'array',
+            'tax_snapshot' => 'array',
         ];
     }
 
@@ -113,6 +123,10 @@ class SaleTransaction extends Model
      */
     public function manualDiscountAmount(): float
     {
+        if (is_array($this->discount_snapshot) && array_key_exists('amount', $this->discount_snapshot)) {
+            return round((float) $this->discount_snapshot['amount'], 2);
+        }
+
         if (! $this->discount) {
             return 0.0;
         }
@@ -120,6 +134,50 @@ class SaleTransaction extends Model
         $afterPromotions = round((float) $this->subtotal - (float) $this->promo_discount, 2);
 
         return round($afterPromotions - (float) $this->discount->applyTo($afterPromotions), 2);
+    }
+
+    /** @return array<string, mixed>|null */
+    public function discountBreakdown(): ?array
+    {
+        if (is_array($this->discount_snapshot) && $this->discount_snapshot !== []) {
+            return $this->discount_snapshot;
+        }
+
+        if (! $this->discount) {
+            return null;
+        }
+
+        return [
+            'type' => 'standard',
+            'name' => (string) $this->discount->discount_name,
+            'reference' => 'DISC-'.str_pad((string) $this->discount->discount_id, 3, '0', STR_PAD_LEFT),
+            'amount' => $this->manualDiscountAmount(),
+        ];
+    }
+
+    /** @return array{vat_rate: float, vatable_sales: float, vat_amount: float, vat_exempt_sales: float, vat_exemption_amount: float, vat_enabled: bool} */
+    public function taxBreakdown(): array
+    {
+        $snapshot = $this->tax_snapshot;
+        if (is_array($snapshot) && array_key_exists('vat_amount', $snapshot)) {
+            return [
+                'vat_rate' => (float) ($snapshot['vat_rate'] ?? $this->vat_rate),
+                'vatable_sales' => (float) ($snapshot['vatable_sales'] ?? 0),
+                'vat_amount' => (float) $snapshot['vat_amount'],
+                'vat_exempt_sales' => (float) ($snapshot['vat_exempt_sales'] ?? 0),
+                'vat_exemption_amount' => (float) ($snapshot['vat_exemption_amount'] ?? 0),
+                'vat_enabled' => (bool) ($snapshot['vat_enabled'] ?? $this->vatRegistered()),
+            ];
+        }
+
+        return [
+            'vat_rate' => $this->vat_rate,
+            'vatable_sales' => $this->vatRegistered() ? $this->net_amount : 0.0,
+            'vat_amount' => $this->vat_amount,
+            'vat_exempt_sales' => 0.0,
+            'vat_exemption_amount' => 0.0,
+            'vat_enabled' => $this->vatRegistered(),
+        ];
     }
 
     public function isFullyRefunded(): bool
@@ -131,16 +189,16 @@ class SaleTransaction extends Model
     |---------------------------------------------------------------------
     | Philippine VAT (Option A — VAT-inclusive pricing)
     |---------------------------------------------------------------------
-    | Your product prices are treated as VAT-inclusive (the standard PH
-    | retail convention). The 12% VAT is extracted here on display only
-    | — no DB column is added and prices are never changed.
+    | Product prices are VAT-inclusive. The VAT component is extracted for
+    | receipt display using the rate saved with this sale; prices and checkout
+    | totals are not changed by the VAT calculation.
     | BIR (RR 16-2017) requires the VAT amount on every receipt.
     |
-    | VAT = total × rate/(1+rate)   = total × 0.12/1.12 ≈ total × 0.10714
+    | VAT = total × rate/(1+rate)
     | e.g. ₱660.00 → VAT ₱70.71, net ₱589.29
     |
-    | Toggleable via config/vat.php (enabled, rate) for the 3% percentage-
-    | tax businesses below the PHP 3,000,000 threshold.
+    | VAT registration remains controlled by config/vat.php. Managers can
+    | update the rate for future sales from the VAT settings page.
     */
 
     /** Whether VAT applies (configurable; true by default for VAT-registered). */
@@ -152,11 +210,18 @@ class SaleTransaction extends Model
     /** VAT component of total_amount under VAT-inclusive pricing. */
     public function getVatAmountAttribute(): float
     {
+        $snapshot = $this->tax_snapshot;
+        if (is_array($snapshot) && array_key_exists('vat_amount', $snapshot)) {
+            return round((float) $snapshot['vat_amount'], 2);
+        }
+
         if (! $this->vatRegistered()) {
             return 0.0;
         }
 
-        return round((float) $this->total_amount * self::VAT_RATE / (1 + self::VAT_RATE), 2);
+        $rate = $this->vat_rate;
+
+        return round((float) $this->total_amount * $rate / (1 + $rate), 2);
     }
 
     /** Net sales amount before VAT (= total − VAT). */
@@ -167,12 +232,12 @@ class SaleTransaction extends Model
             : (float) $this->total_amount;
     }
 
-    /** Standard Philippine VAT rate (12%, per NIRC + RA 11633 / RR 1-2026). */
+    /** Default VAT rate used for new installations and pre-setting fallbacks. */
     public const VAT_RATE = 0.12;
 
-    /** The configured VAT rate as a percentage (e.g. 12 for "12%"). */
-    public function getVatRateAttribute(): float
+    /** Sale-time rate, with the configured default for unsaved/legacy instances. */
+    public function getVatRateAttribute(mixed $value): float
     {
-        return (float) config('vat.rate', self::VAT_RATE);
+        return $value !== null ? (float) $value : (float) config('vat.rate', self::VAT_RATE);
     }
 }

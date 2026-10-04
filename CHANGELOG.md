@@ -5,6 +5,150 @@
 
 > **AGENTS.md lock:** agent never runs `git commit`/`push`; group controls VCS.
 
+## 2026-10-04 — Show shift times and style pending payment table headers
+**What:** Added server-backed opened/last-closed times to the POS shift button and Slate Grav headers with white bold text and subtle depth to the Pending E-Wallet and Pending Card tables. Added cash drawer status coverage and aligned assertions with the current server-side customer search, discount picker, and link markup.
+**Files touched:** `app/Http/Controllers/CashDrawerController.php`, `app/Services/CashDrawerService.php`, `resources/views/pos/index.blade.php`, `resources/views/pos/pending-ewallet/index.blade.php`, `resources/views/pos/pending-card/index.blade.php`, `tests/Feature/CashDrawerFlowTest.php`, `tests/Feature/VatSettingsTest.php`, `tests/Unit/SaleServiceTest.php`, `CHANGELOG.md`.
+**Why:** Let cashiers see when their shift opened or last closed, align payment review tables with the shared Slate Grav table-header treatment, and keep tests accurate to the implemented UI and data loading behavior.
+
+## 2026-10-04 — Add manager PIN authorization and structured audit
+
+- Added hashed 4–6 digit manager PIN setup, a cashier authorization keypad with a 60-second lockout after three failed attempts, and one-use server grants for discounts, refunds, and drawer opening. Protected cart/held-cart actions request manager approval and a reason; approvals and failed attempts are recorded with requester, approver, register, and structured details. Added a reversible migration with nullable employee PIN and audit fields; existing rows are unchanged.
+- Files: `app/Http/Controllers/AuditLogController.php`, `app/Http/Controllers/CashDrawerController.php`, `app/Http/Controllers/EmployeeController.php`, `app/Http/Controllers/ManagerAuthorizationController.php`, `app/Http/Controllers/PosController.php`, `app/Models/AuditLog.php`, `app/Models/Employee.php`, `app/Services/AuditLogger.php`, `app/Services/ManagerAuthorizationService.php`, `app/Services/RefundService.php`, `database/migrations/2026_10_04_000003_add_manager_authorization_audit_fields.php`, `resources/views/audit-logs/index.blade.php`, `resources/views/components/manager-pin-modal.blade.php`, `resources/views/employees/_form.blade.php`, `resources/views/pos/index.blade.php`, `resources/views/pos/show.blade.php`, `routes/web.php`, `tests/Feature/CheckoutFlowTest.php`, `tests/Feature/ManagerAuthorizationTest.php`, `tests/Feature/RefundFlowTest.php`, `CHANGELOG.md`.
+
+## 2026-10-04 — Add register-local Hold and Resume
+
+- Cashiers can hold a non-empty cart and resume or remove held carts from the register header. Holds save cart quantities, customer and discount selections, cashier/register details, and a 24-hour expiry in browser storage; resuming refreshes stock and warns while reducing or skipping unavailable items. Close Shift warns when holds remain, and held carts never reserve or deduct stock.
+- Added an authenticated read-only stock snapshot endpoint for resume-time stock checks. No database schema or checkout behavior changed.
+- Files: `resources/views/pos/index.blade.php`, `app/Http/Controllers/PosController.php`, `app/Services/SaleService.php`, `routes/web.php`, `tests/Feature/CheckoutFlowTest.php`, `CHANGELOG.md`.
+
+## 2026-10-04 — Improve POS cart quantities, tender, and stock cues
+
+- Added editable whole-unit quantities and three-decimal kilogram weights with stock caps, exact cash tender, live change, and checkout blocking for short cash. Stock badges now turn yellow at 10 or less and red at zero; zero-stock products stay unavailable. Kept decimal inventory precision through the product stock accessor and included each product's unit of measure in the register payload.
+- Files: `resources/views/pos/index.blade.php`, `app/Models/Product.php`, `app/Services/SaleService.php`, `tests/Feature/CheckoutFlowTest.php`, `CHANGELOG.md`.
+
+## 2026-10-04 — Fix POS register header actions
+
+- Grouped the cashier/shift status with readable Held, Pending E-Wallet, and primary Close Shift actions in the requested order. Kept labels visible on narrow screens, added the amber pending-count state and a held-list empty state, and made the e-wallet queue visible to cashiers for their own requests while managers see the full queue.
+- Files: `resources/views/pos/index.blade.php`, `resources/views/pos/pending-ewallet/index.blade.php`, `app/Http/Controllers/PosController.php`, `routes/web.php`, `tests/Feature/EwalletVerificationTest.php`, `CHANGELOG.md`.
+
+## 2026-10-04 — Add manager-verified e-wallet checkout
+
+- E-wallet submissions now create a pending verification request and reserve the requested stock. A manager must confirm the completed payment, reference, and amount in the merchant app before checkout creates a sale, payment, and receipt. Rejected or 60-minute-expired requests release their stock reservation; review actions are audited.
+- Added manager queue and request detail screens, a cashier status view, and POS guidance while preserving immediate cash/card checkout and existing payment/provider routes. Added lifecycle, permissions, duplicate-reference, reservation, expiry, and manager-confirmation tests.
+- Files: `app/Http/Controllers/PosController.php`, `app/Models/PendingEwalletVerification.php`, `app/Services/EwalletVerificationService.php`, `database/migrations/2026_10_04_000002_create_pending_ewallet_verifications_table.php`, `resources/views/pos/index.blade.php`, `resources/views/pos/pending-ewallet/index.blade.php`, `resources/views/pos/pending-ewallet/show.blade.php`, `routes/web.php`, `tests/Feature/CheckoutFlowTest.php`, `tests/Feature/EwalletVerificationTest.php`, `CHANGELOG.md`.
+
+## 2026-10-04 — Use slate green for selected navigation
+
+- Changed the selected navigation button to a slate-green `#203C3D` surface with white text and a restrained shadow; unselected controls retain the light peach treatment.
+- Files: `resources/views/layouts/app.blade.php`, `CHANGELOG.md`.
+
+## 2026-10-04 — Style navigation links as compact buttons
+
+- Updated the shared top navigation links to use compact rounded secondary-button surfaces, soft shadows, green hover feedback, a clear green-tinted active state with visible keyboard focus, and stronger Manrope weights for easier scanning.
+- Kept Dashboard first, Reports last, and preserved module links and route behavior.
+- Files: `resources/views/layouts/app.blade.php`, `CHANGELOG.md`.
+
+## 2026-10-04 — Repair VAT settings preview
+
+- Applied the approved VAT migration to the local preview SQLite database after the VAT settings page failed because its schema was missing.
+- Added the shared `.btn` class to the Discounts page's VAT settings action and the VAT page's secondary links so they receive the intended button layout and visual styling; added page-render assertions.
+- Files: `resources/views/discounts/index.blade.php`, `resources/views/settings/vat.blade.php`, `tests/Feature/VatSettingsTest.php`, `CHANGELOG.md`; applied `database/migrations/2026_10_04_000001_add_configurable_vat_rate.php` to the local preview database.
+
+## 2026-10-04 — Add editable VAT rate and refine POS discount picker
+
+- Added a manager-only VAT settings page backed by `vat_settings`; checkout snapshots the rate on each sale so future updates do not rewrite old receipt tax details. Updated `SaleTransaction` VAT extraction to use that saved rate while keeping VAT-inclusive totals unchanged.
+- Added the VAT settings entry point beside Discount management and polished the POS discount select/preview. Kept the existing guard that prevents deleting discounts already used on sales.
+- Added focused feature coverage for manager access and validation, future-sale VAT updates, sale-time VAT snapshots on receipts, the POS Discount picker, and the used-discount deletion guard.
+- Files: `app/Http/Controllers/VatSettingsController.php`, `app/Models/VatSetting.php`, `app/Models/SaleTransaction.php`, `app/Services/CheckoutService.php`, `app/Services/VatSettingsService.php`, `database/migrations/2026_10_04_000001_add_configurable_vat_rate.php`, `resources/views/discounts/index.blade.php`, `resources/views/pos/index.blade.php`, `resources/views/settings/vat.blade.php`, `routes/web.php`, `tests/Feature/VatSettingsTest.php`.
+
+## 2026-10-04 — Enrich the peach and botanical color palette
+
+- Strengthened the light peach canvas and warm surface contrast, refined warm charcoal text, and brightened the shared green accent in `resources/views/layouts/app.blade.php` for a fresher, more dimensional appearance.
+- Kept red limited to danger and error states and softened shared shadows without changing layout or behavior.
+
+## 2026-10-04 — Reserve red for semantic alerts
+
+- Changed the shared primary accent, focus ring, selected states, and ordinary ghost actions in `resources/views/layouts/app.blade.php` to a fresh green, keeping the light peach canvas and warm charcoal text.
+- Kept red for danger actions, errors, and shortage/inactive indicators so it communicates status rather than general navigation or action styling.
+
+## 2026-10-04 — Warm up the shared UI palette
+
+- Replaced the slate and teal color pairing in `resources/views/layouts/app.blade.php` with warm charcoal text, fresh coral actions, and light peach surfaces so the interface feels brighter and more current.
+- Updated shared selection, focus, hover, semantic, and shadow colors while preserving page layouts and application behavior.
+
+## 2026-10-03 — Refine shared UI palette with slate and teal
+
+- Updated shared color tokens in `resources/views/layouts/app.blade.php`: `#344450` slate text, `#203C3D` teal actions and selection, and a lighter peach canvas with warm neutral surfaces; coral remains reserved for focus and danger states.
+- Applied the theme through shared module surfaces, selected/hover states, controls, links, and soft shadows without changing layout or behavior.
+
+## 2026-10-03 — Support fractional refunds and omit unused users table
+
+- `database/migrations/2026_10_03_000001_change_sale_refund_item_quantity_to_decimal.php` changes refund-item quantities to `DECIMAL(10,3)`. `app/Services/RefundService.php`, `app/Models/SaleDetail.php`, `app/Models/SaleRefundItem.php`, and `app/Http/Controllers/PosController.php` now preserve fractional quantities in refund limits, prorated amounts, and stock restoration; `resources/views/pos/show.blade.php` accepts thousandth-unit quantities.
+- `database/migrations/2026_10_03_000002_drop_unused_users_table.php` drops only the unused `users` table after the starter migrations, so fresh installs finish without it while keeping `sessions` and `password_reset_tokens`.
+- `tests/Feature/RefundFlowTest.php` covers fractional partial/full refund math and stock restoration; `tests/Feature/ValidationRulesTest.php` asserts the fresh schema keeps required framework tables and omits `users`.
+
+## 2026-10-03 — Tighten quantity, date, barcode, and payment validation
+
+- `app/Http/Controllers/InventoryController.php::update` and `app/Http/Controllers/PurchaseOrderController.php::store` accept quantities to three decimal places; `resources/views/inventory/edit.blade.php` and `resources/views/purchase-orders/create.blade.php` expose matching `.001` steps.
+- `app/Http/Controllers/CustomerController.php::validated`, `app/Http/Controllers/EmployeeController.php::validated`, and `app/Http/Controllers/PurchaseOrderController.php::store` enforce the existing form date bounds server-side.
+- `app/Http/Controllers/ProductController.php::validated` now requires a 13-digit EAN-13 barcode with a valid check digit; `tests/Feature/CrudAndPosTest.php` uses an EAN-13 barcode.
+- `app/Http/Controllers/PosController.php::store` requires payment references/providers for card and e-wallet checkouts and limits received amounts to two decimal places. `tests/Feature/CheckoutFlowTest.php` and `tests/Feature/ValidationRulesTest.php` cover payment, quantity, date, and barcode validation.
+
+## 2026-10-03 — Remove unused empty users table from local database
+
+- Dropped the empty, unreferenced `pos_system.users` table from the canonical local database after confirming the application authenticates through `employee`.
+- Kept `employee`, `password_reset_tokens`, `sessions`, and `job_batches`; they are used or remain configured by the application/framework.
+- No application routes, validation rules, or business logic changed.
+
+## 2026-10-03 — Refine discount and employee edit forms
+
+- Reorganized the shared discount form in `resources/views/discounts/_form.blade.php` into Discount details and Availability sections, with responsive field groups and clearer value guidance; both create and edit pages use the updated form.
+- Improved page context and action labels in `resources/views/discounts/create.blade.php`, `resources/views/discounts/edit.blade.php`, and `resources/views/employees/edit.blade.php`.
+- Added responsive form styling in `resources/views/layouts/app.blade.php`; kept field names, request methods, routes, and save behavior unchanged.
+
+## 2026-10-03 — Modernize shared module styling and employee form
+
+- Updated shared styling in `resources/views/layouts/app.blade.php` with a lighter peach canvas, Manrope typography, softer surfaces, sentence-case controls, and modern teal hover/selected states across modules.
+- Removed the `+ New Customer` action from `resources/views/customers/index.blade.php` because CRM will provide customer records.
+- Grouped existing employee fields into Personal details and Account access sections in `resources/views/employees/_form.blade.php`; kept field names and submission behavior unchanged.
+- Preserved navigation order, routes, backend behavior, and database structure.
+
+## 2026-10-03 — Rework POS workstation visual hierarchy
+
+- Rebuilt the POS surface styling in `resources/views/pos/index.blade.php` around the cashier flow: clearer product tiles, connected transaction/payment surfaces, visible totals, compact searchable customer rail, and fixed-height desktop layout with independent product/cart scrolling.
+- Improved receipt hierarchy and made payment method and received amount explicit in `resources/views/pos/show.blade.php`; retained existing discount reference and print behavior.
+- Kept navigation, routes, checkout behavior, database schema, and backend functionality untouched. Promotions and Coupons remain omitted from POS presentation.
+
+## 2026-10-03 — Refine POS and receipt Clean SaaS presentation
+
+- Refined `resources/views/pos/index.blade.php` surfaces, product cards, type hierarchy, focus states, discount summary, payment controls, and compact scrolling with the existing brand colors; preserved workstation layout and keyboard interactions.
+- Refined `resources/views/pos/show.blade.php` into a clearer thermal receipt with separate product, quantity, unit-price, and total columns plus soft SaaS styling and thermal-width printing.
+- Kept customer search, discount behavior, routes, navigation, database, checkout logic, and Promotions/Coupons scope unchanged.
+
+## 2026-10-03 — Align register workspace and receipt hierarchy
+
+- Moved payment method, amount due, cash received/change, and Complete Sale into the left register workspace; kept searchable Customer and Discount selection in the right rail in `resources/views/pos/index.blade.php`.
+- Made the applied Discount name, `DISC-` reference, and savings explicit in Live Transaction; tightened panel spacing while retaining independent content scrolling.
+- Rebuilt `resources/views/pos/show.blade.php` receipt markup into structured store, transaction, item, adjustment, totals, payment, and footer sections with class-based thermal styling.
+- Updated the focused receipt presentation assertion in `tests/Feature/PromotionEngineTest.php` to check the new discount row structure.
+- No route, schema, or checkout logic changed; Promotions and Coupons remain omitted from cashier presentation.
+
+## 2026-10-03 — Redesign POS register and receipt presentation
+
+- Rebuilt `resources/views/pos/index.blade.php` as a compact, viewport-filling supermarket workstation with product catalog, Live Transaction, searchable customer selection, existing Discount preview, and payment controls. Removed Promotions/Coupons from the POS presentation without changing their backend or schema.
+- Reworked `resources/views/layouts/app.blade.php` into a compact top navigation, with Dashboard first, Reports last, and Promotions/Coupons omitted from navigation.
+- Restyled `resources/views/pos/show.blade.php` as a compact thermal receipt with the existing Discount identifier/amount, customer ID, and loyalty points; omitted Promotion/Coupon lines.
+- Updated `tests/Feature/PromotionEngineTest.php` assertions to match the approved presentation scope while retaining checks that existing backend checkout calculations are unchanged.
+- Preserved checkout, payment, cash drawer, refund, and database behavior while making the cashier workflow fit the desktop viewport.
+
+## 2026-10-03 — Scope update: exclude promotions and coupons from POS redesign
+
+- Updated `docs/superpowers/specs/2026-10-03-supermarket-pos-redesign-design.md` to exclude Promotions and Coupons from POS UI, navigation, live transaction, receipt, and backend/schema work. Kept existing Discount support in scope per CRM database availability.
+
+## 2026-10-03 — Design spec: supermarket POS workstation redesign
+
+- Added `docs/superpowers/specs/2026-10-03-supermarket-pos-redesign-design.md` describing the approved reference direction, viewport layout, adjustment visibility, receipt hierarchy, scope boundaries, and acceptance checks. This records the implementation target before the broad UI rebuild.
+
 ---
 
 ## 2026-09-25 — SM Grocery Store Seeder, SaleService Refactor, Refund Window UI & Credit Slip Polish
@@ -833,3 +977,483 @@ him understand and explain the system to groupmates, and to stop seeing Laravel 
 - Code style: keep existing Laravel conventions (singular table names, `<entity>_id` PKs, `public $timestamps = false` on most models).
 - Document each task here the moment it is done, before moving on.
 - When documenting, cite the exact file + method (e.g. `app/Http/Controllers/PosController.php::store`).
+
+## 2026-10-04 — POS receipts and Senior/PWD discount policy
+
+**What:** Added configurable thermal receipt settings, sequential per-register receipt numbers, checkout success/reprint flow, and receipt snapshots so historical receipts retain the store/tax/discount details from sale time. Added the simplified Senior Citizen/PWD policy: 20% of the VAT-exempt base across products, with required full name and ID proof; the special discount records are displayed and maintained at 20%. Kept promotion/coupon backend calculations intact and omitted them from the POS receipt presentation.
+
+**Files touched:** `app/Http/Controllers/DiscountController.php`, `app/Http/Controllers/PosController.php`, `app/Http/Controllers/ReceiptSettingsController.php`, `app/Models/Discount.php`, `app/Models/Receipt.php`, `app/Models/SaleTransaction.php`, `app/Services/CheckoutService.php`, `app/Services/ReceiptNumberService.php`, `app/Services/ReceiptSettingsService.php`, `database/migrations/2026_10_04_000004_add_receipt_settings_and_sale_snapshots.php`, `database/seeders/RealisticDataSeeder.php`, `resources/views/dashboard.blade.php`, `resources/views/discounts/_form.blade.php`, `resources/views/discounts/index.blade.php`, `resources/views/pos/index.blade.php`, `resources/views/pos/show.blade.php`, `resources/views/settings/receipt.blade.php`, `routes/web.php`, `tests/Feature/CheckoutFlowTest.php`, `tests/Feature/EwalletVerificationTest.php`, `tests/Feature/ManagerAuthorizationTest.php`, `tests/Feature/PromotionEngineTest.php`, `tests/Feature/ReceiptAndSpecialDiscountTest.php`, `tests/Feature/VatSettingsTest.php`, `CHANGELOG.md`.
+
+**Why:** Complete the approved register receipt and Senior/PWD steps while preserving existing backend behavior and keeping historical sale output auditable.
+
+## 2026-10-04 — POS checkout idempotency
+
+**What:** Added per-cart UUID checkout keys, persisted them across hold/resume and retry flows, and added unique nullable keys to completed sales and pending E-Wallet requests. Replayed checkout requests now return the existing receipt or pending payment without repeating stock, customer, cash-drawer, or receipt side effects. The POS now disables Complete during submission and refreshes BFCache-restored checkout pages.
+
+**Files touched:** `app/Http/Controllers/PosController.php`, `app/Models/PendingEwalletVerification.php`, `app/Models/SaleTransaction.php`, `app/Services/CheckoutService.php`, `app/Services/EwalletVerificationService.php`, `database/migrations/2026_10_04_000005_add_checkout_idempotency_keys.php`, `resources/views/pos/index.blade.php`, `resources/views/pos/pending-ewallet/show.blade.php`, `resources/views/pos/show.blade.php`, `tests/Feature/CheckoutIdempotencyTest.php`, `CHANGELOG.md`.
+
+**Why:** Prevent browser Back, double-click, and network retries from completing the same cashier checkout more than once, including E-Wallet submission and verification.
+
+## 2026-10-04 — POS register header and held-cart actions
+
+**What:** Removed link underlines from the Pending E-Wallet header action on hover and focus, added subtle background/shadow feedback to the register header actions, and restored the visible danger styling on held-cart removal.
+
+**Files touched:** `resources/views/pos/index.blade.php`, `tests/Feature/EwalletVerificationTest.php`, `CHANGELOG.md`.
+
+**Why:** Keep register actions visually consistent and make the held-cart Remove control clearly visible to cashiers.
+
+## 2026-10-04 — POS live transaction auto-scroll
+
+**What:** Added smooth cart scrolling to the newest product row, and brief highlighting for product quantity increases. Existing-row updates only scroll when the cashier was already following the latest cart row; manual upward scrolling remains in place. The highlight respects reduced-motion preferences.
+
+**Files touched:** `resources/views/pos/index.blade.php`, `tests/Feature/CheckoutIdempotencyTest.php`, `CHANGELOG.md`.
+
+**Why:** Keep newly scanned and updated items easy to spot in long live transactions without interrupting cashiers reviewing earlier rows.
+
+## 2026-10-04 — E-Wallet review and result screens
+
+**What:** Reorganized E-Wallet review around the amount, provider, reference, customer, and cart summary. Added focused Verify and Reject actions with duplicate-submit protection, a rejection confirmation with a Back to POS action, and an E-Wallet completion action labeled Next sale with an Enter shortcut. Kept manager-only verification and rejection routes unchanged.
+
+**Files touched:** `resources/views/pos/pending-ewallet/show.blade.php`, `resources/views/pos/show.blade.php`, `app/Http/Controllers/PosController.php`, `tests/Feature/EwalletVerificationTest.php`, `CHANGELOG.md`.
+
+**Why:** Make merchant-app review and its success or rejection outcome clear for the cashier while preserving existing authorization and checkout behavior.
+
+## 2026-10-04 — Card and E-Wallet checkout validation
+
+**What:** Added server-side provider allowlists, distinct Card approval-code and E-Wallet reference limits, rejection of card-number-shaped values in the approval-code field, and four-digit validation for optional card last-four input. E-Wallet input now accepts the server-supported 100-character maximum.
+
+**Files touched:** `app/Http/Controllers/PosController.php`, `resources/views/pos/index.blade.php`, `tests/Feature/CheckoutFlowTest.php`, `CHANGELOG.md`.
+
+**Why:** Reject unsupported payment providers and prevent a full PAN or malformed last-four value from being accepted as Card checkout metadata while retaining the current schema and checkout flow.
+
+## 2026-10-04 — Secure payment references and Card verification
+
+**What:** Added reversible encryption and keyed reference fingerprints with a unique reservation registry; migrated existing E-Wallet and payment references out of plaintext columns and checkout JSON; added a manager-reviewed Card queue with stock reservation, expiration, idempotency, audit details, and duplicate approval-code checks; masked references in review lists, receipts, reports, and audit output; added manager-only audited reveal controls that re-mask after 10 seconds; rejected card-number-shaped and CVV-shaped Card codes.
+
+**Files touched:** `database/migrations/2026_10_04_000006_secure_payment_references_and_create_pending_card_verifications.php`, `app/Services/PaymentReferenceService.php`, `app/Services/CardVerificationService.php`, `app/Services/EwalletVerificationService.php`, `app/Services/CheckoutService.php`, `app/Models/Payment.php`, `app/Models/PendingEwalletVerification.php`, `app/Models/PendingCardVerification.php`, `app/Http/Controllers/PosController.php`, `app/Http/Controllers/AuditLogController.php`, `routes/web.php`, `resources/views/pos/index.blade.php`, `resources/views/pos/show.blade.php`, `resources/views/pos/pending-ewallet/index.blade.php`, `resources/views/pos/pending-ewallet/show.blade.php`, `resources/views/pos/pending-card/index.blade.php`, `resources/views/pos/pending-card/show.blade.php`, `resources/views/components/masked-value.blade.php`, `tests/Feature/PaymentReferenceMigrationTest.php`, `tests/Feature/CardVerificationTest.php`, `tests/Feature/EwalletVerificationTest.php`, `tests/Feature/CheckoutFlowTest.php`, `tests/Feature/CheckoutIdempotencyTest.php`, `CHANGELOG.md`.
+
+**Why:** Keep Card and E-Wallet review behavior consistent while protecting payment references at rest and in cashier-facing pages, logs, and exports without storing full PAN or CVV values.
+
+## 2026-10-04 — POS transient reprint notice and manager authorization recovery
+
+**What:** Applied the approved manager authorization audit-fields migration to the active preview SQLite database. Made the empty F10 reprint notice dismiss itself after three seconds, refined flash alerts to use a light outline, and styled the manager modal Cancel action with the shared secondary button treatment.
+
+**Files touched:** `app/Http/Controllers/PosController.php`, `resources/views/layouts/app.blade.php`, `resources/views/components/manager-pin-modal.blade.php`, `CHANGELOG.md`.
+
+**Why:** Keep the no-receipt message temporary, make the Cancel action visually consistent, and allow manager authorization auditing to work against the preview database schema.
+
+## 2026-10-04 — Checkout schema recovery for preview POS
+
+**What:** Applied the existing receipt/sale snapshot and checkout idempotency migrations to the active preview SQLite database so it matches the current checkout code. No migration files or existing records were edited.
+
+**Files touched:** `CHANGELOG.md`.
+
+**Why:** Complete Sale was returning HTTP 500 because the preview database lacked the `senior_pwd_type` and checkout idempotency columns expected by the application.
+
+## 2026-10-04 — POS header action and shift status colors
+
+**What:** Changed the POS register header action buttons to slate-teal with bold white labels and gave the ACTIVE status a padded strong-green pill with bold white text. NO SHIFT retains a muted status style.
+
+**Files touched:** `resources/views/pos/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Make key register controls and the active shift state easier to distinguish at a glance.
+
+## 2026-10-04 — Customer directory action and status styling
+
+**What:** Matched the customer directory Edit action to the slate-teal button style with bold white text, styled active customer status as a padded strong-green badge with bold white text, and made Delete visibly destructive.
+
+**Files touched:** `resources/views/customers/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Carry the clearer POS action and active-status color treatment into the customer directory.
+
+## 2026-10-04 — Customer points and inactive status badges
+
+**What:** Styled loyalty points with a slate-grav background and bold white text; changed inactive customer status to a padded solid-red badge with bold white text.
+
+**Files touched:** `resources/views/customers/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Improve contrast and make loyalty points and inactive accounts immediately recognizable.
+
+## 2026-10-04 — Shared status and Edit action styling
+
+**What:** Updated shared active badges to use a padded strong-green fill with bold white text and inactive badges to use a padded solid-red fill with bold white text. Styled management-page Edit links as slate-grav buttons with bold white labels and clear hover/focus states.
+
+**Files touched:** `resources/views/layouts/app.blade.php`, `CHANGELOG.md`.
+
+**Why:** Apply the requested status and Edit-button treatment consistently across modules that use the shared UI classes.
+
+## 2026-10-04 — POS receipt auto-print and store location presentation
+
+**What:** Restored one-time automatic browser printing on newly completed receipt screens, labeled the configured store address as Location on receipts, and changed product Add controls to padded solid-green buttons with a clear focus state.
+
+**Files touched:** `resources/views/pos/show.blade.php`, `resources/views/pos/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Restore the cashier's print workflow, make receipt location details easy to identify, and make product-add actions more visible.
+
+## 2026-10-04 — POS product and stock badge emphasis
+
+**What:** Made POS catalog product names bold and styled normal stock-count badges with a padded slate-grav fill and bold white text. Low-stock yellow and out-of-stock red states remain distinct.
+
+**Files touched:** `resources/views/pos/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Improve product-name readability and make stock counts easier to scan while preserving stock warnings.
+
+## 2026-10-04 — POS product name readability
+
+**What:** Slightly increased product-name text size in both standard and narrow catalog layouts while retaining bold weight and the existing line clamp.
+
+**Files touched:** `resources/views/pos/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Make product names easier for cashiers to spot.
+
+## 2026-10-04 — POS reorder-level stock indicator
+
+**What:** The POS stock badge now uses a solid-red background with white text when stock reaches the product reorder or critical-reorder level. Stock below the existing ten-unit watch threshold stays yellow until it reaches the configured reorder level; zero stock remains red.
+
+**Files touched:** `app/Services/SaleService.php`, `resources/views/pos/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Surface configured reorder status clearly to the cashier without changing stock or checkout rules.
+
+## 2026-10-04 — Audit log period filters
+
+**What:** Added Daily, Weekly, Monthly, Yearly, and All time filters to the Audit Logs page. Filtering is performed against the log timestamp, the selected period stays in pagination links, and the current range is shown above results.
+
+**Files touched:** `app/Http/Controllers/AuditLogController.php`, `resources/views/audit-logs/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Let staff narrow the audit trail to a useful time window without manually scanning unrelated entries.
+
+## 2026-10-04 — Customer table content spacing
+
+**What:** Added consistent padded content surfaces for customer IDs, customer names, and contact/email values in the customer directory.
+
+**Files touched:** `resources/views/customers/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Improve separation and readability of customer details within the table rows.
+
+## 2026-10-04 — Slate customer detail chips
+
+**What:** Changed padded Customer ID, name, and contact/email content surfaces to slate grav with white text.
+
+**Files touched:** `resources/views/customers/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Match the stronger customer detail treatment to the loyalty-points badge styling.
+
+## 2026-10-04 — Customer table white rows and slate header
+
+**What:** Set the customer table surface and body rows to white. Styled the complete table header with slate-grav background, padded cells, and bold white labels while preserving the right alignment of Loyalty Points.
+
+**Files touched:** `resources/views/customers/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Improve contrast and structure in the customer directory table.
+
+## 2026-10-04 — Employee table white rows and slate header
+
+**What:** Applied the customer directory table treatment to Employees: white table/body rows and a padded slate-grav header with bold white labels.
+
+**Files touched:** `resources/views/employees/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Keep the management tables visually consistent and easier to scan.
+
+## 2026-10-04 — Audit Logs and Reports table styling
+
+**What:** Applied a shared white-row table style with padded slate-grav headers and bold white column labels to Audit Logs and Reports.
+
+**Files touched:** `resources/views/layouts/app.blade.php`, `resources/views/audit-logs/index.blade.php`, `resources/views/reports/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Match the management-table treatment already used in Customers and Employees.
+
+## 2026-10-04 — Dashboard table styling
+
+**What:** Applied the shared white-row table style with padded slate-grav headers and bold white text to the Dashboard transaction and low-stock tables.
+
+**Files touched:** `resources/views/dashboard.blade.php`, `CHANGELOG.md`.
+
+**Why:** Keep Dashboard tables consistent with Customers, Employees, Audit Logs, and Reports.
+
+## 2026-10-04 — Dashboard payment method badge
+
+**What:** Styled payment method values in the Dashboard transactions table as padded slate-grav badges with bold white text.
+
+**Files touched:** `resources/views/dashboard.blade.php`, `CHANGELOG.md`.
+
+**Why:** Make payment types easier to scan and align them with the shared slate-grav UI treatment.
+
+## 2026-10-04 — Dashboard Reprint action styling
+
+**What:** Styled the Dashboard Reprint action as a padded solid-blue button with bold white text and a darker hover/focus state.
+
+**Files touched:** `resources/views/dashboard.blade.php`, `CHANGELOG.md`.
+
+**Why:** Give receipt reprinting a clear, easy-to-find action treatment.
+
+## 2026-10-04 — Discount table and Edit action styling
+
+**What:** Applied the shared white-row and padded slate-grav header treatment to the Discounts table, and styled each Edit action as a padded solid-blue button with bold white text.
+
+**Files touched:** `resources/views/discounts/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Carry the recent report action and table styling improvements into Discounts.
+
+## 2026-10-04 — Discount Edit button color correction
+
+**What:** Changed the Discounts Edit button from blue to padded slate grav with bold white text and a darker slate hover/focus treatment.
+
+**Files touched:** `resources/views/discounts/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Match the requested Edit action color consistently across management modules.
+
+## 2026-10-04 — Shared table heading depth
+
+**What:** Added subtle inset and drop shadows to table headings across modules, with a contrasting shadow treatment for slate-grav headers.
+
+**Files touched:** `resources/views/layouts/app.blade.php`, `CHANGELOG.md`.
+
+**Why:** Give table headings clearer visual depth while preserving each table's existing palette and layout.
+
+## 2026-10-04 — Navigation hover color refinement
+
+**What:** Replaced the peach-fuzz hover background on sidebar navigation items with a restrained slate-grav tint and matching border/shadow.
+
+**Files touched:** `resources/views/layouts/app.blade.php`, `CHANGELOG.md`.
+
+**Why:** Keep navigation hover states aligned with the selected slate-grav module styling.
+
+## 2026-10-04 — Non-POS hover tint cleanup
+
+**What:** Changed the shared surface-hover color to a light slate tint for all pages outside POS, using a route-aware body class to preserve the existing POS hover palette.
+
+**Files touched:** `resources/views/layouts/app.blade.php`, `CHANGELOG.md`.
+
+**Why:** Remove peach-fuzz hover styling across the management modules while keeping POS visuals unchanged.
+
+## 2026-10-04 — POS product card Add button overflow
+
+**What:** Prevented product-card content from overflowing its border, constrained price/action flex sizing, and tightened Add button spacing in narrow catalog cards.
+
+**Files touched:** `resources/views/pos/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Keep the Add button inside product cards, including narrow POS catalog layouts.
+
+## 2026-10-04 — POS product button clipping correction
+
+**What:** Removed the product-card overflow clipping that was cutting off the Add button edge/shadow; retained the narrower button sizing rules.
+
+**Files touched:** `resources/views/pos/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Keep the Add button fully visible inside the product-card border.
+
+## 2026-10-04 — POS product card button breathing room
+
+**What:** Increased product-card minimum height and bottom padding so the Add button has a visible inset from the card border.
+
+**Files touched:** `resources/views/pos/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Keep the Add button from appearing clipped or pressed against the lower card edge.
+
+## 2026-10-04 — Dashboard payment badge depth
+
+**What:** Added a subtle inset highlight and drop shadow to the padded slate-grav Payment Method badges in the Dashboard transaction table.
+
+**Files touched:** `resources/views/dashboard.blade.php`, `CHANGELOG.md`.
+
+**Why:** Give the payment labels clearer visual depth while preserving their white text and slate treatment.
+
+## 2026-10-04 — Dashboard payment method summary depth
+
+**What:** Restyled the Payment Methods summary rows as padded slate-grav panels with bold white method/total text, muted-white transaction counts, and subtle inset/drop shadows.
+
+**Files touched:** `resources/views/dashboard.blade.php`, `CHANGELOG.md`.
+
+**Why:** Extend the slate-grav treatment and depth to the payment summary element on the Dashboard.
+
+## 2026-10-04 — Dashboard payment summary soft depth
+
+**What:** Refined the Payment Methods summary cards with a softer translucent edge, rounder corners, layered inset/drop shadows, and a restrained hover lift.
+
+**Files touched:** `resources/views/dashboard.blade.php`, `CHANGELOG.md`.
+
+**Why:** Add more polished depth and softer edges to the slate-grav payment summaries.
+
+## 2026-10-04 — Green Dashboard payment summaries
+
+**What:** Changed Dashboard Payment Methods summary cards to a solid green fill with white text, keeping their soft edge, layered depth, and darker green hover state.
+
+**Files touched:** `resources/views/dashboard.blade.php`, `CHANGELOG.md`.
+
+**Why:** Apply the requested stronger green accent to the payment summaries.
+
+## 2026-10-04 — Softer Dashboard payment card depth
+
+**What:** Reduced the Payment Methods cards to a light inset highlight and compact shadow, and removed the hover lift while keeping the green hover state.
+
+**Files touched:** `resources/views/dashboard.blade.php`, `CHANGELOG.md`.
+
+**Why:** Keep the cards dimensional without making their shadows feel heavy.
+
+## 2026-10-04 — Green navigation hover depth
+
+**What:** Changed non-selected module navigation hover states to solid green with white text, a subtle lift, and a green-tinted shadow. Selected modules retain their slate-grav styling and existing depth.
+
+**Files touched:** `resources/views/layouts/app.blade.php`, `CHANGELOG.md`.
+
+**Why:** Make navigation feedback clearer and add consistent depth to module links.
+
+## 2026-10-04 — Reverted green navigation hover
+
+**What:** Restored the sidebar navigation hover to the prior light slate-grav tint with its subtle shadow; selected modules remain slate grav.
+
+**Files touched:** `resources/views/layouts/app.blade.php`, `CHANGELOG.md`.
+
+**Why:** Revert the most recent green navigation hover change as requested.
+
+## 2026-10-04 — Soft green navigation fill hover
+
+**What:** Replaced the slate hover tint with a soft green fill animation that grows left-to-right, with a restrained shadow and reduced-motion support. The selected module remains slate grav.
+
+**Files touched:** `resources/views/layouts/app.blade.php`, `CHANGELOG.md`.
+
+**Why:** Add a gentler green interaction state with clearer motion feedback.
+
+## 2026-10-04 — Solid soft-green navigation hover
+
+**What:** Replaced the left-to-right navigation fill animation with a solid soft-green hover background and a short color transition; the selected module remains slate grav.
+
+**Files touched:** `resources/views/layouts/app.blade.php`, `CHANGELOG.md`.
+
+**Why:** Match the requested solid soft-green navigation hover.
+
+## 2026-10-04 — Customer ID and name spacing
+
+**What:** Removed the inner padding from Customer ID and Customer Name content chips while leaving Contact/Email spacing unchanged.
+
+**Files touched:** `resources/views/customers/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Reduce extra space around those two customer fields as requested.
+
+## 2026-10-04 — Plain bold customer ID and name
+
+**What:** Removed the slate chip backgrounds from Customer ID and Customer Name and rendered both as plain bold text.
+
+**Files touched:** `resources/views/customers/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Match the requested simpler customer table content style.
+
+## 2026-10-04 — POS product action row alignment
+
+**What:** Anchored each product card's price and Add button row to the card bottom so wrapped product names do not shift the button vertically.
+
+**Files touched:** `resources/views/pos/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Keep Add buttons aligned across cards in the same product row.
+
+## 2026-10-04 — Remove Dashboard payment summary depth
+
+**What:** Removed the shadows from Dashboard Payment Methods rows while retaining the solid green fill, soft border, and hover color.
+
+**Files touched:** `resources/views/dashboard.blade.php`, `CHANGELOG.md`.
+
+**Why:** Simplify the payment summary appearance as requested.
+
+## 2026-10-04 — Cash Drawer table styling
+
+**What:** Applied the shared white-row table treatment with padded slate-grav header, bold white labels, and header depth to Cash Drawer Sessions.
+
+**Files touched:** `resources/views/cash-drawers/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Match Cash Drawer with the other management tables.
+
+## 2026-10-04 — Cash Drawer accountability status badges
+
+**What:** Added padded, solid-color accountability badges with white bold text: green for Balanced, amber for Overage, and red for Shortage.
+
+**Files touched:** `resources/views/cash-drawers/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Make reconciliation status easy to scan while keeping discrepancies visibly distinct from balanced shifts.
+
+## 2026-10-04 — Consistent module table row depth
+
+**What:** Added a restrained shadow to shared table body rows across modules. Kept the POS cart and thermal receipt item rows flat for readability.
+
+**Files touched:** `resources/views/layouts/app.blade.php`, `CHANGELOG.md`.
+
+**Why:** Extend consistent depth from table headings to module table content without crowding the POS ticket or print receipt.
+
+## 2026-10-04 — Checkout database preflight
+
+**What:** Added a read-only `pos:database-preflight` command that reports pending migrations and missing checkout schema; POS checkout and final sale creation now stop with a clear message when the deployed database is behind the application. The command reminds operators to back up the live database before applying migrations and does not run migrations or create a backup.
+
+**Files touched:** `app/Console/Commands/PosDatabasePreflight.php`, `app/Services/DatabasePreflightService.php`, `app/Services/CheckoutService.php`, `app/Http/Controllers/PosController.php`, `CHANGELOG.md`.
+
+**Why:** Prevent a schema mismatch from becoming a failed or partially processed sale, and provide a safe pre-deployment check.
+
+## 2026-10-04 — POS customer search, checkout checks, and shared UI components
+
+**What:** Moved register customer lookup to a bounded server-side search by customer ID, name, contact, or email; stopped embedding the full customer directory in the POS page; and retained held-cart customer restoration through the lookup endpoint. Added focused search, exact-cash, held-cart/close-shift, and cash-drawer reconciliation checks. Added reusable button, badge, and table Blade components and applied them to management tables, dashboard actions/payment badges, customer/employee controls, and cash-drawer accountability states.
+
+**Files touched:** `app/Services/SaleService.php`, `app/Http/Controllers/PosController.php`, `routes/web.php`, `resources/views/pos/index.blade.php`, `resources/views/layouts/app.blade.php`, `resources/views/components/ui/button.blade.php`, `resources/views/components/ui/badge.blade.php`, `resources/views/components/ui/table.blade.php`, `resources/views/audit-logs/index.blade.php`, `resources/views/cash-drawers/index.blade.php`, `resources/views/categories/index.blade.php`, `resources/views/coupons/index.blade.php`, `resources/views/customers/index.blade.php`, `resources/views/dashboard.blade.php`, `resources/views/discounts/index.blade.php`, `resources/views/employees/index.blade.php`, `resources/views/inventory/index.blade.php`, `resources/views/products/index.blade.php`, `resources/views/promotions/index.blade.php`, `resources/views/purchase-orders/create.blade.php`, `resources/views/purchase-orders/index.blade.php`, `resources/views/purchase-orders/show.blade.php`, `resources/views/reports/index.blade.php`, `resources/views/suppliers/index.blade.php`, `tests/Feature/PosCustomerSearchTest.php`, `tests/Feature/CheckoutFlowTest.php`, `tests/Feature/CashDrawerFlowTest.php`, `CHANGELOG.md`.
+
+**Why:** Keep large customer directories out of the register payload, validate cashier-critical checkout and shift paths, and make shared module controls consistent and maintainable.
+
+## 2026-10-04 — Remove navigation link underline
+
+**What:** Kept shared navigation links free of underlines in default, hover, focus, and active states.
+
+**Files touched:** `resources/views/layouts/app.blade.php`, `CHANGELOG.md`.
+
+**Why:** Prevent navigation items from appearing underlined after being clicked.
+
+## 2026-10-04 — Keep POS discount selector recoverable
+
+**What:** Wrapped discount authorization in error-safe handling, restored the previous selection when authorization is canceled or fails, and always re-enabled the selector after the request settles.
+
+**Files touched:** `resources/views/pos/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Prevent a failed or interrupted manager authorization request from leaving the discount selector disabled.
+
+## 2026-10-04 — Reset manager authorization controls after approval
+
+**What:** Reset the PIN input, keypad, and Authorize button whenever the manager authorization modal closes; ignore overlapping authorization requests while one is pending.
+
+**Files touched:** `resources/views/components/manager-pin-modal.blade.php`, `CHANGELOG.md`.
+
+**Why:** Allow repeated discount changes and other protected actions after a successful authorization instead of leaving the next request blocked by a disabled submit button.
+
+## 2026-10-04 — Refine POS discount dropdown styling
+
+**What:** Improved the discount select surface, spacing, text hierarchy, chevron treatment, focus ring, disabled state, option colors, and selected-discount detail panel.
+
+**Files touched:** `resources/views/pos/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Make discount choices easier to scan and interact with while preserving the native select and its authorization flow.
+
+## 2026-10-04 — Replace platform-colored discount popup
+
+**What:** Added a branded, keyboard-operable discount listbox with code labels and policy details. Kept the native select synchronized as the existing authorization and checkout source of truth.
+
+**Files touched:** `resources/views/pos/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Avoid the operating-system blue selection popup and keep the dropdown visually consistent with the POS palette.
+
+## 2026-10-04 — Prevent discount menu clipping
+
+**What:** Positioned the discount listbox against the viewport, flipped it above the selector when needed, and recalculated placement during rail scrolling and window resizing.
+
+**Files touched:** `resources/views/pos/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Keep all available discount choices reachable when the customer rail has limited vertical space.
+
+## 2026-10-04 — Restore base styling on colored shared buttons
+
+**What:** Added the base `btn` class to slate and blue shared button variants so they receive the standard button layout, padding, and hover behavior.
+
+**Files touched:** `resources/views/components/ui/button.blade.php`, `CHANGELOG.md`.
+
+**Why:** Restore the intended appearance of Employee Edit and other slate/blue action buttons.
+
+## 2026-10-04 — Fix link button style specificity
+
+**What:** Added higher-specificity anchor rules for slate/blue variants and compact sizing so generic link defaults cannot override their colors, border, or padding.
+
+**Files touched:** `resources/views/layouts/app.blade.php`, `CHANGELOG.md`.
+
+**Why:** Ensure shared Edit links in Customer and Employee tables render in Slate Grav with the intended compact button shape.

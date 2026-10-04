@@ -10,8 +10,8 @@
     <div class="card">
         <p>Supplier: {{ $order->supplier->supplier_name ?? '—' }}</p>
         <p>Ordered by: {{ $order->employee->username ?? '—' }} on {{ optional($order->order_date)->format('Y-m-d') }}</p>
-        <p>Status: <span class="badge {{ $order->status === 'pending' ? 'badge-pending' : ($order->status === 'received' ? 'badge-active' : 'badge-inactive') }}">{{ $order->status }}</span></p>
-        <table>
+        <p>Status: <x-ui.badge :variant="$order->status === 'pending' ? 'pending' : ($order->status === 'received' ? 'active' : 'inactive')">{{ $order->status }}</x-ui.badge></p>
+<x-ui.table>
             <thead>
                 <tr>
                     <th>Product</th>
@@ -30,7 +30,7 @@
                     </tr>
                 @endforeach
             </tbody>
-        </table>
+</x-ui.table>
         <p><strong>Total: {{ number_format($order->total_amount, 2) }}</strong></p>
         @if ($order->isPending())
             <div class="actions">

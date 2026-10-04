@@ -66,14 +66,14 @@ class CrudAndPosTest extends TestCase
             ->post(route('products.store'), [
                 'category_id' => $category->category_id,
                 'product_name' => 'Potato Chips',
-                'barcode' => 'SNACK-001',
+                'barcode' => '4006381333931',
                 'unit_price' => 45.50,
                 'cost_price' => 30,
                 'reorder_level' => 5,
             ])
             ->assertRedirect(route('products.index'));
 
-        $product = Product::query()->where('barcode', 'SNACK-001')->firstOrFail();
+        $product = Product::query()->where('barcode', '4006381333931')->firstOrFail();
 
         $this->assertDatabaseHas('inventory', [
             'product_id' => $product->product_id,

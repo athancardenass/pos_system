@@ -33,7 +33,7 @@
                 <button type="button" class="pos-quick-btn" data-range="weekly">Weekly</button>
                 <button type="button" class="pos-quick-btn" data-range="monthly">Monthly</button>
                 <button type="button" class="pos-quick-btn" data-range="yearly">Yearly</button>
-                <button type="submit" class="btn">Apply</button>
+                <x-ui.button type="submit">Apply</x-ui.button>
             </div>
         </form>
     </div>
@@ -110,16 +110,14 @@
                         @endforeach
                     </div>
                 @endif
-                <a class="btn" href="{{ route('reports.export', ['type' => $key, 'from' => $from->toDateString(), 'to' => $to->toDateString()]) }}">
-                    Export CSV
-                </a>
+                <x-ui.button :href="route('reports.export', ['type' => $key, 'from' => $from->toDateString(), 'to' => $to->toDateString()])">Export CSV</x-ui.button>
             </div>
             @php($rows = $previews[$key])
             @if (count($rows) === 0)
                 <p class="empty">No data for this period.</p>
             @else
                 <div class="table-wrap">
-                    <table>
+                    <x-ui.table>
                         <thead>
                             <tr>@foreach ($columns[$key] as $col)<th>{{ $col }}</th>@endforeach</tr>
                         </thead>
@@ -128,7 +126,7 @@
                                 <tr>@foreach ($row as $cell)<td>{{ $cell }}</td>@endforeach</tr>
                             @endforeach
                         </tbody>
-                    </table>
+                    </x-ui.table>
                 </div>
                 @if (count($rows) > 5)
                     <p class="muted" style="margin-top: 0.75rem; font-size: 0.8rem;">Showing 5 of {{ count($rows) }} rows — export the CSV for the full report.</p>

@@ -39,7 +39,7 @@ class DiscountController extends Controller
 
     public function update(Request $request, Discount $discount): RedirectResponse
     {
-        $discount->update($this->validated($request));
+        $discount->update($this->validated($request, $discount));
 
         AuditLogger::record('update', 'discount', $discount->discount_id, 'Updated discount '.$discount->discount_name);
 
@@ -61,9 +61,9 @@ class DiscountController extends Controller
         return redirect()->route('discounts.index')->with('status', 'Discount deleted.');
     }
 
-    private function validated(Request $request): array
+    private function validated(Request $request, ?Discount $discount = null): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'discount_name' => 'required|string|max:100',
             'discount_type' => 'required|in:percentage,fixed',
             'discount_value' => [
@@ -81,5 +81,14 @@ class DiscountController extends Controller
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
         ]);
+
+        $specialType = $discount?->specialPolicyType()
+            ?? Discount::specialPolicyTypeForName((string) $data['discount_name']);
+        if ($specialType) {
+            $data['discount_type'] = 'percentage';
+            $data['discount_value'] = 20;
+        }
+
+        return $data;
     }
 }

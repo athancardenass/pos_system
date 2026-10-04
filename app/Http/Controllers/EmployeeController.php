@@ -10,6 +10,7 @@ use App\Models\SaleRefund;
 use App\Models\SaleTransaction;
 use App\Services\AuditLogger;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -37,7 +38,14 @@ class EmployeeController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validated($request);
+        $managerPin = $data['manager_pin'] ?? null;
+        unset($data['manager_pin'], $data['manager_pin_confirmation']);
         $employee = Employee::query()->create($data);
+
+        if (filled($managerPin)) {
+            $employee->manager_pin_hash = Hash::make($managerPin);
+            $employee->save();
+        }
 
         AuditLogger::record('create', 'employee', $employee->employee_id, 'Created employee '.$employee->username);
 
@@ -55,12 +63,25 @@ class EmployeeController extends Controller
     public function update(Request $request, Employee $employee): RedirectResponse
     {
         $data = $this->validated($request, $employee);
+        $managerPin = $data['manager_pin'] ?? null;
+        unset($data['manager_pin'], $data['manager_pin_confirmation']);
 
         if (blank($data['password'] ?? null)) {
             unset($data['password']);
         }
 
-        $employee->update($data);
+        $isManager = Role::query()
+            ->where('role_id', $data['role_id'])
+            ->whereRaw('LOWER(role_name) = ?', ['manager'])
+            ->exists();
+
+        $employee->fill($data);
+        if ($isManager && filled($managerPin)) {
+            $employee->manager_pin_hash = Hash::make($managerPin);
+        } elseif (! $isManager) {
+            $employee->manager_pin_hash = null;
+        }
+        $employee->save();
 
         AuditLogger::record('update', 'employee', $employee->employee_id, 'Updated employee '.$employee->username);
 
@@ -107,16 +128,34 @@ class EmployeeController extends Controller
     private function validated(Request $request, ?Employee $employee = null): array
     {
         $passwordRule = $employee ? 'nullable|string|min:8' : 'required|string|min:8';
+        $roleId = $request->input('role_id');
+        $isManagerRole = Role::query()
+            ->where('role_id', $roleId)
+            ->whereRaw('LOWER(role_name) = ?', ['manager'])
+            ->exists();
+        $pinRequired = $isManagerRole && (! $employee || blank($employee->manager_pin_hash));
 
-        return $request->validate([
+        try {
+            return $request->validate([
             'role_id' => 'required|exists:role,role_id',
             'first_name' => 'required|string|max:50',
             'last_name' => 'required|string|max:50',
             'username' => 'required|string|max:50|unique:employee,username,'.($employee?->employee_id ?? 'NULL').',employee_id',
             'password' => $passwordRule,
             'contact_number' => 'nullable|string|max:20',
-            'hire_date' => 'required|date',
+            'hire_date' => 'required|date_format:Y-m-d|after_or_equal:1900-01-01|before_or_equal:today',
             'status' => 'required|in:active,inactive',
+            'manager_pin' => [
+                $isManagerRole ? 'nullable' : 'prohibited',
+                $pinRequired ? 'required' : 'nullable',
+                'string',
+                'regex:/^\d{4,6}$/',
+                'confirmed',
+            ],
         ]);
+        } finally {
+            // Prevent PINs from being flashed back into the session after validation errors.
+            $request->merge(['manager_pin' => null, 'manager_pin_confirmation' => null]);
+        }
     }
 }

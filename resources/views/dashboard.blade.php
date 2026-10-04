@@ -2,6 +2,30 @@
 
 @section('title', 'Dashboard')
 
+@push('styles')
+    <style>
+        .dashboard-payment-method-list { display: flex; flex-direction: column; gap: .6rem; }
+        .dashboard-payment-method-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            padding: .7rem .85rem;
+            border: 1px solid rgba(255,255,255,.2);
+            border-radius: 12px;
+            background: #16803c;
+            color: #fff;
+            box-shadow: none;
+            transition: background-color .16s ease, border-color .16s ease;
+        }
+        .dashboard-payment-method-row:hover { border-color: rgba(255,255,255,.26); background: #126b32; }
+        .dashboard-payment-method-name { color: #fff; font-size: .8rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+        .dashboard-payment-method-summary { text-align: right; }
+        .dashboard-payment-method-total { color: #fff; font-size: .92rem; font-weight: 800; }
+        .dashboard-payment-method-count { color: rgba(255,255,255,.78); font-size: .72rem; }
+    </style>
+@endpush
+
 @section('content')
     <div class="page-head">
         <div>
@@ -110,13 +134,13 @@
                         <h2>Payment Methods</h2>
                         <span class="muted" style="font-size:0.78rem;">Today</span>
                     </div>
-                    <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+                    <div class="dashboard-payment-method-list">
                         @foreach ($stats['payment_methods'] as $pm)
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.75rem; background: var(--surface-soft); border-radius: var(--r-sm); border: 1px solid var(--rule-faint);">
-                                <span style="text-transform: uppercase; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.04em;">{{ $pm->payment_method }}</span>
-                                <div style="text-align: right;">
-                                    <div style="font-weight: 800; font-size: 0.92rem;">₱{{ number_format($pm->total, 2) }}</div>
-                                    <div style="color: var(--muted); font-size: 0.72rem;">{{ $pm->count }} txn(s)</div>
+                            <div class="dashboard-payment-method-row">
+                                <span class="dashboard-payment-method-name">{{ $pm->payment_method }}</span>
+                                <div class="dashboard-payment-method-summary">
+                                    <div class="dashboard-payment-method-total">₱{{ number_format($pm->total, 2) }}</div>
+                                    <div class="dashboard-payment-method-count">{{ $pm->count }} txn(s)</div>
                                 </div>
                             </div>
                         @endforeach
@@ -131,11 +155,11 @@
                 <div class="card-header-bar">
                     <h2>Recent Completed Transactions</h2>
                     @if (in_array('reports.index', $modules))
-                        <a href="{{ route('reports.index') }}" class="btn btn-secondary" style="font-size: 0.78rem; padding: 0.4rem 0.75rem;">View Full Report &rarr;</a>
+                        <x-ui.button variant="secondary" size="compact" :href="route('reports.index')">View Full Report &rarr;</x-ui.button>
                     @endif
                 </div>
                 <div class="table-wrap">
-                    <table>
+                    <x-ui.table>
                         <thead>
                             <tr>
                                 <th>Receipt No.</th>
@@ -143,6 +167,7 @@
                                 <th>Cashier</th>
                                 <th style="text-align: right;">Total Amount</th>
                                 <th>Payment Method</th>
+                                <th>Receipt</th>
                                 <th>Transaction Date</th>
                             </tr>
                         </thead>
@@ -156,13 +181,14 @@
                                     <td>{{ $sale->employee?->fullName() ?? $sale->employee?->username ?? '—' }}</td>
                                     <td style="text-align: right; font-weight: 800; font-variant-numeric: tabular-nums;">₱{{ number_format($sale->total_amount, 2) }}</td>
                                     <td>
-                                        <span class="badge" style="background: var(--bg-tint); color: var(--text); border: 1px solid var(--rule-faint);">{{ strtoupper($sale->payment_method) }}</span>
+                                        <x-ui.badge variant="slate">{{ strtoupper($sale->payment_method) }}</x-ui.badge>
                                     </td>
+                                    <td><x-ui.button variant="blue" size="compact" :href="route('pos.reprint', $sale)">Reprint</x-ui.button></td>
                                     <td style="color: var(--muted); font-size: 0.85rem;">{{ \Carbon\Carbon::parse($sale->transaction_date)->format('M j, Y g:i A') }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
-                    </table>
+                    </x-ui.table>
                 </div>
             </div>
         @endif
@@ -174,11 +200,11 @@
             <div class="card-header-bar">
                 <h2 style="color: var(--danger);">Low Stock Alert ({{ $stats['low_stock_count'] }} Products)</h2>
                 @if (in_array('inventory.index', $modules))
-                    <a href="{{ route('inventory.index') }}" class="btn btn-danger" style="font-size: 0.78rem; padding: 0.4rem 0.75rem;">Manage Inventory &rarr;</a>
+                    <x-ui.button variant="danger" size="compact" :href="route('inventory.index')">Manage Inventory &rarr;</x-ui.button>
                 @endif
             </div>
             <div class="table-wrap">
-                <table>
+                <x-ui.table>
                     <thead>
                         <tr>
                             <th>Product Name</th>
@@ -203,7 +229,7 @@
                             </tr>
                         @endforeach
                     </tbody>
-                </table>
+                </x-ui.table>
             </div>
         </div>
     @endif

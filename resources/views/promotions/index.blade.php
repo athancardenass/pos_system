@@ -5,13 +5,13 @@
 @section('content')
     <div class="page-head">
         <h1>Promotions</h1>
-        <a class="btn" href="{{ route('promotions.create') }}">New promotion</a>
+        <x-ui.button :href="route('promotions.create')">New promotion</x-ui.button>
     </div>
     <div class="card">
         @if ($promotions->isEmpty())
             <p class="empty">No promotions yet.</p>
         @else
-            <table>
+<x-ui.table>
                 <thead>
                     <tr>
                         <th>Name</th>
@@ -44,27 +44,27 @@
                             </td>
                             <td>
                                 @if (! $promotion->is_active)
-                                    <span class="badge badge-inactive">Inactive</span>
+                                    <x-ui.badge variant="inactive">Inactive</x-ui.badge>
                                 @elseif ($promotion->isLive())
-                                    <span class="badge badge-active">Active</span>
+                                    <x-ui.badge variant="active">Active</x-ui.badge>
                                 @else
-                                    <span class="badge badge-inactive">Expired</span>
+                                    <x-ui.badge variant="inactive">Expired</x-ui.badge>
                                 @endif
                             </td>
                             <td class="actions">
                                 <div class="actions">
-                                    <a class="btn-ghost" href="{{ route('promotions.edit', $promotion) }}">Edit</a>
+                                    <x-ui.button variant="slate" size="compact" :href="route('promotions.edit', $promotion)">Edit</x-ui.button>
                                     <form class="inline-form" method="POST" action="{{ route('promotions.destroy', $promotion) }}" onsubmit="return confirm('Delete this promotion?')">
                                         @csrf
                                         @method('DELETE')
-                                        <button class="btn-ghost btn-danger" type="submit">Delete</button>
+                                        <x-ui.button variant="danger" type="submit" size="compact">Delete</x-ui.button>
                                     </form>
                                 </div>
                             </td>
                         </tr>
                     @endforeach
                 </tbody>
-            </table>
+</x-ui.table>
             {{ $promotions->links('partials.pagination') }}
         @endif
     </div>

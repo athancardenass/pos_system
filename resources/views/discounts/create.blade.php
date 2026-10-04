@@ -4,7 +4,10 @@
 
 @section('content')
     <div class="page-head">
-        <h1>New discount</h1>
+        <div>
+            <h1>New discount</h1>
+            <p class="muted">Set the discount details and when it is available.</p>
+        </div>
         <a class="btn btn-secondary" href="{{ route('discounts.index') }}">Back</a>
     </div>
     <div class="card">
@@ -13,7 +16,7 @@
             @csrf
             @include('discounts._form')
             <div class="form-actions">
-                <button type="submit">Save</button>
+                <button type="submit">Create discount</button>
             </div>
         </form>
     </div>

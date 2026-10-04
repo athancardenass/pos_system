@@ -4,7 +4,10 @@
 
 @section('content')
     <div class="page-head">
-        <h1>Edit discount</h1>
+        <div>
+            <h1>Edit discount</h1>
+            <p class="muted">Update the discount details and availability dates.</p>
+        </div>
         <a class="btn btn-secondary" href="{{ route('discounts.index') }}">Back</a>
     </div>
     <div class="card">
@@ -14,7 +17,7 @@
             @method('PUT')
             @include('discounts._form')
             <div class="form-actions">
-                <button type="submit">Update</button>
+                <button type="submit">Update discount</button>
             </div>
         </form>
     </div>

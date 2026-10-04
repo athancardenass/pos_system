@@ -43,6 +43,18 @@ class CashDrawerService
     }
 
     /**
+     * Get the employee's most recently closed drawer session.
+     */
+    public function getLastClosedDrawer(int $employeeId): ?CashDrawer
+    {
+        return CashDrawer::where('employee_id', $employeeId)
+            ->where('status', 'closed')
+            ->whereNotNull('closed_at')
+            ->orderByDesc('closed_at')
+            ->first();
+    }
+
+    /**
      * Add cash to the expected amount (e.g., cash sale).
      */
     public function addCash(int $employeeId, float $amount): void

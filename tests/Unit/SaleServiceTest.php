@@ -28,16 +28,16 @@ class SaleServiceTest extends TestCase
         $this->saleService = new SaleService();
     }
 
-    public function test_get_pos_index_data_returns_all_expected_keys(): void
+    public function test_get_pos_index_data_keeps_customer_records_out_of_register_bootstrap(): void
     {
         $data = $this->saleService->getPosIndexData();
 
         $this->assertArrayHasKey('products', $data);
         $this->assertArrayHasKey('categories', $data);
-        $this->assertArrayHasKey('customers', $data);
         $this->assertArrayHasKey('discounts', $data);
         $this->assertArrayHasKey('productsJson', $data);
-        $this->assertArrayHasKey('customersJson', $data);
+        $this->assertArrayNotHasKey('customers', $data);
+        $this->assertArrayNotHasKey('customersJson', $data);
 
         $this->assertNotEmpty($data['products']);
         $this->assertNotEmpty($data['categories']);
