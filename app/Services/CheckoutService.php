@@ -213,11 +213,10 @@ class CheckoutService
                 ]);
             }
 
-            if (in_array($data['payment_method'], ['card', 'e-wallet'], true)
-                && round($amountPaid, 2) !== round($total, 2)) {
-                throw ValidationException::withMessages([
-                    'amount_paid' => 'Card and E-Wallet payments must match the transaction total exactly.',
-                ]);
+            if (in_array($data['payment_method'], ['card', 'e-wallet'], true) && $amountPaid > $total) {
+                // If tendered before backend auto-promotions/discounts reduced the total,
+                // cap the card/e-wallet charged amount to the final transaction total.
+                $amountPaid = $total;
             }
 
             $sale = SaleTransaction::query()->create([

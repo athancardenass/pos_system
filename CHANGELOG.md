@@ -12,9 +12,10 @@
 2. Form submissions for Cashiers on both pending E-Wallet and Card reviews intercept verify/reject actions to request a 4–6 digit Manager PIN, generating a one-time grant token (`manager_authorization_token`) without requiring the cashier to log out or a manager to switch user sessions.
 3. Cleaned up inline styling on cashier verification notices in `pending-card/show.blade.php` and `pending-ewallet/show.blade.php`, replacing them with design-system-compliant `.verification-cashier-notice` CSS classes.
 4. Fixed form post-authorization submission by using `HTMLFormElement.prototype.submit.call(form)` to prevent handler recursion, added explicit checkbox validation guards, and included `@include('partials.errors')` on review views to surface any validation feedback immediately.
-5. Added feature tests in `tests/Feature/EwalletVerificationTest.php` verifying that Cashiers can verify and reject pending e-wallet payments using Manager PIN authorization, with tests passing across both card and e-wallet workflows.
+5. Resolved non-cash settlement mismatch in `CheckoutService::checkout` when backend auto-promotions/discounts reduce the final transaction total below the tendered amount, auto-capping the charged amount to the final total instead of throwing an exact match validation failure.
+6. Added feature tests in `tests/Feature/EwalletVerificationTest.php` verifying that Cashiers can verify and reject pending e-wallet payments using Manager PIN authorization, with tests passing across both card and e-wallet workflows.
 
-**Files touched:** `app/Http/Controllers/PosController.php`, `resources/views/pos/pending-ewallet/show.blade.php`, `resources/views/pos/pending-card/show.blade.php`, `tests/Feature/EwalletVerificationTest.php`, `CHANGELOG.md`.
+**Files touched:** `app/Http/Controllers/PosController.php`, `app/Services/CheckoutService.php`, `resources/views/pos/pending-ewallet/show.blade.php`, `resources/views/pos/pending-card/show.blade.php`, `tests/Feature/EwalletVerificationTest.php`, `CHANGELOG.md`.
 
 **Why:** Ensure continuous cashier workflow during card and e-wallet transactions so pending payments are approved or rejected via Manager PIN right at the cashier's terminal without manager login/logout disruption.
 
