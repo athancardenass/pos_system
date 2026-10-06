@@ -90,6 +90,8 @@
         </dl>
     </section>
 
+    @include('partials.errors')
+
     <div class="card-review-grid">
         <section class="card-review-panel" aria-labelledby="card-request-title">
             <h2 id="card-request-title">Request details</h2>
@@ -241,6 +243,7 @@
         if (returnToPos) returnToPos.focus({ preventScroll: true });
 
         const isManager = @json(auth()->user()->hasRole('Manager'));
+        let isAuthorizing = false;
 
         document.querySelectorAll('[data-card-review-form]').forEach(form => {
             form.addEventListener('submit', async event => {
@@ -259,6 +262,8 @@
 
                 if (!isManager) {
                     event.preventDefault();
+                    if (isAuthorizing) return;
+
                     const actionType = form.dataset.actionType || (form.action.includes('verify') ? 'verify' : 'reject');
                     const isVerify = actionType === 'verify';
                     const reasonInput = form.querySelector('textarea[name="reason"]');
@@ -270,7 +275,8 @@
 
                     if (isVerify) {
                         const checkInput = form.querySelector('input[name="terminal_checked"]');
-                        if (checkInput && !checkInput.reportValidity()) {
+                        if (checkInput && (!checkInput.checked || !checkInput.reportValidity())) {
+                            if (checkInput && !checkInput.checked) checkInput.reportValidity();
                             return;
                         }
                     }
@@ -280,12 +286,18 @@
                         return;
                     }
 
-                    const authorization = await window.requestManagerAuthorization({
-                        action: isVerify ? 'pending_card_verify' : 'pending_card_reject',
-                        details: { pending_id: @json($pending->id) },
-                        requiresReason: false,
-                        reason: reason,
-                    });
+                    isAuthorizing = true;
+                    let authorization = null;
+                    try {
+                        authorization = await window.requestManagerAuthorization({
+                            action: isVerify ? 'pending_card_verify' : 'pending_card_reject',
+                            details: { pending_id: @json($pending->id) },
+                            requiresReason: false,
+                            reason: reason,
+                        });
+                    } finally {
+                        isAuthorizing = false;
+                    }
 
                     if (!authorization || !authorization.token) {
                         return;
@@ -306,7 +318,7 @@
                         button.setAttribute('aria-busy', 'true');
                     });
 
-                    form.submit();
+                    HTMLFormElement.prototype.submit.call(form);
                     return;
                 }
 
