@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\SaleTransaction;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -205,5 +206,75 @@ class CardVerificationTest extends TestCase
             ->assertOk()
             ->assertSee('Payment reference submitted for manager verification.')
             ->assertDontSee($rawReference);
+    }
+
+    public function test_cashier_can_verify_pending_card_with_manager_pin(): void
+    {
+        $product = $this->stockedProduct();
+        $cashier = $this->employee('cashier');
+        $manager = $this->employee('manager');
+        $manager->manager_pin_hash = Hash::make('2468');
+        $manager->save();
+
+        $this->actingAs($cashier)->post(route('pos.store'), $this->requestData($product, 'TERM-OK-7721'));
+        $pending = PendingCardVerification::query()->latest('id')->firstOrFail();
+
+        // 1. Cashier prompts manager for PIN
+        $authResponse = $this->actingAs($cashier)->postJson(route('manager-authorization.authorize'), [
+            'action' => 'pending_card_verify',
+            'pin' => '2468',
+            'register_id' => 'REG-01',
+            'details' => ['pending_id' => $pending->id],
+        ]);
+        $authResponse->assertOk()->assertJson(['ok' => true]);
+        $token = $authResponse->json('token');
+        $this->assertNotEmpty($token);
+
+        // 2. Cashier submits verify with token
+        $response = $this->actingAs($cashier)->post(route('pos.pending-card.verify', $pending), [
+            'terminal_checked' => '1',
+            'manager_authorization_token' => $token,
+        ]);
+
+        $response->assertRedirect();
+        $this->assertSame(PendingCardVerification::STATUS_VERIFIED, $pending->fresh()->status);
+        $this->assertSame((int) $manager->employee_id, (int) $pending->fresh()->verified_by_employee_id);
+
+        $sale = SaleTransaction::query()->latest('transaction_id')->firstOrFail();
+        $this->assertSame('completed', $sale->status);
+    }
+
+    public function test_cashier_can_reject_pending_card_with_manager_pin(): void
+    {
+        $product = $this->stockedProduct();
+        $cashier = $this->employee('cashier');
+        $manager = $this->employee('manager');
+        $manager->manager_pin_hash = Hash::make('2468');
+        $manager->save();
+
+        $this->actingAs($cashier)->post(route('pos.store'), $this->requestData($product, 'TERM-REJ-9921'));
+        $pending = PendingCardVerification::query()->latest('id')->firstOrFail();
+
+        // 1. Cashier prompts manager for PIN
+        $authResponse = $this->actingAs($cashier)->postJson(route('manager-authorization.authorize'), [
+            'action' => 'pending_card_reject',
+            'pin' => '2468',
+            'register_id' => 'REG-01',
+            'reason' => 'Declined at POS terminal',
+            'details' => ['pending_id' => $pending->id],
+        ]);
+        $authResponse->assertOk()->assertJson(['ok' => true]);
+        $token = $authResponse->json('token');
+
+        // 2. Cashier submits reject with token
+        $response = $this->actingAs($cashier)->post(route('pos.pending-card.reject', $pending), [
+            'reason' => 'Declined at POS terminal',
+            'manager_authorization_token' => $token,
+        ]);
+
+        $response->assertRedirect(route('pos.pending-card.show', $pending));
+        $this->assertSame(PendingCardVerification::STATUS_REJECTED, $pending->fresh()->status);
+        $this->assertSame((int) $manager->employee_id, (int) $pending->fresh()->rejected_by_employee_id);
+        $this->assertSame(10.0, (float) Inventory::query()->where('product_id', $product->product_id)->value('stock_quantity'));
     }
 }

@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'POS')</title>
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+    <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -77,20 +80,29 @@
             overflow-y: auto;
         }
         .sidebar-brand {
-            display: flex; align-items: center; gap: 0.65rem;
-            padding: 1.3rem 1.25rem;
+            display: flex; align-items: center; justify-content: center;
+            padding: 1.15rem 1rem;
             border-bottom: 1px solid var(--rule-faint);
             text-decoration: none; color: var(--text);
-            font-weight: 700; font-size: 1rem;
-            text-transform: uppercase; letter-spacing: 0.14em;
         }
         .sidebar-brand-icon {
             display: inline-flex; align-items: center; justify-content: center;
-            width: 30px; height: 30px;
-            background: var(--accent); color: #fff;
-            border-radius: var(--r-sm);
-            font-weight: 800; font-size: 0.75rem;
-            box-shadow: 0 8px 16px -10px rgba(24, 118, 94, 0.34);
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            flex-shrink: 0;
+            overflow: visible;
+        }
+        .sidebar-brand-icon img {
+            width: 44px; height: 44px;
+            object-fit: contain;
+            display: block;
+            filter: drop-shadow(0 2px 6px rgba(30, 41, 59, 0.15));
+            transition: transform 0.2s var(--ease), filter 0.2s var(--ease);
+        }
+        .sidebar-brand:hover .sidebar-brand-icon img {
+            transform: scale(1.06);
+            filter: drop-shadow(0 4px 10px rgba(30, 41, 59, 0.22));
         }
         .sidebar-nav { display: flex; flex-direction: column; flex: 1; padding: 0.75rem; gap: 0.35rem; }
         .sidebar-nav a {
@@ -104,14 +116,19 @@
             transition: color 0.18s var(--ease), background-color 0.18s var(--ease), border-color 0.18s var(--ease), box-shadow 0.18s var(--ease), transform 0.18s var(--ease);
         }
         .sidebar-nav a:hover:not(.active) {
-            color: #205B3A; background: #DDEBE2;
-            border-color: rgba(32, 128, 69, 0.24); box-shadow: 0 3px 8px rgba(32, 60, 61, 0.08);
-            transform: translateY(-1px); text-decoration: none;
+            color: rgb(56, 43, 45) !important;
+            background: rgba(56, 43, 45, 0.08) !important;
+            border-color: rgba(56, 43, 45, 0.24) !important;
+            box-shadow: 0 3px 8px rgba(56, 43, 45, 0.12);
+            transform: translateY(-1px);
+            text-decoration: none;
         }
         .sidebar-nav a.active {
-            color: #fff; background: #203C3D;
-            border-color: #203C3D; font-weight: 800;
-            box-shadow: 0 2px 7px rgba(32, 60, 61, 0.18);
+            color: #FFFFFF !important;
+            background: rgb(56, 43, 45) !important;
+            border-color: rgb(56, 43, 45) !important;
+            font-weight: 800;
+            box-shadow: 0 2px 7px rgba(56, 43, 45, 0.28);
         }
         .sidebar-nav a:focus-visible { outline: none; box-shadow: var(--ring); }
         @media (prefers-reduced-motion: reduce) {
@@ -129,37 +146,147 @@
         .sidebar-user-info strong { color: var(--text); display: block; }
         .sidebar-logout {
             display: block; width: 100%; padding: 0.6rem;
-            background: var(--text); color: #fff; border: none;
+            background: rgb(56, 43, 45) !important;
+            color: #FFBE98 !important;
+            border: 1px solid rgba(255, 190, 152, 0.25) !important;
             border-radius: var(--r-sm);
-            font-family: inherit; font-size: 0.78rem; font-weight: 700;
+            font-family: inherit; font-size: 0.78rem; font-weight: 800;
             letter-spacing: 0.01em;
             cursor: pointer; text-align: center;
-            transition: background-color 0.15s var(--ease), transform 0.15s var(--ease);
+            transition: background-color 0.15s var(--ease), transform 0.15s var(--ease), color 0.15s var(--ease);
         }
-        .sidebar-logout:hover { background: #315D59; transform: translateY(-1px); }
+        .sidebar-logout:hover {
+            background: rgb(40, 29, 31) !important;
+            color: #FFD4BC !important;
+            transform: translateY(-1px);
+        }
 
         /* --- Main Content --- */
         .main { margin-left: var(--sidebar-w); padding: 2rem 2.5rem; width: calc(100% - var(--sidebar-w)); }
-        .page-head {
-            display: flex; justify-content: space-between; align-items: center;
-            gap: 1rem; margin-bottom: 1.1rem;
-            padding-bottom: 0.8rem; border-bottom: 1px solid var(--rule-faint);
+        
+        /* Modernized Header Banner across all modules (except POS) */
+        body:not(.pos-shell) .page-head,
+        body:not(.pos-shell) .form-page-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1.25rem;
+            min-height: 84px;
+            margin-bottom: 1.5rem;
+            padding: 1.2rem 1.6rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: var(--r-lg);
+            background: rgb(56, 43, 45);
+            background: linear-gradient(135deg, rgb(56, 43, 45) 0%, rgb(40, 29, 31) 100%);
+            color: #FFFFFF;
+            box-shadow: 0 10px 25px -5px rgba(56, 43, 45, 0.28), 0 4px 10px -2px rgba(56, 43, 45, 0.16);
+            position: relative;
+            overflow: hidden;
             flex-wrap: wrap;
         }
-        /* Shared form workspace styling for edit pages and New Discount. */
-        .form-page-head {
-            min-height: 82px; padding: 0.9rem 1.2rem; border: 0; border-radius: var(--r-lg);
-            background: #203C3D; color: #fff; box-shadow: 0 5px 14px rgba(32,60,61,.12);
+        body:not(.pos-shell) .page-head::after,
+        body:not(.pos-shell) .form-page-head::after {
+            content: '';
+            position: absolute;
+            top: -40px;
+            right: -40px;
+            width: 180px;
+            height: 180px;
+            background: radial-gradient(circle, rgba(255, 190, 152, 0.12) 0%, transparent 70%);
+            pointer-events: none;
+            border-radius: 50%;
         }
-        .form-page-head h1 { color: #fff; font-weight: 800; letter-spacing: -0.025em; }
-        .form-page-head p.muted { color: rgba(255,255,255,.78); }
-        .form-page-head .eyebrow { color: #B8D9C4; }
-        .form-page-head .btn-secondary,
-        .form-page-head a.btn-secondary:link,
-        .form-page-head a.btn-secondary:visited {
-            --btn-bg: #fff; --btn-bg-hover: #E7F2EB;
-            min-height: 36px; background: #fff; color: #203C3D !important;
-            border: 1px solid rgba(255,255,255,.42); font-weight: 800;
+        body:not(.pos-shell) .page-head h1,
+        body:not(.pos-shell) .form-page-head h1 {
+            color: #FFFFFF !important;
+            font-size: 1.55rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            margin: 0;
+            line-height: 1.2;
+            position: relative;
+            z-index: 1;
+        }
+        body:not(.pos-shell) .page-head p.muted,
+        body:not(.pos-shell) .form-page-head p.muted {
+            color: rgba(255, 255, 255, 0.78) !important;
+            font-size: 0.84rem;
+            margin: 0.25rem 0 0;
+            position: relative;
+            z-index: 1;
+        }
+        body:not(.pos-shell) .page-head .eyebrow,
+        body:not(.pos-shell) .form-page-head .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            width: fit-content;
+            padding: 0.2rem 0.6rem;
+            border-radius: 9999px;
+            background: rgba(255, 190, 152, 0.14);
+            border: 1px solid rgba(255, 190, 152, 0.28);
+            color: #FFBE98 !important;
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin-bottom: 0.35rem;
+            position: relative;
+            z-index: 1;
+        }
+        body:not(.pos-shell) .page-head .btn:not(.btn-secondary):not(.btn-ghost):not(.btn-slate):not(.btn-danger),
+        body:not(.pos-shell) .form-page-head .btn:not(.btn-secondary):not(.btn-ghost):not(.btn-slate):not(.btn-danger) {
+            --btn-bg: #FFBE98;
+            --btn-bg-hover: #FFD4BC;
+            min-height: 42px;
+            padding: 0.6rem 1.15rem;
+            background: #FFBE98 !important;
+            color: #0F172A !important;
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            border-radius: 10px;
+            font-size: 0.86rem;
+            font-weight: 900;
+            letter-spacing: 0.02em;
+            text-transform: none;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+            position: relative;
+            z-index: 1;
+            transition: transform 0.16s var(--ease), background-color 0.16s var(--ease), box-shadow 0.16s var(--ease);
+        }
+        body:not(.pos-shell) .page-head .btn:not(.btn-secondary):not(.btn-ghost):not(.btn-slate):not(.btn-danger):hover,
+        body:not(.pos-shell) .form-page-head .btn:not(.btn-secondary):not(.btn-ghost):not(.btn-slate):not(.btn-danger):hover {
+            background: #FFD4BC !important;
+            color: #0F172A !important;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(255, 190, 152, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+        }
+        body:not(.pos-shell) .page-head .btn:not(.btn-secondary):not(.btn-ghost):not(.btn-slate):not(.btn-danger):active,
+        body:not(.pos-shell) .form-page-head .btn:not(.btn-secondary):not(.btn-ghost):not(.btn-slate):not(.btn-danger):active {
+            transform: translateY(0);
+        }
+        body:not(.pos-shell) .page-head .btn-secondary,
+        body:not(.pos-shell) .page-head a.btn-secondary:link,
+        body:not(.pos-shell) .page-head a.btn-secondary:visited,
+        body:not(.pos-shell) .form-page-head .btn-secondary,
+        body:not(.pos-shell) .form-page-head a.btn-secondary:link,
+        body:not(.pos-shell) .form-page-head a.btn-secondary:visited {
+            --btn-bg: #FFFFFF;
+            --btn-bg-hover: #F1F5F9;
+            min-height: 40px;
+            background: #FFFFFF !important;
+            color: #1E293B !important;
+            border: 1px solid rgba(255, 255, 255, 0.45) !important;
+            border-radius: 10px;
+            font-weight: 800;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+            position: relative;
+            z-index: 1;
+        }
+        body:not(.pos-shell) .page-head .btn-secondary:hover,
+        body:not(.pos-shell) .form-page-head .btn-secondary:hover {
+            background: #F1F5F9 !important;
+            color: #0F172A !important;
+            transform: translateY(-1px);
         }
         .form-page-card.card {
             display: block; max-width: 1240px; margin: 0 auto 1rem; padding: 1.2rem;
@@ -653,9 +780,10 @@
 <body class="{{ auth()->check() ? 'authenticated-shell' : '' }} {{ request()->routeIs('pos.*') ? 'pos-shell' : '' }}">
     @auth
         <aside class="sidebar">
-            <a class="sidebar-brand" href="{{ $navEmployee?->hasRole('Cashier') ? route('pos.index') : route('dashboard') }}">
-                <span class="sidebar-brand-icon">P</span>
-                POS
+            <a class="sidebar-brand" href="{{ $navEmployee?->hasRole('Cashier') ? route('pos.index') : route('dashboard') }}" title="Supermarket POS">
+                <span class="sidebar-brand-icon">
+                    <img src="{{ asset('branding/market-canopy-symbol.svg') }}" alt="Market Canopy" width="44" height="44">
+                </span>
             </a>
             @php
                 $navOrder = ['dashboard', 'pos.index', 'customers.index', 'cash-drawers.index', 'categories.index', 'products.index', 'inventory.index', 'purchase-orders.index', 'suppliers.index', 'discounts.index', 'employees.index', 'audit-logs.index', 'reports.index'];

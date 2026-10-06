@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-2">
+  <title id="title-2">HyperCrate — Isometric Supermarket Monolith</title>
+  <!-- Top Roof Facet (Peach Fuzz) -->
+  <polygon points="128,28 214,78 128,128 42,78" fill="#FFBE98"/>
+  <!-- Left Flank (Deep Slate) -->
+  <polygon points="42,88 122,134 122,228 42,182" fill="#1E293B"/>
+  <!-- Right Flank (Soft Slate) -->
+  <polygon points="134,134 214,88 214,182 134,228" fill="#334155"/>
+  <!-- Central Diamond Checkout Portal (Negative void in Slate) -->
+  <polygon points="128,90 154,105 128,120 102,105" fill="#1E293B"/>
+</svg>

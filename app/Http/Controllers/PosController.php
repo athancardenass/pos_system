@@ -292,7 +292,7 @@ class PosController extends Controller
             'pending' => $pendingEwalletVerification,
             'itemSnapshots' => $pendingEwalletVerification->checkout_payload['item_snapshot'] ?? [],
             'customer' => $customerId ? Customer::query()->find($customerId) : null,
-            'canReview' => $employee->hasRole('Manager') && $pendingEwalletVerification->status === PendingEwalletVerification::STATUS_PENDING,
+            'canReview' => $pendingEwalletVerification->status === PendingEwalletVerification::STATUS_PENDING,
             'canReveal' => $employee->hasRole('Manager'),
         ]);
     }
@@ -328,18 +328,32 @@ class PosController extends Controller
             'pending' => $pendingCardVerification,
             'itemSnapshots' => $pendingCardVerification->checkout_payload['item_snapshot'] ?? [],
             'customer' => $customerId ? Customer::query()->find($customerId) : null,
-            'canReview' => $employee->hasRole('Manager') && $pendingCardVerification->status === PendingCardVerification::STATUS_PENDING,
+            'canReview' => $pendingCardVerification->status === PendingCardVerification::STATUS_PENDING,
             'canReveal' => $employee->hasRole('Manager'),
         ]);
     }
 
     public function verifyPendingEwallet(Request $request, PendingEwalletVerification $pendingEwalletVerification): RedirectResponse
     {
-        $request->validate([
+        $employee = $request->user();
+        if ($employee->hasRole('Cashier') && blank($request->input('manager_authorization_token'))) {
+            abort(403, 'Manager approval is required to verify e-wallet payment.');
+        }
+
+        $data = $request->validate([
             'merchant_checked' => 'required|accepted',
+            'manager_authorization_token' => 'nullable|string|max:100',
         ]);
 
-        $sale = $this->ewalletVerifications->verify($pendingEwalletVerification, (int) auth()->id());
+        $approval = $this->authorizations->requireGrant(
+            $request,
+            'pending_ewallet_verify',
+            ['pending_id' => (int) $pendingEwalletVerification->id],
+            $data['manager_authorization_token'] ?? null,
+        );
+
+        $approverId = (int) ($approval['approved_by_employee_id'] ?? auth()->id());
+        $sale = $this->ewalletVerifications->verify($pendingEwalletVerification, $approverId);
         $request->session()->put('pos.last_receipt_transaction_id', (int) $sale->transaction_id);
 
         return redirect()
@@ -349,11 +363,26 @@ class PosController extends Controller
 
     public function rejectPendingEwallet(Request $request, PendingEwalletVerification $pendingEwalletVerification): RedirectResponse
     {
+        $employee = $request->user();
+        if ($employee->hasRole('Cashier') && blank($request->input('manager_authorization_token'))) {
+            abort(403, 'Manager approval is required to reject e-wallet payment.');
+        }
+
         $data = $request->validate([
             'reason' => 'required|string|max:255',
+            'manager_authorization_token' => 'nullable|string|max:100',
         ]);
 
-        $this->ewalletVerifications->reject($pendingEwalletVerification, (int) auth()->id(), $data['reason']);
+        $approval = $this->authorizations->requireGrant(
+            $request,
+            'pending_ewallet_reject',
+            ['pending_id' => (int) $pendingEwalletVerification->id],
+            $data['manager_authorization_token'] ?? null,
+            $data['reason'],
+        );
+
+        $approverId = (int) ($approval['approved_by_employee_id'] ?? auth()->id());
+        $this->ewalletVerifications->reject($pendingEwalletVerification, $approverId, $data['reason']);
 
         return redirect()
             ->route('pos.pending-ewallet.show', $pendingEwalletVerification)
@@ -362,9 +391,25 @@ class PosController extends Controller
 
     public function verifyPendingCard(Request $request, PendingCardVerification $pendingCardVerification): RedirectResponse
     {
-        $request->validate(['terminal_checked' => 'required|accepted']);
+        $employee = $request->user();
+        if ($employee->hasRole('Cashier') && blank($request->input('manager_authorization_token'))) {
+            abort(403, 'Manager approval is required to verify card payment.');
+        }
 
-        $sale = $this->cardVerifications->verify($pendingCardVerification, (int) auth()->id());
+        $data = $request->validate([
+            'terminal_checked' => 'required|accepted',
+            'manager_authorization_token' => 'nullable|string|max:100',
+        ]);
+
+        $approval = $this->authorizations->requireGrant(
+            $request,
+            'pending_card_verify',
+            ['pending_id' => (int) $pendingCardVerification->id],
+            $data['manager_authorization_token'] ?? null,
+        );
+
+        $approverId = (int) ($approval['approved_by_employee_id'] ?? auth()->id());
+        $sale = $this->cardVerifications->verify($pendingCardVerification, $approverId);
         $request->session()->put('pos.last_receipt_transaction_id', (int) $sale->transaction_id);
 
         return redirect()
@@ -374,8 +419,26 @@ class PosController extends Controller
 
     public function rejectPendingCard(Request $request, PendingCardVerification $pendingCardVerification): RedirectResponse
     {
-        $data = $request->validate(['reason' => 'required|string|max:255']);
-        $this->cardVerifications->reject($pendingCardVerification, (int) auth()->id(), $data['reason']);
+        $employee = $request->user();
+        if ($employee->hasRole('Cashier') && blank($request->input('manager_authorization_token'))) {
+            abort(403, 'Manager approval is required to reject card payment.');
+        }
+
+        $data = $request->validate([
+            'reason' => 'required|string|max:255',
+            'manager_authorization_token' => 'nullable|string|max:100',
+        ]);
+
+        $approval = $this->authorizations->requireGrant(
+            $request,
+            'pending_card_reject',
+            ['pending_id' => (int) $pendingCardVerification->id],
+            $data['manager_authorization_token'] ?? null,
+            $data['reason'],
+        );
+
+        $approverId = (int) ($approval['approved_by_employee_id'] ?? auth()->id());
+        $this->cardVerifications->reject($pendingCardVerification, $approverId, $data['reason']);
 
         return redirect()
             ->route('pos.pending-card.show', $pendingCardVerification)

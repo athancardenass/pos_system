@@ -5,6 +5,124 @@
 
 > **AGENTS.md lock:** agent never runs `git commit`/`push`; group controls VCS.
 
+## 2026-10-06 — Seamless Manager PIN Authorization for Cashier Pending E-Wallet & Card Verification
+
+**What:** 
+1. Enabled full in-place verification and rejection for Cashiers on `pending-ewallet.show` by allowing `$canReview` when status is pending, integrating `<x-manager-pin-modal>`, and attaching the manager authorization prompt to review forms.
+2. Form submissions for Cashiers on both pending E-Wallet and Card reviews intercept verify/reject actions to request a 4–6 digit Manager PIN, generating a one-time grant token (`manager_authorization_token`) without requiring the cashier to log out or a manager to switch user sessions.
+3. Cleaned up inline styling on cashier verification notices in `pending-card/show.blade.php` and `pending-ewallet/show.blade.php`, replacing them with design-system-compliant `.verification-cashier-notice` CSS classes.
+4. Added feature tests in `tests/Feature/EwalletVerificationTest.php` verifying that Cashiers can verify and reject pending e-wallet payments using Manager PIN authorization, with tests passing across both card and e-wallet workflows.
+
+**Files touched:** `app/Http/Controllers/PosController.php`, `resources/views/pos/pending-ewallet/show.blade.php`, `resources/views/pos/pending-card/show.blade.php`, `tests/Feature/EwalletVerificationTest.php`, `CHANGELOG.md`.
+
+**Why:** Ensure continuous cashier workflow during card and e-wallet transactions so pending payments are approved or rejected via Manager PIN right at the cashier's terminal without manager login/logout disruption.
+
+## 2026-10-06 — Manager PIN Authorization for Cashier Pending Card Verification
+
+**What:** 
+1. Added `pending_card_verify`, `pending_card_reject`, `pending_ewallet_verify`, and `pending_ewallet_reject` to authorized actions in `ManagerAuthorizationService` and `ManagerAuthorizationController`.
+2. Updated routes in `routes/web.php` and controller methods in `PosController` to allow Cashiers to verify/reject pending card payments when backed by a valid Manager PIN grant token (`manager_authorization_token`), automatically attributing the verified/rejected employee ID to the approving Manager.
+3. Enhanced `resources/views/pos/pending-card/show.blade.php` to display review actions directly for Cashiers with clear notice, integrated `<x-manager-pin-modal>`, and hooked form submissions to prompt for Manager PIN authorization in-place without requiring logout.
+4. Added feature tests in `tests/Feature/CardVerificationTest.php` ensuring Cashiers can verify and reject pending card transactions using a Manager PIN.
+
+**Files touched:** `app/Services/ManagerAuthorizationService.php`, `app/Http/Controllers/ManagerAuthorizationController.php`, `app/Http/Controllers/PosController.php`, `routes/web.php`, `resources/views/pos/pending-card/show.blade.php`, `tests/Feature/CardVerificationTest.php`, `CHANGELOG.md`.
+
+**Why:** Allow smooth in-place manager authorization at the cashier terminal without forcing cashier logout/login cycles.
+
+## 2026-10-05 — Remove Legacy Complex Password Across Database & Operator Login
+
+**What:** 
+1. Cleared the MySQL `root` password in MariaDB (`IDENTIFIED BY ''`) and updated `.env` (`DB_PASSWORD=`) to standard empty password so local XAMPP and integration clones connect without friction.
+2. Updated the operator account (`Athan`) password from `Css@1234` to standard default (`password`), matching the rest of the system accounts.
+
+**Files touched:** `.env`, MySQL privileges, `employee` table, `CHANGELOG.md`.
+
+**Why:** Eliminate local database connection refusal and login friction caused by the non-standard `Css@1234` credential.
+
+## 2026-10-05 — Style POS Live Transaction Heading with rgb(24, 118, 94)
+
+**What:** Updated `.pos-transaction-heading` in `resources/views/pos/index.blade.php` to use `rgb(24, 118, 94)` (`#18765E`) as its header background, providing a distinct brand accent tone for the live transaction card.
+
+**Files touched:** `resources/views/pos/index.blade.php`, `CHANGELOG.md`.
+
+**Why:** Align the POS live transaction panel header with the user's requested botanical green accent color.
+
+## 2026-10-05 — Unify Headers & Navigation in rgb(56, 43, 45) Dark Espresso Palette
+
+**What:** 
+1. Updated all non-POS module headers (`body:not(.pos-shell) .page-head`, `form-page-head`, `receipt-settings-heading`, `vat-settings-heading`, and `dashboard-head`) to use `rgb(56, 43, 45)` (`#382B2D`) as their primary background.
+2. Updated the navigation bar to use `rgb(56, 43, 45)` for active tabs (`.sidebar-nav a.active`), subtle `rgba(56, 43, 45, 0.08)` for non-green hover states, and styled `.sidebar-logout` in `rgb(56, 43, 45)` with Peach Fuzz text (`#FFBE98`).
+3. Preserved the POS register screen (`pos/index.blade.php`) completely unaffected.
+
+**Files touched:** `resources/views/layouts/app.blade.php`, `resources/views/dashboard.blade.php`, `resources/views/settings/receipt.blade.php`, `resources/views/settings/vat.blade.php`, `resources/views/auth/login.blade.php`, `CHANGELOG.md`.
+
+**Why:** Establish unified, warm, and sophisticated color harmony across all headers and navigation controls using the system's core dark ink tone `rgb(56, 43, 45)`.
+
+## 2026-10-05 — Remove Navigation Green Hover & Apply Modern Slate Header Systemwide
+
+**What:** 
+1. Removed green hover backgrounds and text colors on the navigation bar (`.sidebar-nav a:hover:not(.active)` and `.sidebar-logout:hover`). Switched to clean neutral slate hover states (`#F1F5F9` background, `#1E293B` text, and `#0F172A`/`#FFBE98` logout).
+2. Applied the modernized Deep Slate (`#1E293B` to `#0F172A`) hero header system across all modules (`body:not(.pos-shell) .page-head`, `.form-page-head`, `receipt.blade.php`, `vat.blade.php`). Formatted bold white headings, muted descriptions, uppercase eyebrow chips, and Peach Fuzz (`#FFBE98`) primary CTA buttons.
+3. Explicitly preserved the POS register screen (`pos/index.blade.php` under `pos-shell`) so cashier transaction workflows remain completely unaffected.
+
+**Files touched:** `resources/views/layouts/app.blade.php`, `resources/views/settings/receipt.blade.php`, `resources/views/settings/vat.blade.php`, `CHANGELOG.md`.
+
+**Why:** Eliminate dated green accents from the navigation bar and establish a cohesive, modern Market Canopy header appearance across all administrative and management modules without disturbing the cashier POS layout.
+
+## 2026-10-05 — Modernize Dashboard Hero Header & Command Action
+
+**What:** 
+1. Redesigned the Dashboard header (`dashboard.blade.php`) from a plain flat text row into an elevated Deep Slate hero banner (`#1E293B` to `#0F172A` gradient) with subtle ambient glow and layered depth.
+2. Added an eyebrow operational status chip (`● LIVE OPERATIONS • ASIA/MANILA (PHT)`) with a glowing green pulse dot, high-contrast white `Dashboard` display typography, and a formatted operator welcome line with live date badge (`#FFD4BC`).
+3. Re-architected the primary call-to-action button (`#btn-new-pos-sale`) into an elevated hero button in Peach Fuzz (`#FFBE98`) with Slate text (`#0F172A`), integrated circular icon bubble, and an `F1` keyboard shortcut cap badge.
+
+**Files touched:** `resources/views/dashboard.blade.php`, `CHANGELOG.md`.
+
+**Why:** Replace the dated legacy header with an elevated, modern retail command center banner that matches the Market Canopy brand design system.
+
+## 2026-10-05 — Upscale & Elevate Login Logo, Style Dark Slate Button, and Enlarge Sidebar Brand
+
+**What:** 
+1. Upscaled the Market Canopy logo on the Terminal Login screen (`login.blade.php`) to `96×96px`, with a multi-layered drop shadow for tactile depth and elevation without any bounding box.
+2. Formatted the "Sign In to Terminal" primary button in exact Slate Gray (`#1E293B`) with Soft Peach Fuzz bold typography (`#FFBE98`) and a deeper hover state (`#0F172A`).
+3. Enlarged the sidebar brand icon inside the authenticated layout (`layouts/app.blade.php`) to `44×44px` with a subtle elevation shadow and zero background box, and removed the standalone text label "POS" so the clean Market Canopy mark stands proudly alone as the system header.
+
+**Files touched:** `resources/views/auth/login.blade.php`, `resources/views/layouts/app.blade.php`, `CHANGELOG.md`.
+
+**Why:** Match user specifications for a prominent, elevated login emblem, precise palette button styling, and a clean logo-only sidebar header.
+
+## 2026-10-05 — Fix Logo PNG Export Viewports & Zero-Cutoff Rendering
+
+**What:** Re-rendered all master PNG assets (`market-canopy-color-512.png`, `market-canopy-color-1024.png`, `market-canopy-horizontal-1200.png`, `market-canopy-app-icon-512.png`, `market-canopy-black-512.png`, `market-canopy-white-512.png`) using direct headless Chromium at full scale to eliminate window decoration clipping on Windows. Adjusted the horizontal lockup viewBox to `650x256` with generous breathing room on all margins, guaranteeing 100% complete circles on the cart wheels and zero text truncation. Rebuilt the distribution ZIP bundle (`supermarket-pos-logo-pack.zip`).
+
+**Files touched:** `public/branding/*`, `CHANGELOG.md`.
+
+**Why:** Resolve wheel cutoff / clipping artifacts on exported PNGs so the other integration groups receive pristine, production-ready image files.
+
+## 2026-10-05 — Refine Terminal Login Logo & Action Styling
+
+**What:** Upsized the Market Canopy logo on the Terminal Login screen (`login.blade.php`) from 40px to 72px and removed the white badge container background for a direct, clean presentation on the card. Styled the "Sign In to Terminal" primary button in Slate Grav (`#203C3D`) with Soft Peach Fuzz typography (`#FFBE98`). Removed the development demo credentials notice from the login footer.
+
+**Files touched:** `resources/views/auth/login.blade.php`, `CHANGELOG.md`.
+
+**Why:** Match user aesthetic preferences for a prominent, non-boxed brand mark, cohesive Slate Grav and Peach Fuzz button interactions, and a clean production-ready login card.
+
+## 2026-10-05 — Embed Market Canopy Logo into POS UI & Navigation
+
+**What:** Replaced legacy placeholder badges with the official Market Canopy vector symbol (`market-canopy-symbol.svg`) across the Terminal Login screen (`login.blade.php`) and the authenticated sidebar header (`layouts/app.blade.php`). Added direct favicon links (`favicon.ico`, `favicon.svg`, `apple-touch-icon.png`) to the main application `<head>`.
+
+**Files touched:** `resources/views/auth/login.blade.php`, `resources/views/layouts/app.blade.php`, `CHANGELOG.md`.
+
+**Why:** Seamlessly integrate the approved Market Canopy brand identity into the live POS terminal and administrative workspace.
+
+## 2026-10-05 — Supermarket POS Brand Identity & Logo Kit (Market Canopy)
+
+**What:** Created and exported the official brand identity system and logo kit ("Market Canopy" direction) using Slate Gray (`#1E293B`) and Peach Fuzz (`#FFBE98`). Delivered complete vector masters (standalone symbol, horizontal lockup, stacked badge, app icon), monochrome and brand-color variants, 16px to 512px PNG sets, web icons (`favicon.ico`, `favicon.svg`, `apple-touch-icon.png`, PWA icons, `site.webmanifest`), interactive client presentation board with real-world retail mockups (`presentation.html`), and compact brand guidelines (`BRAND-GUIDELINES.md`). Updated the public web favicon assets.
+
+**Files touched:** `public/branding/*`, `public/favicon.ico`, `public/favicon.svg`, `public/apple-touch-icon.png`, `CHANGELOG.md`.
+
+**Why:** Establish an authentic, scalable, and non-clunky supermarket brand identity that seamlessly connects storefront retail heritage with modern POS checkout operations.
+
 ## 2026-10-04 — Add subtle depth to info notices
 
 **What:** Added a soft raised shadow and light surface highlight to informational flash notices.

@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-1">
+  <title id="title-1">Bloom Basket — Organic Fresh Grocer</title>
+  <!-- Basket Cradle (Slate Gray): Centered 256 canvas (L36 R36) -->
+  <path fill="#1E293B" fill-rule="evenodd" d="
+    M 36 104
+    C 36 96.3 42.3 90 50 90
+    C 57.7 90 64 96.3 64 104
+    V 136
+    C 64 171.3 92.7 200 128 200
+    C 163.3 200 192 171.3 192 136
+    V 104
+    C 192 96.3 198.3 90 206 90
+    C 213.7 90 220 96.3 220 104
+    V 136
+    C 220 184.6 180.6 224 132 224
+    H 124
+    C 75.4 224 36 184.6 36 136
+    Z
+  "/>
+  <!-- Basket Rim Bar (Slate Gray) -->
+  <path fill="#1E293B" d="
+    M 28 116
+    C 28 109.4 33.4 104 40 104
+    H 216
+    C 222.6 104 228 109.4 228 116
+    C 228 122.6 222.6 128 216 128
+    H 40
+    C 33.4 128 28 122.6 28 116
+    Z
+  "/>
+  <!-- Fresh Peach Fruit & Sprout (Peach Fuzz) -->
+  <path fill="#FFBE98" d="
+    M 128 32
+    C 128 32 94 62 94 98
+    C 94 116.8 109.2 132 128 132
+    C 146.8 132 162 116.8 162 98
+    C 162 62 128 32 128 32
+    Z
+  "/>
+  <!-- Sprout Leaf (Peach Fuzz) -->
+  <path fill="#FFBE98" d="
+    M 128 32
+    C 144 20 160 24 168 30
+    C 170 42 162 54 146 54
+    C 134 54 128 42 128 32
+    Z
+  "/>
+</svg>

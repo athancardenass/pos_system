@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\SaleTransaction;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class EwalletVerificationTest extends TestCase
@@ -116,8 +117,9 @@ class EwalletVerificationTest extends TestCase
             ->assertSee($pending->maskedReference())
             ->assertDontSee('GCASH-REF-10001')
             ->assertDontSee('data-url="'.route('pos.pending-ewallet.reveal', $pending).'"', false)
-            ->assertDontSee('action="'.route('pos.pending-ewallet.verify', $pending).'"', false)
-            ->assertDontSee('action="'.route('pos.pending-ewallet.reject', $pending).'"', false);
+            ->assertSee('action="'.route('pos.pending-ewallet.verify', $pending).'"', false)
+            ->assertSee('action="'.route('pos.pending-ewallet.reject', $pending).'"', false)
+            ->assertSee('Cashier Terminal:');
         $this->actingAs($cashier)
             ->post(route('pos.pending-ewallet.reveal', $pending))
             ->assertForbidden();
@@ -288,6 +290,76 @@ class EwalletVerificationTest extends TestCase
             ->assertOk();
 
         $this->assertSame(PendingEwalletVerification::STATUS_EXPIRED, $pending->fresh()->status);
+        $this->assertSame(10.0, (float) Inventory::query()->where('product_id', $product->product_id)->value('stock_quantity'));
+    }
+
+    public function test_cashier_can_verify_pending_ewallet_with_manager_pin(): void
+    {
+        $product = $this->stockedProduct();
+        $cashier = $this->employee('cashier');
+        $manager = $this->employee('manager');
+        $manager->manager_pin_hash = Hash::make('2468');
+        $manager->save();
+
+        $this->actingAs($cashier)->post(route('pos.store'), $this->requestData($product, 'GCASH-OK-7721'));
+        $pending = PendingEwalletVerification::query()->latest('id')->firstOrFail();
+
+        // 1. Cashier prompts manager for PIN
+        $authResponse = $this->actingAs($cashier)->postJson(route('manager-authorization.authorize'), [
+            'action' => 'pending_ewallet_verify',
+            'pin' => '2468',
+            'register_id' => 'REG-01',
+            'details' => ['pending_id' => $pending->id],
+        ]);
+        $authResponse->assertOk()->assertJson(['ok' => true]);
+        $token = $authResponse->json('token');
+        $this->assertNotEmpty($token);
+
+        // 2. Cashier submits verify with token
+        $response = $this->actingAs($cashier)->post(route('pos.pending-ewallet.verify', $pending), [
+            'merchant_checked' => '1',
+            'manager_authorization_token' => $token,
+        ]);
+
+        $response->assertRedirect();
+        $this->assertSame(PendingEwalletVerification::STATUS_VERIFIED, $pending->fresh()->status);
+        $this->assertSame((int) $manager->employee_id, (int) $pending->fresh()->verified_by_employee_id);
+
+        $sale = SaleTransaction::query()->latest('transaction_id')->firstOrFail();
+        $this->assertSame('completed', $sale->status);
+    }
+
+    public function test_cashier_can_reject_pending_ewallet_with_manager_pin(): void
+    {
+        $product = $this->stockedProduct();
+        $cashier = $this->employee('cashier');
+        $manager = $this->employee('manager');
+        $manager->manager_pin_hash = Hash::make('2468');
+        $manager->save();
+
+        $this->actingAs($cashier)->post(route('pos.store'), $this->requestData($product, 'GCASH-REJ-9921'));
+        $pending = PendingEwalletVerification::query()->latest('id')->firstOrFail();
+
+        // 1. Cashier prompts manager for PIN
+        $authResponse = $this->actingAs($cashier)->postJson(route('manager-authorization.authorize'), [
+            'action' => 'pending_ewallet_reject',
+            'pin' => '2468',
+            'register_id' => 'REG-01',
+            'reason' => 'Reference not found in GCash merchant app',
+            'details' => ['pending_id' => $pending->id],
+        ]);
+        $authResponse->assertOk()->assertJson(['ok' => true]);
+        $token = $authResponse->json('token');
+
+        // 2. Cashier submits reject with token
+        $response = $this->actingAs($cashier)->post(route('pos.pending-ewallet.reject', $pending), [
+            'reason' => 'Reference not found in GCash merchant app',
+            'manager_authorization_token' => $token,
+        ]);
+
+        $response->assertRedirect(route('pos.pending-ewallet.show', $pending));
+        $this->assertSame(PendingEwalletVerification::STATUS_REJECTED, $pending->fresh()->status);
+        $this->assertSame((int) $manager->employee_id, (int) $pending->fresh()->rejected_by_employee_id);
         $this->assertSame(10.0, (float) Inventory::query()->where('product_id', $product->product_id)->value('stock_quantity'));
     }
 }

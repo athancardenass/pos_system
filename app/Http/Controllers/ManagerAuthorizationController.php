@@ -22,7 +22,7 @@ class ManagerAuthorizationController extends Controller
             'pin' => [$isManager ? 'nullable' : 'required', 'string', 'regex:/^\d{4,6}$/'],
             'register_id' => 'required|string|max:50',
             'details' => 'present|array|max:15',
-            'reason' => [Rule::requiredIf(fn () => in_array($request->input('action'), ['cart_item_void', 'held_transaction_delete', 'sale_refund'], true)), 'nullable', 'string', Rule::in(array_keys(RefundService::REASONS))],
+            'reason' => [Rule::requiredIf(fn () => in_array($request->input('action'), ['cart_item_void', 'held_transaction_delete', 'sale_refund'], true)), 'nullable', 'string', Rule::when(fn () => in_array($request->input('action'), ['cart_item_void', 'held_transaction_delete', 'sale_refund'], true), Rule::in(array_keys(RefundService::REASONS)))],
             'notes' => 'nullable|string|max:255',
         ];
         $rules += match ($request->input('action')) {
@@ -49,6 +49,9 @@ class ManagerAuthorizationController extends Controller
             ],
             'cash_drawer_open' => [
                 'details.opening_cash' => 'required|numeric|min:0|decimal:0,2',
+            ],
+            'pending_card_verify', 'pending_card_reject', 'pending_ewallet_verify', 'pending_ewallet_reject' => [
+                'details.pending_id' => 'required|integer|min:1',
             ],
             default => [],
         };
@@ -98,6 +101,9 @@ class ManagerAuthorizationController extends Controller
             ],
             'cash_drawer_open' => [
                 'opening_cash' => round((float) ($details['opening_cash'] ?? 0), 2),
+            ],
+            'pending_card_verify', 'pending_card_reject', 'pending_ewallet_verify', 'pending_ewallet_reject' => [
+                'pending_id' => (int) ($details['pending_id'] ?? 0),
             ],
             default => [],
         };

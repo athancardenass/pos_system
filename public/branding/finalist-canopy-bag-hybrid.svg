@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-3">
+  <title id="title-3">The Canopy Bag — Storefront Awning &amp; Grocery Bag Hybrid</title>
+  <!-- Fresh Orchard Peach peaking above the bag (Peach Fuzz) -->
+  <circle cx="128" cy="46" r="32" fill="#FFBE98"/>
+  <path fill="#1E293B" d="
+    M 128 14
+    C 140 4 154 8 160 14
+    C 162 24 156 34 142 34
+    C 132 34 128 24 128 14
+    Z
+  "/>
+
+  <!-- Supermarket Storefront Canopy / Awning Roof capping the bag -->
+  <!-- Top Roof Bar (Slate Gray) -->
+  <rect x="36" y="52" width="184" height="14" rx="7" fill="#1E293B"/>
+  <!-- Scalloped Awning Flaps: 4 alternating panels (Slate & Peach) -->
+  <path fill="#1E293B" d="
+    M 44 66 H 84 V 92 C 84 100 75 106 64 106 C 53 106 44 100 44 92 Z
+  "/>
+  <path fill="#FFBE98" d="
+    M 84 66 H 128 V 92 C 128 100 119 106 106 106 C 93 106 84 100 84 92 Z
+  "/>
+  <path fill="#1E293B" d="
+    M 128 66 H 172 V 92 C 172 100 163 106 150 106 C 137 106 128 100 128 92 Z
+  "/>
+  <path fill="#FFBE98" d="
+    M 172 66 H 212 V 92 C 212 100 203 106 192 106 C 181 106 172 100 172 92 Z
+  "/>
+
+  <!-- Grocery Bag Lower Body (Slate Gray) with handle & barcode slots -->
+  <path fill="#1E293B" fill-rule="evenodd" d="
+    M 56 106
+    H 200
+    L 188 226
+    C 186.8 235.8 178.6 242.8 168.7 242.8
+    H 87.3
+    C 77.4 242.8 69.2 235.8 68 226
+    L 56 106
+    Z
+    M 104 136
+    H 152
+    C 159.8 136 166 142.2 166 150
+    C 166 157.8 159.8 164 152 164
+    H 104
+    C 96.2 164 90 157.8 90 150
+    C 90 142.2 96.2 136 104 136
+    Z
+  "/>
+  <!-- Barcode Rhythm Slits (Peach Fuzz) -->
+  <rect x="100" y="190" width="10" height="24" rx="4" fill="#FFBE98"/>
+  <rect x="116" y="190" width="14" height="24" rx="4" fill="#FFBE98"/>
+  <rect x="136" y="190" width="8" height="24" rx="4" fill="#FFBE98"/>
+  <rect x="150" y="190" width="6" height="24" rx="3" fill="#FFBE98"/>
+</svg>

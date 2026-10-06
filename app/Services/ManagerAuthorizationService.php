@@ -16,9 +16,21 @@ class ManagerAuthorizationService
         'discount_apply',
         'sale_refund',
         'cash_drawer_open',
+        'pending_card_verify',
+        'pending_card_reject',
+        'pending_ewallet_verify',
+        'pending_ewallet_reject',
     ];
 
-    private const GRANT_ACTIONS = ['discount_apply', 'sale_refund', 'cash_drawer_open'];
+    private const GRANT_ACTIONS = [
+        'discount_apply',
+        'sale_refund',
+        'cash_drawer_open',
+        'pending_card_verify',
+        'pending_card_reject',
+        'pending_ewallet_verify',
+        'pending_ewallet_reject',
+    ];
 
     /**
      * @param array<string, mixed> $details
@@ -112,7 +124,7 @@ class ManagerAuthorizationService
         if (! is_array($grant)
             || ($grant['action'] ?? null) !== $action
             || (int) ($grant['requester_id'] ?? 0) !== (int) $employee->employee_id
-            || ($grant['register_id'] ?? null) !== $registerId
+            || ($registerId !== null && ($grant['register_id'] ?? null) !== $registerId)
             || (int) ($grant['expires_at'] ?? 0) < now()->timestamp
             || ! hash_equals((string) ($grant['scope_hash'] ?? ''), $this->scopeHash($action, $details, $reason, $notes))) {
             throw ValidationException::withMessages([
@@ -224,6 +236,9 @@ class ManagerAuthorizationService
             ],
             'cash_drawer_open' => [
                 'opening_cash' => round((float) ($details['opening_cash'] ?? 0), 2),
+            ],
+            'pending_card_verify', 'pending_card_reject', 'pending_ewallet_verify', 'pending_ewallet_reject' => [
+                'pending_id' => (int) ($details['pending_id'] ?? 0),
             ],
             default => [],
         };

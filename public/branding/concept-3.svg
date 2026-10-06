@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-3">
+  <title id="title-3">OmniTag — Fresh Supermarket Seal</title>
+  <!-- Outer Slate Gray Tag Shield with Lanyard Aperture -->
+  <path fill="#1E293B" fill-rule="evenodd" d="
+    M 112 24
+    C 118 18 138 18 144 24
+    L 218 98
+    C 224 104 224 114 224 122
+    V 208
+    C 224 221.2 213.2 232 200 232
+    H 56
+    C 42.8 232 32 221.2 32 208
+    V 122
+    C 32 114 32 104 38 98
+    Z
+    M 128 44
+    C 134.6 44 140 49.4 140 56
+    C 140 62.6 134.6 68 128 68
+    C 121.4 68 116 62.6 116 56
+    C 116 49.4 121.4 44 128 44
+    Z
+    M 68 126
+    H 80
+    V 180
+    H 68
+    Z
+    M 92 126
+    H 104
+    V 180
+    H 92
+    Z
+  "/>
+  <!-- Peach Fuzz Dynamic Checkout Checkmark (Verified Fresh & Accurately Scanned) -->
+  <path fill="#FFBE98" d="
+    M 116 156
+    L 136 176
+    C 139.9 179.9 146.1 179.9 150 176
+    L 196 130
+    C 199.9 126.1 199.9 119.9 196 116
+    C 192.1 112.1 185.9 112.1 182 116
+    L 143 155
+    L 130 142
+    C 126.1 138.1 119.9 138.1 116 142
+    C 112.1 145.9 112.1 152.1 116 156
+    Z
+  "/>
+</svg>

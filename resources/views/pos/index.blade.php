@@ -738,7 +738,7 @@
     .pos-add-product-btn:hover, .pos-add-product-btn:focus-visible { background: #126b32; color: #fff; }
     .pos-add-product-btn:focus-visible { outline: 3px solid rgba(22,128,60,.22); outline-offset: 2px; }
     .pos-add-product-btn:disabled { background: #e7ece9; color: #7b8781; box-shadow: none; cursor: not-allowed; }
-    .pos-transaction-heading { display: flex; align-items: center; justify-content: space-between; margin: -13px -13px 0; padding: 11px 14px; border: 0; border-radius: 13px 13px 0 0; background: var(--text); color: #fff; }
+    .pos-transaction-heading { display: flex; align-items: center; justify-content: space-between; margin: -13px -13px 0; padding: 11px 14px; border: 0; border-radius: 13px 13px 0 0; background: rgb(24, 118, 94); color: #fff; }
     .pos-transaction-heading .pos-section-title { margin: 0; color: #fff; font-size: .8rem; }
     .pos-table-wrap { flex: 1; min-height: 0; max-height: none; margin-top: 5px; overflow: auto; scrollbar-color: rgba(32,60,61,.24) transparent; scrollbar-width: thin; }
     .pos-cart-table { border-collapse: collapse; }

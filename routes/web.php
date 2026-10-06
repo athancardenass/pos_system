@@ -54,12 +54,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/pos/pending-ewallet/{pendingEwalletVerification}', [PosController::class, 'showPendingEwallet'])->name('pos.pending-ewallet.show');
         Route::get('/pos/pending-card', [PosController::class, 'pendingCardIndex'])->name('pos.pending-card.index');
         Route::get('/pos/pending-card/{pendingCardVerification}', [PosController::class, 'showPendingCard'])->name('pos.pending-card.show');
+        Route::post('/pos/pending-ewallet/{pendingEwalletVerification}/verify', [PosController::class, 'verifyPendingEwallet'])->name('pos.pending-ewallet.verify');
+        Route::post('/pos/pending-ewallet/{pendingEwalletVerification}/reject', [PosController::class, 'rejectPendingEwallet'])->name('pos.pending-ewallet.reject');
+        Route::post('/pos/pending-card/{pendingCardVerification}/verify', [PosController::class, 'verifyPendingCard'])->name('pos.pending-card.verify');
+        Route::post('/pos/pending-card/{pendingCardVerification}/reject', [PosController::class, 'rejectPendingCard'])->name('pos.pending-card.reject');
         Route::middleware('role:Manager')->group(function () {
-            Route::post('/pos/pending-ewallet/{pendingEwalletVerification}/verify', [PosController::class, 'verifyPendingEwallet'])->name('pos.pending-ewallet.verify');
-            Route::post('/pos/pending-ewallet/{pendingEwalletVerification}/reject', [PosController::class, 'rejectPendingEwallet'])->name('pos.pending-ewallet.reject');
             Route::post('/pos/pending-ewallet/{pendingEwalletVerification}/reveal', [PosController::class, 'revealPendingEwalletReference'])->middleware('throttle:30,1')->name('pos.pending-ewallet.reveal');
-            Route::post('/pos/pending-card/{pendingCardVerification}/verify', [PosController::class, 'verifyPendingCard'])->name('pos.pending-card.verify');
-            Route::post('/pos/pending-card/{pendingCardVerification}/reject', [PosController::class, 'rejectPendingCard'])->name('pos.pending-card.reject');
             Route::post('/pos/pending-card/{pendingCardVerification}/reveal', [PosController::class, 'revealPendingCardReference'])->middleware('throttle:30,1')->name('pos.pending-card.reveal');
         });
         Route::post('/pos/check-coupon', [PosController::class, 'checkCoupon'])->name('pos.check-coupon');

@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-3">
+  <title id="title-3">The Minimalist Tote — Modern Grocery Bag</title>
+  <!-- Handle Loop (Slate Gray) -->
+  <path fill="#1E293B" fill-rule="evenodd" d="
+    M 92 36
+    C 92 24.9 101 16 112 16
+    H 144
+    C 155 16 164 24.9 164 36
+    V 84
+    H 140
+    V 44
+    C 140 41.8 138.2 40 136 40
+    H 120
+    C 117.8 40 116 41.8 116 44
+    V 84
+    H 92
+    Z
+  "/>
+  <!-- Bag Body (Deep Slate Gray) -->
+  <path fill="#1E293B" fill-rule="evenodd" d="
+    M 56 84
+    H 200
+    L 186 218
+    C 184.8 229.4 175.2 238 163.7 238
+    H 92.3
+    C 80.8 238 71.2 229.4 70 218
+    L 56 84
+    Z
+    M 88 120
+    H 168
+    C 173.5 120 178 124.5 178 130
+    C 178 135.5 173.5 140 168 140
+    H 88
+    C 82.5 140 78 135.5 78 130
+    C 78 124.5 82.5 120 88 120
+    Z
+  "/>
+  <!-- Fresh Produce Core Badge (Peach Fuzz) -->
+  <path fill="#FFBE98" d="
+    M 128 110
+    C 128 110 156 128 156 156
+    C 156 171.5 143.5 184 128 184
+    C 112.5 184 100 171.5 100 156
+    C 100 128 128 110 128 110
+    Z
+  "/>
+</svg>

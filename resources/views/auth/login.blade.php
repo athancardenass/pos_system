@@ -8,11 +8,7 @@
             {{-- Header Branding --}}
             <div class="login-header">
                 <div class="login-brand-badge">
-                    <svg class="login-brand-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="2" y="3" width="20" height="14" rx="2"/>
-                        <line x1="8" y1="21" x2="16" y2="21"/>
-                        <line x1="12" y1="17" x2="12" y2="21"/>
-                    </svg>
+                    <img src="{{ asset('branding/market-canopy-symbol.svg') }}" alt="Market Canopy" width="96" height="96" class="login-brand-img">
                 </div>
                 <h1 class="login-title">POS SYSTEM</h1>
                 <p class="login-subtitle">Supermarket Terminal & Operations</p>
@@ -77,9 +73,6 @@
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     <span>Authorized Personnel Only &bull; Shift Audited</span>
                 </div>
-                <div class="dev-demo-hint">
-                    Demo credentials: <strong>manager</strong> or <strong>cashier</strong> (password: <code>password</code>)
-                </div>
             </div>
         </div>
     </div>
@@ -114,13 +107,30 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 58px;
-            height: 58px;
-            background: var(--accent);
-            color: #fff;
-            border-radius: var(--r);
-            box-shadow: 0 10px 24px -10px rgba(196, 80, 74, 0.95);
-            margin-bottom: 1rem;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            margin-bottom: 1.15rem;
+            position: relative;
+        }
+
+        .login-brand-img {
+            display: block;
+            width: 96px;
+            height: 96px;
+            object-fit: contain;
+            /* Multi-layer elevation drop shadow for rich, tactile depth */
+            filter: drop-shadow(0 2px 4px rgba(30, 41, 59, 0.12))
+                    drop-shadow(0 10px 20px rgba(30, 41, 59, 0.20))
+                    drop-shadow(0 20px 32px rgba(30, 41, 59, 0.14));
+            transition: transform 0.25s var(--ease), filter 0.25s var(--ease);
+        }
+
+        .login-brand-img:hover {
+            transform: translateY(-2px) scale(1.02);
+            filter: drop-shadow(0 4px 8px rgba(30, 41, 59, 0.14))
+                    drop-shadow(0 14px 26px rgba(30, 41, 59, 0.24))
+                    drop-shadow(0 24px 38px rgba(30, 41, 59, 0.16));
         }
 
         .login-title {
@@ -252,36 +262,57 @@
             color: var(--text);
         }
 
+        button[type="submit"].login-btn,
         .login-btn {
-            width: 100%;
-            padding: 0.95rem;
-            background: var(--text);
-            color: #fff;
-            border: none;
-            border-radius: var(--r);
-            font-family: inherit;
-            font-size: 0.92rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            cursor: pointer;
-            box-shadow: 0 4px 14px rgba(32, 60, 61, 0.25);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            transition: transform 0.15s var(--ease), background-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+            width: 100% !important;
+            min-height: 48px;
+            padding: 0.95rem 1.25rem !important;
+            --btn-bg: rgb(56, 43, 45) !important;
+            --btn-bg-hover: rgb(40, 29, 31) !important;
+            background: rgb(56, 43, 45) !important;
+            background-color: rgb(56, 43, 45) !important;
+            color: #FFBE98 !important;
+            border: 1px solid rgba(255, 190, 152, 0.28) !important;
+            border-radius: var(--r) !important;
+            font-family: inherit !important;
+            font-size: 0.92rem !important;
+            font-weight: 800 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.08em !important;
+            cursor: pointer !important;
+            box-shadow: 0 6px 18px rgba(56, 43, 45, 0.32) !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0.5rem !important;
+            transition: transform 0.15s var(--ease), background-color 0.15s var(--ease), box-shadow 0.15s var(--ease), color 0.15s var(--ease) !important;
             margin-top: 0.35rem;
         }
 
-        .login-btn:hover {
-            background: #172D2E;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 22px rgba(32, 60, 61, 0.35);
+        button[type="submit"].login-btn *,
+        .login-btn * {
+            color: #FFBE98 !important;
+            stroke: #FFBE98 !important;
         }
 
+        button[type="submit"].login-btn:hover,
+        .login-btn:hover {
+            background: rgb(40, 29, 31) !important;
+            background-color: rgb(40, 29, 31) !important;
+            color: #FFD4BC !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 10px 24px rgba(40, 29, 31, 0.42) !important;
+        }
+
+        button[type="submit"].login-btn:hover *,
+        .login-btn:hover * {
+            color: #FFD4BC !important;
+            stroke: #FFD4BC !important;
+        }
+
+        button[type="submit"].login-btn:active,
         .login-btn:active {
-            transform: translateY(0);
+            transform: translateY(0) !important;
         }
 
         /* Footer */
@@ -303,19 +334,6 @@
             font-size: 0.75rem;
             color: var(--muted);
             font-weight: 600;
-        }
-
-        .dev-demo-hint {
-            font-size: 0.72rem;
-            color: var(--muted);
-        }
-
-        .dev-demo-hint code {
-            background: var(--bg-tint);
-            padding: 0.1rem 0.35rem;
-            border-radius: var(--r-sm);
-            font-family: monospace;
-            border: 1px solid var(--rule-faint);
         }
 
         /* Error box */

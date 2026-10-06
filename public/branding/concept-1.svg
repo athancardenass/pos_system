@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-1">
+  <title id="title-1">Apex Cart — Supermarket Symbol</title>
+  <!-- Slate Gray Sturdy Chassis & Wheels -->
+  <!-- Handle and Chassis frame -->
+  <path fill="#1E293B" d="
+    M 34 50
+    C 34 43.4 39.4 38 46 38
+    H 70
+    C 75.3 38 80.2 41.5 81.8 46.5
+    L 94 82
+    H 214
+    C 221.7 82 227.4 89.6 226 96
+    L 207 167
+    C 205.4 172.9 200 177 193.9 177
+    H 101
+    C 94.9 177 89.5 172.9 87.9 167
+    L 68.9 96
+    H 46
+    C 39.4 96 34 90.6 34 84
+    Z
+  "/>
+  <!-- Dual Precision Glide Wheels (Slate Gray) -->
+  <circle cx="106" cy="216" r="20" fill="#1E293B"/>
+  <circle cx="178" cy="216" r="20" fill="#1E293B"/>
+  
+  <!-- Peach Fuzz Basket Interior / Fresh Goods Payload -->
+  <path fill="#FFBE98" d="
+    M 100 102
+    H 200
+    L 188 147
+    C 187.1 150.4 184.1 152.6 180.6 152.6
+    H 119.4
+    C 115.9 152.6 112.9 150.4 112 147
+    L 100 102
+    Z
+  "/>
+  <!-- Fresh produce accent notch (Slate cutout) -->
+  <circle cx="150" cy="126" r="10" fill="#1E293B"/>
+</svg>

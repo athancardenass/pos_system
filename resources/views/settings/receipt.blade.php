@@ -5,10 +5,31 @@
 @push('styles')
 <style>
     .receipt-settings-page { max-width: 920px; margin: 0 auto; }
-    .receipt-settings-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 72px; margin-bottom: 12px; padding: 12px 18px; border-radius: 12px; background: #203C3D; color: #fff; box-shadow: 0 4px 10px rgba(32,60,61,.1); }
-    .receipt-settings-heading h1 { margin: 0; color: #fff; font-size: 1.22rem; font-weight: 800; }
-    .receipt-settings-heading .eyebrow { margin: 0 0 3px; color: #B8D9C4; font-size: .66rem; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
-    .receipt-settings-heading .btn-secondary { min-height: 36px; border-color: rgba(255,255,255,.42); background: #fff; color: #203C3D; font-weight: 800; }
+    .receipt-settings-heading {
+        display: flex; align-items: center; justify-content: space-between; gap: 14px;
+        min-height: 84px; margin-bottom: 14px; padding: 1.15rem 1.6rem;
+        border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgb(56, 43, 45); background: linear-gradient(135deg, rgb(56, 43, 45) 0%, rgb(40, 29, 31) 100%);
+        color: #fff; box-shadow: 0 10px 25px -5px rgba(56, 43, 45, 0.28), 0 4px 10px -2px rgba(56, 43, 45, 0.16);
+        position: relative; overflow: hidden;
+    }
+    .receipt-settings-heading::after {
+        content: ''; position: absolute; top: -40px; right: -40px; width: 180px; height: 180px;
+        background: radial-gradient(circle, rgba(255, 190, 152, 0.12) 0%, transparent 70%);
+        pointer-events: none; border-radius: 50%;
+    }
+    .receipt-settings-heading h1 { margin: 0; color: #fff; font-size: 1.45rem; font-weight: 800; letter-spacing: -0.025em; position: relative; z-index: 1; }
+    .receipt-settings-heading .eyebrow {
+        display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.2rem 0.6rem;
+        border-radius: 9999px; background: rgba(255, 190, 152, 0.14); border: 1px solid rgba(255, 190, 152, 0.28);
+        color: #FFBE98; font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+        margin-bottom: 0.35rem; position: relative; z-index: 1;
+    }
+    .receipt-settings-heading .btn-secondary {
+        min-height: 40px; border-radius: 10px; border-color: rgba(255,255,255,.45);
+        background: #fff; color: #1E293B; font-weight: 800; box-shadow: 0 2px 6px rgba(0,0,0,.12);
+        position: relative; z-index: 1;
+    }
     .receipt-settings-card { max-width: none; padding: 20px 22px; border: 1px solid var(--rule-faint); border-radius: 12px; box-shadow: var(--shadow-card); }
     .receipt-settings-copy { max-width: none; margin-bottom: 14px; padding: 9px 12px; border-left: 3px solid #4B9B6B; border-radius: 0 8px 8px 0; background: #F2F7F3; color: #38564A; font-size: .82rem; }
     .receipt-settings-section { padding: 14px 0; border-top: 1px solid var(--rule-faint); }

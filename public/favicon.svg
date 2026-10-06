@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256"><title>Market Canopy — Supermarket System Logo</title><g transform="translate(-29.31 -34.23) scale(1.229)">
+  <title id="title-mc">Market Canopy Logo</title>
+  <!-- Awning Top Ridge Bar (Slate Gray #1E293B) -->
+  <path fill="#1E293B" d="
+    M 36 44
+    C 36 37.4 41.4 32 48 32
+    H 208
+    C 214.6 32 220 37.4 220 44
+    C 220 50.6 214.6 56 208 56
+    H 48
+    C 41.4 56 36 50.6 36 44
+    Z
+  "/>
+  <!-- 4 Canopy Fabric Panels: Alternating Slate Gray & Peach Fuzz -->
+  <!-- Panel 1 (Slate Gray) -->
+  <path fill="#1E293B" d="
+    M 44 56
+    H 84
+    V 124
+    C 84 135 75 144 64 144
+    C 53 144 44 135 44 124
+    Z
+  "/>
+  <!-- Panel 2 (Peach Fuzz #FFBE98) -->
+  <path fill="#FFBE98" d="
+    M 84 56
+    H 128
+    V 124
+    C 128 135 119 144 106 144
+    C 93 144 84 135 84 124
+    Z
+  "/>
+  <!-- Panel 3 (Slate Gray) -->
+  <path fill="#1E293B" d="
+    M 128 56
+    H 172
+    V 124
+    C 172 135 163 144 150 144
+    C 137 144 128 135 128 124
+    Z
+  "/>
+  <!-- Panel 4 (Peach Fuzz #FFBE98) -->
+  <path fill="#FFBE98" d="
+    M 172 56
+    H 212
+    V 124
+    C 212 135 203 144 192 144
+    C 181 144 172 135 172 124
+    Z
+  "/>
+  <!-- Cart Under-carriage / Glide Base (Slate Gray) -->
+  <path fill="#1E293B" d="
+    M 56 168
+    C 56 161.4 61.4 156 68 156
+    H 188
+    C 194.6 156 200 161.4 200 168
+    C 200 174.6 194.6 180 188 180
+    H 68
+    C 61.4 180 56 174.6 56 168
+    Z
+  "/>
+  <!-- Dual Wheels (Slate Gray outer, Peach Fuzz hub) -->
+  <circle cx="88" cy="214" r="18" fill="#1E293B"/>
+  <circle cx="88" cy="214" r="7" fill="#FFBE98"/>
+  <circle cx="168" cy="214" r="18" fill="#1E293B"/>
+  <circle cx="168" cy="214" r="7" fill="#FFBE98"/>
+</g></svg>

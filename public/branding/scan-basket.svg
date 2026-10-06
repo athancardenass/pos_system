@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-3">
+  <title id="title-3">Scan Basket — Wire Basket &amp; Barcode Checkout</title>
+  <!-- Basket Carrying Handle (Slate Gray): Arched handle over the top -->
+  <path fill="#1E293B" fill-rule="evenodd" d="
+    M 128 20
+    C 88.2 20 56 52.2 56 92
+    V 108
+    H 72
+    V 92
+    C 72 61.1 97.1 36 128 36
+    C 158.9 36 184 61.1 184 92
+    V 108
+    H 200
+    V 92
+    C 200 52.2 167.8 20 128 20
+    Z
+  "/>
+  <!-- Basket Top Rim Collar (Peach Fuzz) -->
+  <rect x="28" y="104" width="200" height="18" rx="9" fill="#FFBE98"/>
+
+  <!-- Basket Body Outer Frame (Slate Gray) — Snapped 75° and 105° taper -->
+  <path fill="#1E293B" fill-rule="evenodd" d="
+    M 36 122
+    H 220
+    L 196 212
+    C 194.2 219.8 187.5 225 179.6 225
+    H 76.4
+    C 68.5 225 61.8 219.8 60 212
+    L 36 122
+    Z
+    M 56 138
+    L 74 209
+    C 74.5 211 76.2 212.4 78.3 212.4
+    H 177.7
+    C 179.8 212.4 181.5 211 182 209
+    L 200 138
+    H 56
+    Z
+  "/>
+
+  <!-- Barcode Scanning Slats inside Basket (Peach Fuzz) -->
+  <rect x="80" y="146" width="8" height="56" rx="4" fill="#FFBE98"/>
+  <rect x="96" y="146" width="14" height="56" rx="4" fill="#FFBE98"/>
+  <rect x="118" y="146" width="8" height="56" rx="4" fill="#FFBE98"/>
+  <rect x="134" y="146" width="18" height="56" rx="4" fill="#FFBE98"/>
+  <rect x="160" y="146" width="10" height="56" rx="4" fill="#FFBE98"/>
+</svg>

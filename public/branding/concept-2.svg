@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-2">
+  <title id="title-2">Market Knot — Interlocking Supermarket Flow</title>
+  <!-- Upper Loop (Peach Fuzz) — Warm Fresh Produce & Care -->
+  <path fill="#FFBE98" fill-rule="evenodd" d="
+    M 78 36
+    H 156
+    C 192.4 36 222 65.6 222 102
+    C 222 138.4 192.4 168 156 168
+    H 124
+    V 136
+    H 156
+    C 174.8 136 190 120.8 190 102
+    C 190 83.2 174.8 68 156 68
+    H 78
+    C 69.2 68 62 60.8 62 52
+    C 62 43.2 69.2 36 78 36
+    Z
+  "/>
+  <!-- Lower Interlocking Base (Slate Gray) — Terminal Stability & Operations -->
+  <path fill="#1E293B" fill-rule="evenodd" d="
+    M 178 220
+    H 100
+    C 63.6 220 34 190.4 34 154
+    C 34 117.6 63.6 88 100 88
+    H 132
+    V 120
+    H 100
+    C 81.2 120 66 135.2 66 154
+    C 66 172.8 81.2 188 100 188
+    H 178
+    C 186.8 188 194 195.2 194 204
+    C 194 212.8 186.8 220 178 220
+    Z
+  "/>
+  <!-- Central Scan Nexus (Peach Fuzz core) -->
+  <circle cx="128" cy="128" r="14" fill="#FFBE98"/>
+</svg>

@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-2">
+  <title id="title-2">Glide Cart — Modern Supermarket Shopping Cart</title>
+  <!-- Radiant Peach Fuzz Fresh Grocery Payload (Centered in Basket) -->
+  <circle cx="148" cy="98" r="32" fill="#FFBE98"/>
+  <!-- Sprout Stem (Slate Gray) -->
+  <path fill="#1E293B" d="
+    M 148 66
+    C 158 54 172 56 178 62
+    C 180 72 172 82 160 82
+    C 148 82 148 66 148 66
+    Z
+  "/>
+  <!-- Masterclass Monoline Shopping Cart (Slate Gray) -->
+  <path fill="#1E293B" fill-rule="evenodd" d="
+    M 34 50
+    C 34 43.4 39.4 38 46 38
+    H 70
+    C 75.3 38 80.2 41.5 81.8 46.5
+    L 96 99
+    H 214
+    C 221.7 99 227.4 106.6 226 113
+    L 207 184
+    C 205.4 189.9 200 194 193.9 194
+    H 104
+    C 96.3 194 90 187.7 90 180
+    L 71 109
+    H 46
+    C 39.4 109 34 103.6 34 97
+    V 50
+    Z
+    M 104 119
+    L 116 164
+    C 116.9 167.4 119.9 169.6 123.4 169.6
+    H 182.6
+    C 186.1 169.6 189.1 167.4 190 164
+    L 202 119
+    H 104
+    Z
+  "/>
+  <!-- Precision Wheels (Slate Gray outer, Peach Fuzz inner) with daylight gap -->
+  <circle cx="106" cy="222" r="18" fill="#1E293B"/>
+  <circle cx="106" cy="222" r="7" fill="#FFBE98"/>
+  <circle cx="186" cy="222" r="18" fill="#1E293B"/>
+  <circle cx="186" cy="222" r="7" fill="#FFBE98"/>
+</svg>

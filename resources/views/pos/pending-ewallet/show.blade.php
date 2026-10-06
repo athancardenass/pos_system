@@ -50,6 +50,7 @@
     .ewallet-result-actions { display: flex; flex-wrap: wrap; gap: 8px; }
     .payment-reference-value { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
     .payment-reference-reveal { min-height: 28px; padding: 4px 8px; font-size: .68rem; }
+    .verification-cashier-notice { display: flex; align-items: center; gap: 8px; padding: 10px 14px; margin-bottom: 12px; border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; background: rgba(245, 158, 11, 0.1); color: #b45309; font-size: 0.85rem; }
     .ewallet-action-stack [data-ewallet-primary-action] { width: 100%; justify-content: center; min-height: 42px; font-weight: 800; }
     .ewallet-result { padding: 12px; border: 1px solid rgba(24,118,94,.12); border-radius: 11px; background: #F4F8F5; }
     @media (max-width: 760px) {
@@ -145,23 +146,41 @@
 
             @if ($canReview)
                 <div class="ewallet-action-stack">
+                    @if (auth()->user()->hasRole('Cashier'))
+                        <div class="verification-cashier-notice">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            <span><strong>Cashier Terminal:</strong> Requires Manager PIN authorization to verify or reject this e-wallet transaction.</span>
+                        </div>
+                    @endif
                     <p class="ewallet-status-note">Check the recipient account, completed status, reference number, and exact amount in the merchant app before approving.</p>
-                    <form class="ewallet-review-form" data-ewallet-review-form method="POST" action="{{ route('pos.pending-ewallet.verify', $pending) }}">
+                    <form class="ewallet-review-form" data-ewallet-review-form data-action-type="verify" method="POST" action="{{ route('pos.pending-ewallet.verify', $pending) }}">
                         @csrf
                         <div class="ewallet-verify-check">
                             <input id="merchant-checked" type="checkbox" name="merchant_checked" value="1" required>
                             <label for="merchant-checked">I confirmed the completed payment, reference, and amount in the merchant app.</label>
                         </div>
-                        <button class="btn" type="submit" data-ewallet-primary-action>Verify and complete sale <span class="ewallet-key-hint">Enter</span></button>
+                        <button class="btn" type="submit" data-ewallet-primary-action>
+                            @if (auth()->user()->hasRole('Cashier'))
+                                Authorize with Manager PIN & Complete Sale <span class="ewallet-key-hint">Enter</span>
+                            @else
+                                Verify and complete sale <span class="ewallet-key-hint">Enter</span>
+                            @endif
+                        </button>
                     </form>
                     <div class="ewallet-action-divider" aria-hidden="true"></div>
-                    <form class="ewallet-review-form" data-ewallet-review-form method="POST" action="{{ route('pos.pending-ewallet.reject', $pending) }}">
+                    <form class="ewallet-review-form" data-ewallet-review-form data-action-type="reject" method="POST" action="{{ route('pos.pending-ewallet.reject', $pending) }}">
                         @csrf
                         <div>
                             <label for="ewallet-reject-reason">Reason for rejection</label>
                             <textarea id="ewallet-reject-reason" class="input-lg bordered" name="reason" rows="2" maxlength="255" required placeholder="For example: reference not found or amount does not match"></textarea>
                         </div>
-                        <button class="btn btn-danger" type="submit">Reject payment</button>
+                        <button class="btn btn-danger" type="submit">
+                            @if (auth()->user()->hasRole('Cashier'))
+                                Reject with Manager PIN
+                            @else
+                                Reject payment
+                            @endif
+                        </button>
                     </form>
                     <p class="ewallet-status-note">Rejecting releases reserved stock. If money was received, process any customer refund separately in the merchant app.</p>
                 </div>
@@ -198,6 +217,7 @@
         </section>
     </div>
 </section>
+<x-manager-pin-modal :is-manager="auth()->user()->hasRole('Manager')" />
 @endsection
 
 @php
@@ -272,8 +292,76 @@
         if (primaryAction) primaryAction.focus({ preventScroll: true });
         if (returnToPos) returnToPos.focus({ preventScroll: true });
 
+        const isManager = @json(auth()->user()->hasRole('Manager'));
+
         document.querySelectorAll('[data-ewallet-review-form]').forEach(form => {
-            form.addEventListener('submit', event => {
+            form.addEventListener('submit', async event => {
+                if (form.querySelector('input[name="manager_authorization_token"]')) {
+                    if (submissionStarted) {
+                        event.preventDefault();
+                        return;
+                    }
+                    submissionStarted = true;
+                    form.querySelectorAll('button[type="submit"]').forEach(button => {
+                        button.disabled = true;
+                        button.setAttribute('aria-busy', 'true');
+                    });
+                    return;
+                }
+
+                if (!isManager) {
+                    event.preventDefault();
+                    const actionType = form.dataset.actionType || (form.action.includes('verify') ? 'verify' : 'reject');
+                    const isVerify = actionType === 'verify';
+                    const reasonInput = form.querySelector('textarea[name="reason"]');
+                    const reason = reasonInput ? reasonInput.value.trim() : null;
+
+                    if (!isVerify && (!reasonInput || !reasonInput.reportValidity())) {
+                        return;
+                    }
+
+                    if (isVerify) {
+                        const checkInput = form.querySelector('input[name="merchant_checked"]');
+                        if (checkInput && !checkInput.reportValidity()) {
+                            return;
+                        }
+                    }
+
+                    if (typeof window.requestManagerAuthorization !== 'function') {
+                        alert('Manager PIN authorization is not available.');
+                        return;
+                    }
+
+                    const authorization = await window.requestManagerAuthorization({
+                        action: isVerify ? 'pending_ewallet_verify' : 'pending_ewallet_reject',
+                        details: { pending_id: @json($pending->id) },
+                        requiresReason: false,
+                        reason: reason,
+                    });
+
+                    if (!authorization || !authorization.token) {
+                        return;
+                    }
+
+                    let tokenInput = form.querySelector('input[name="manager_authorization_token"]');
+                    if (!tokenInput) {
+                        tokenInput = document.createElement('input');
+                        tokenInput.type = 'hidden';
+                        tokenInput.name = 'manager_authorization_token';
+                        form.appendChild(tokenInput);
+                    }
+                    tokenInput.value = authorization.token;
+
+                    submissionStarted = true;
+                    form.querySelectorAll('button[type="submit"]').forEach(button => {
+                        button.disabled = true;
+                        button.setAttribute('aria-busy', 'true');
+                    });
+
+                    form.submit();
+                    return;
+                }
+
                 if (submissionStarted) {
                     event.preventDefault();
                     return;
