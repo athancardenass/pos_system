@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-2">
+  <title id="title-2">The Swift Cart — Supermarket Shopping Cart</title>
+  <!-- Main Cart Basket Frame (Slate Gray) -->
+  <path fill="#1E293B" fill-rule="evenodd" d="
+    M 34 52
+    C 34 44.3 40.3 38 48 38
+    H 68
+    C 74.8 38 80.6 42.8 82 49.5
+    L 96 102
+    H 214
+    C 221.7 102 227.4 109.6 226 116
+    L 207 187
+    C 205.4 192.9 200 197 193.9 197
+    H 104
+    C 96.3 197 90 190.7 90 183
+    L 71 112
+    H 48
+    C 40.3 112 34 105.7 34 98
+    V 52
+    Z
+    M 104 122
+    L 116 167
+    C 116.9 170.4 119.9 172.6 123.4 172.6
+    H 182.6
+    C 186.1 172.6 189.1 170.4 190 167
+    L 202 122
+    H 104
+    Z
+  "/>
+  <!-- Fresh Supermarket Grocery Payload (Peach Fuzz) -->
+  <circle cx="134" cy="94" r="26" fill="#FFBE98"/>
+  <path fill="#1E293B" d="
+    M 134 68
+    C 142 58 154 60 160 64
+    C 162 72 156 80 144 80
+    C 134 80 134 68 134 68
+    Z
+  "/>
+  <!-- Grocery Box/Carton (Peach Fuzz) -->
+  <rect x="156" y="74" width="36" height="38" rx="8" fill="#FFBE98"/>
+  <rect x="164" y="84" width="20" height="4" rx="2" fill="#1E293B"/>
+
+  <!-- Dual Cart Wheels with daylight clearance -->
+  <circle cx="106" cy="222" r="18" fill="#1E293B"/>
+  <circle cx="106" cy="222" r="7" fill="#FFBE98"/>
+  <circle cx="186" cy="222" r="18" fill="#1E293B"/>
+  <circle cx="186" cy="222" r="7" fill="#FFBE98"/>
+</svg>

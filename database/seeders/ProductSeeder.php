@@ -1,0 +1,54 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\Category;
+use App\Models\Product;
+use Illuminate\Database\Seeder;
+
+class ProductSeeder extends Seeder
+{
+    /**
+     * Seed a demo product catalog.
+     *
+     * Each product is linked to a seeded category and supplier, and gets an
+     * inventory row (stock_quantity > 0) so the POS is immediately usable —
+     * this mirrors the inventory creation done in ProductController@store.
+     */
+    public function run(): void
+    {
+        $beverages = Category::query()->where('category_name', 'Beverages')->firstOrFail();
+        $snacks = Category::query()->where('category_name', 'Snacks')->firstOrFail();
+        $personal = Category::query()->where('category_name', 'Personal Care')->firstOrFail();
+        $household = Category::query()->where('category_name', 'Household')->firstOrFail();
+        $stationery = Category::query()->where('category_name', 'Stationery')->firstOrFail();
+
+        $products = [
+            ['product_name' => 'Bottled Water 500ml', 'category' => $beverages, 'unit_price' => 15.00, 'cost_price' => 8.00, 'stock' => 120, 'reorder' => 30],
+            ['product_name' => 'Cola 350ml', 'category' => $beverages, 'unit_price' => 25.00, 'cost_price' => 14.00, 'stock' => 90, 'reorder' => 25],
+            ['product_name' => 'Orange Juice 1L', 'category' => $beverages, 'unit_price' => 65.00, 'cost_price' => 40.00, 'stock' => 40, 'reorder' => 15],
+            ['product_name' => 'Potato Chips 100g', 'category' => $snacks, 'unit_price' => 30.00, 'cost_price' => 18.00, 'stock' => 75, 'reorder' => 20],
+            ['product_name' => 'Chocolate Bar', 'category' => $snacks, 'unit_price' => 35.00, 'cost_price' => 20.00, 'stock' => 60, 'reorder' => 20],
+            ['product_name' => 'Bath Soap', 'category' => $personal, 'unit_price' => 28.00, 'cost_price' => 15.00, 'stock' => 50, 'reorder' => 15],
+            ['product_name' => 'Shampoo 200ml', 'category' => $personal, 'unit_price' => 85.00, 'cost_price' => 50.00, 'stock' => 35, 'reorder' => 10],
+            ['product_name' => 'Dishwashing Liquid 500ml', 'category' => $household, 'unit_price' => 55.00, 'cost_price' => 32.00, 'stock' => 45, 'reorder' => 12],
+            ['product_name' => 'Paper Towels 2-ply', 'category' => $household, 'unit_price' => 45.00, 'cost_price' => 26.00, 'stock' => 30, 'reorder' => 10],
+            ['product_name' => 'Ballpen (Blue)', 'category' => $stationery, 'unit_price' => 12.00, 'cost_price' => 5.00, 'stock' => 200, 'reorder' => 50],
+            ['product_name' => 'Notebook A5', 'category' => $stationery, 'unit_price' => 40.00, 'cost_price' => 22.00, 'stock' => 80, 'reorder' => 25],
+        ];
+
+        foreach ($products as $item) {
+            $barcode = Product::generateBarcode();
+            $product = Product::query()->firstOrCreate(
+                ['barcode' => $barcode],
+                [
+                    'category_id' => $item['category']->category_id,
+                    'product_name' => $item['product_name'],
+                    'unit_price' => $item['unit_price'],
+                    'cost_price' => $item['cost_price'],
+                    'reorder_level' => $item['reorder'],
+                ],
+            );
+        }
+    }
+}

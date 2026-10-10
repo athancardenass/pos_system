@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-3">
+  <title id="title-3">The Orchard Cart — Fresh Fruit Shopping Cart</title>
+  <!-- Shopping Cart Handle (Slate Gray) -->
+  <path fill="#1E293B" d="
+    M 34 68
+    C 34 60.3 40.3 54 48 54
+    H 72
+    C 79.7 54 86 60.3 86 68
+    C 86 75.7 79.7 82 72 82
+    H 62
+    L 76 124
+    H 56
+    L 40 76
+    C 36 74 34 71 34 68
+    Z
+  "/>
+  <!-- The Peach Body that is a Supermarket Cart Basket (Peach Fuzz) -->
+  <path fill="#FFBE98" fill-rule="evenodd" d="
+    M 84 84
+    H 216
+    C 222.6 84 228 89.4 228 96
+    C 228 120 220 144 204 168
+    C 188 192 164 200 138 200
+    C 134 200 130 198 128 196
+    C 126 198 122 200 118 200
+    C 96 200 76 182 72 160
+    C 70 144 76 112 84 84
+    Z
+    M 102 110
+    C 98 126 96 142 102 154
+    C 106 162 116 168 126 168
+    C 128 168 130 166 132 164
+    C 134 166 136 168 138 168
+    C 148 168 162 160 172 144
+    C 180 132 186 120 190 110
+    Z
+  "/>
+  <!-- Sprout Stem (Slate Gray) at top cleft -->
+  <path fill="#1E293B" d="
+    M 148 40
+    C 166 26 186 32 194 40
+    C 196 54 186 68 168 68
+    C 154 68 148 54 148 40
+    Z
+  "/>
+  <!-- Rolling Supermarket Wheels (Slate Gray) -->
+  <circle cx="106" cy="222" r="18" fill="#1E293B"/>
+  <circle cx="106" cy="222" r="7" fill="#FFBE98"/>
+  <circle cx="186" cy="222" r="18" fill="#1E293B"/>
+  <circle cx="186" cy="222" r="7" fill="#FFBE98"/>
+</svg>

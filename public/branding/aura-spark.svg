@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-3">
+  <title id="title-3">Aura Spark — Ethereal Retail Star</title>
+  <!-- Primary Dual-Blade Vertical Ray (Slate Gray) -->
+  <path fill="#1E293B" d="
+    M 128 20
+    C 128 79.6 176.4 128 236 128
+    C 176.4 128 128 176.4 128 236
+    C 128 176.4 79.6 128 20 128
+    C 79.6 128 128 79.6 128 20
+    Z
+  "/>
+  <!-- Floating Negative Space Diamond (Peach Fuzz Core) -->
+  <path fill="#FFBE98" d="
+    M 128 72
+    C 128 102.9 153.1 128 184 128
+    C 153.1 128 128 153.1 128 184
+    C 128 153.1 102.9 128 72 128
+    C 102.9 128 128 102.9 128 72
+    Z
+  "/>
+  <!-- Pure Center Focal Node (Deep Slate) -->
+  <circle cx="128" cy="128" r="14" fill="#1E293B"/>
+</svg>

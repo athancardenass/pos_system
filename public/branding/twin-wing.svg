@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-2">
+  <title id="title-2">Twin Wing — Supermarket Flow</title>
+  <!-- Left Wing (Deep Slate): Forward-sweeping dynamic retail fin -->
+  <path fill="#1E293B" d="
+    M 120 24
+    C 62.6 24 24 68.6 24 128
+    C 24 187.4 62.6 232 120 232
+    C 88 196 74 158 74 128
+    C 74 98 88 60 120 24
+    Z
+  "/>
+  <!-- Right Wing (Peach Fuzz): Upward-sweeping fresh harvest fin -->
+  <path fill="#FFBE98" d="
+    M 136 24
+    C 193.4 24 232 68.6 232 128
+    C 232 187.4 193.4 232 136 232
+    C 168 196 182 158 182 128
+    C 182 98 168 60 136 24
+    Z
+  "/>
+  <!-- Optical diamond aperture (Slate Gray) -->
+  <polygon points="128,88 144,128 128,168 112,128" fill="#1E293B"/>
+</svg>

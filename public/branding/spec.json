@@ -1,0 +1,29 @@
+{
+  "brand": "Supermarket POS",
+  "tagline": "Terminal & Operations System",
+  "brief": "A modern, high-volume retail supermarket point-of-sale terminal and inventory operating system. Needs a clean, friendly, and authoritative identity combining storefront charm and seamless checkout throughput.",
+  "adjectives": ["reliable", "approachable", "efficient", "fresh"],
+  "industry": "retail",
+  "mockups": ["shopping-bag", "terminal", "app-icon", "signage", "tote", "box"],
+  "brand_color": "#1E293B",
+  "tile_color": "#1E293B",
+  "greyscale": false,
+  "final": true,
+  "round": 1,
+  "concepts": [
+    {
+      "name": "Market Canopy",
+      "symbol": "market-canopy-symbol.svg",
+      "lockup": "market-canopy-horizontal.svg",
+      "stacked": "market-canopy-stacked.svg",
+      "avatar": "market-canopy-app-icon.svg",
+      "idea": "An iconic scalloped supermarket storefront canopy fused with a rolling checkout cart.",
+      "rationale": [
+        "Unmistakable grocery storefront heritage paired with modern checkout mobility.",
+        "Calibrated palette of Slate Gray (#1E293B) and Peach Fuzz (#FFBE98) for hardware authority and organic warmth.",
+        "Engineered for high readability from 16px desktop browser tabs to physical store signage."
+      ]
+    }
+  ],
+  "recommendation": "Market Canopy establishes a definitive supermarket identity that feels authentic to retail operations while standing out with contemporary warmth."
+}

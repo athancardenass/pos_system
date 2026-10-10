@@ -1,0 +1,153 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\AuditLog;
+use App\Models\Category;
+use App\Models\Employee;
+use App\Models\Product;
+use App\Models\SaleDetail;
+use App\Models\SaleTransaction;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\View\View;
+
+class DashboardController extends Controller
+{
+    public function __invoke(): View
+    {
+        $employee = auth()->user()->loadMissing('role');
+        $modules = $employee->allowedModules();
+
+        $stats = [];
+
+        // === Sales Stats (Cashier, Manager) ===
+        if (in_array('pos.index', $modules)) {
+            $today = Carbon::today();
+
+            // Refunded sales are voided — exclude them from every revenue stat.
+            $stats['today_sales'] = SaleTransaction::where('status', 'completed')->whereDate('transaction_date', $today)->count();
+            $stats['today_revenue'] = SaleTransaction::where('status', 'completed')->whereDate('transaction_date', $today)->sum('total_amount');
+            $stats['avg_transaction'] = SaleTransaction::where('status', 'completed')->whereDate('transaction_date', $today)->avg('total_amount') ?? 0;
+
+            $stats['total_sales'] = SaleTransaction::where('status', 'completed')->count();
+            $stats['total_revenue'] = SaleTransaction::where('status', 'completed')->sum('total_amount');
+
+            // Last 7 days trend
+            $stats['weekly_trend'] = SaleTransaction::select(
+                DB::raw('DATE(transaction_date) as date'),
+                DB::raw('COUNT(*) as count'),
+                DB::raw('SUM(total_amount) as revenue')
+            )
+                ->where('status', 'completed')
+                ->where('transaction_date', '>=', Carbon::now()->subDays(6)->startOfDay())
+                ->groupBy('date')
+                ->orderBy('date')
+                ->get();
+
+            // Performance baseline for the weekly chart: average DAILY revenue of
+            // the previous week (days 13–7 ago). Tune the color bands in
+            // dashboard.blade.php ("Sales This Week" section).
+            $prevWeekRevenue = SaleTransaction::where('status', 'completed')->whereBetween('transaction_date', [
+                Carbon::now()->subDays(13)->startOfDay(),
+                Carbon::now()->subDays(7)->endOfDay(),
+            ])->sum('total_amount');
+            $stats['daily_baseline'] = $prevWeekRevenue / 7;
+
+            // Refund totals (today / 7 days / all time) for the dashboard cards.
+            $stats['refunds_today'] = \App\Models\SaleRefund::whereDate('refunded_at', $today)->sum('refund_amount');
+            $stats['refunds_week'] = \App\Models\SaleRefund::where('refunded_at', '>=', Carbon::now()->subDays(6)->startOfDay())->sum('refund_amount');
+            $stats['refunds_total'] = \App\Models\SaleRefund::sum('refund_amount');
+            $stats['refunds_count'] = \App\Models\SaleRefund::count();
+
+            // Refund rate (7-day window): refunds / completed sales, as a %.
+            // Guards against division-by-zero on a dead week.
+            $weekSalesCount = (int) SaleTransaction::where('status', 'completed')
+                ->where('transaction_date', '>=', Carbon::now()->subDays(6)->startOfDay())->count();
+            $weekRefundCount = (int) \App\Models\SaleRefund::where('refunded_at', '>=', Carbon::now()->subDays(6)->startOfDay())->count();
+            $stats['refund_rate'] = $weekSalesCount > 0 ? round(($weekRefundCount / $weekSalesCount) * 100, 1) : 0;
+
+            // Prior-week refund rate for the baseline comparison.
+            $prevWeekSales = (int) SaleTransaction::where('status', 'completed')
+                ->whereBetween('transaction_date', [Carbon::now()->subDays(13)->startOfDay(), Carbon::now()->subDays(7)->endOfDay()])->count();
+            $prevWeekRefunds = (int) \App\Models\SaleRefund::whereBetween('refunded_at', [Carbon::now()->subDays(13)->startOfDay(), Carbon::now()->subDays(7)->endOfDay()])->count();
+            $stats['refund_rate_baseline'] = $prevWeekSales > 0 ? round(($prevWeekRefunds / $prevWeekSales) * 100, 1) : 0;
+
+            // Refund reason breakdown (7-day window) — for the dashboard mini-bar.
+            $stats['refund_reasons'] = \App\Models\SaleRefund::query()
+                ->select('reason', \Illuminate\Support\Facades\DB::raw('COUNT(*) as count'), \Illuminate\Support\Facades\DB::raw('SUM(refund_amount) as total'))
+                ->where('refunded_at', '>=', Carbon::now()->subDays(6)->startOfDay())
+                ->groupBy('reason')
+                ->get();
+
+            // Payment method breakdown (today)
+            $stats['payment_methods'] = SaleTransaction::select('payment_method', DB::raw('COUNT(*) as count'), DB::raw('SUM(total_amount) as total'))
+                ->where('status', 'completed')
+                ->whereDate('transaction_date', $today)
+                ->groupBy('payment_method')
+                ->get();
+
+            // Top selling products (completed sales only)
+            $stats['top_products'] = SaleDetail::join('sale_transaction', 'sale_details.transaction_id', '=', 'sale_transaction.transaction_id')
+                ->where('sale_transaction.status', 'completed')
+                ->select('sale_details.product_id', DB::raw('SUM(sale_details.quantity) as total_qty'), DB::raw('SUM(sale_details.subtotal) as total_revenue'))
+                ->groupBy('sale_details.product_id')
+                ->orderByDesc('total_qty')
+                ->limit(5)
+                ->with('product')
+                ->get();
+
+            // Top categories (completed sales only)
+            $stats['top_categories'] = SaleDetail::join('sale_transaction', 'sale_details.transaction_id', '=', 'sale_transaction.transaction_id')
+                ->join('product', 'sale_details.product_id', '=', 'product.product_id')
+                ->join('category', 'product.category_id', '=', 'category.category_id')
+                ->where('sale_transaction.status', 'completed')
+                ->select('category.category_name', DB::raw('SUM(sale_details.quantity) as total_qty'), DB::raw('SUM(sale_details.subtotal) as total_revenue'))
+                ->groupBy('category.category_name')
+                ->orderByDesc('total_revenue')
+                ->limit(5)
+                ->get();
+
+            // Recent transactions
+            $stats['recent_sales'] = SaleTransaction::with(['employee', 'receipt'])
+                ->latest('transaction_date')
+                ->limit(5)
+                ->get();
+        }
+
+        // === Product Stats ===
+        if (in_array('products.index', $modules)) {
+            $stats['products'] = Product::count();
+            $stats['categories'] = Category::count();
+        }
+
+
+        // === Employee Stats (Manager) ===
+        if (in_array('employees.index', $modules)) {
+            $stats['employees'] = Employee::count();
+            $stats['active_employees'] = Employee::where('status', 'active')->count();
+        }
+
+        // === Audit Log (Manager) ===
+        if (in_array('audit-logs.index', $modules)) {
+            $stats['recent_activity'] = AuditLog::with('employee')
+                ->latest('action_timestamp')
+                ->limit(8)
+                ->get();
+        }
+
+        // === Alerts ===
+        $alerts = [];
+        if (($stats['out_of_stock_count'] ?? 0) > 0) {
+            $alerts[] = ['type' => 'danger', 'message' => $stats['out_of_stock_count'] . ' product(s) are out of stock'];
+        }
+        if (($stats['low_stock_count'] ?? 0) > 0) {
+            $alerts[] = ['type' => 'warning', 'message' => $stats['low_stock_count'] . ' product(s) are below reorder level'];
+        }
+        if (($stats['pending_orders'] ?? 0) > 0) {
+            $alerts[] = ['type' => 'info', 'message' => $stats['pending_orders'] . ' purchase order(s) awaiting delivery'];
+        }
+
+        return view('dashboard', compact('employee', 'modules', 'stats', 'alerts'));
+    }
+}

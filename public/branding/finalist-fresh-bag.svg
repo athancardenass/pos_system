@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-1">
+  <title id="title-1">The Fresh Bag — Supermarket Grocery Bag</title>
+  <!-- Fresh Peach Fruit emerging from the bag (Peach Fuzz) -->
+  <circle cx="128" cy="80" r="48" fill="#FFBE98"/>
+  <!-- Leaf accent at top of peach (Slate Gray) -->
+  <path fill="#1E293B" d="
+    M 128 32
+    C 144 18 162 22 170 28
+    C 172 42 164 56 146 56
+    C 134 56 128 44 128 32
+    Z
+  "/>
+  <!-- Supermarket Grocery Bag Silhouette (Slate Gray) -->
+  <path fill="#1E293B" fill-rule="evenodd" d="
+    M 48 88
+    H 208
+    L 194 220
+    C 192.8 230.8 183.6 238.8 172.7 238.8
+    H 83.3
+    C 72.4 238.8 63.2 230.8 62 220
+    L 48 88
+    Z
+    M 104 120
+    H 152
+    C 160.8 120 168 127.2 168 136
+    C 168 144.8 160.8 152 152 152
+    H 104
+    C 95.2 152 88 144.8 88 136
+    C 88 127.2 95.2 120 104 120
+    Z
+  "/>
+  <!-- Barcode Rhythm Slits (Peach Fuzz) -->
+  <rect x="100" y="180" width="10" height="24" rx="4" fill="#FFBE98"/>
+  <rect x="116" y="180" width="14" height="24" rx="4" fill="#FFBE98"/>
+  <rect x="136" y="180" width="8" height="24" rx="4" fill="#FFBE98"/>
+  <rect x="150" y="180" width="6" height="24" rx="3" fill="#FFBE98"/>
+</svg>
