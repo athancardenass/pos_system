@@ -1,5 +1,45 @@
 # POS System — Changelog
 
+## 2026-10-12 — Match shift note fields to Store Information style
+
+Styled the Close Register reconciliation notes box and Cash In / Cash Out reason field with the same shared textbox classes as Store Information / address, including vertical resizing and scrolling for longer explanations. Set the Movement history title and table header to the POS theme color `rgb(56, 43, 45)` for clearer section hierarchy.
+
+Verification: Blade templates cached successfully; full PHPUnit suite passed (185 tests / 1,121 assertions) with XAMPP's SQLite extensions loaded for the test process.
+
+## 2026-10-12 — Add Manager-configured Supervisor role
+
+Added a separate Supervisor account role with POS and shift-work access only. Managers can assign or revoke permissions for opening floats, cash movements, drawer transfers and cancellations, refunds, and exchanges, with a maximum amount for each; new Supervisors start with none. Supervisors can use their own permission for assigned actions and approve another cashier only when the action and amount fit their assignment. Manager PINs remain the override, and approval grants are checked again when used so a revoked permission cannot complete a pending action. Refunds and exchanges stay inside the standard seven-day window for Supervisors. Approval PINs are hashed, and changing a Supervisor to another role clears the PIN and permissions.
+
+Verification: targeted Supervisor role tests passed (8 tests / 47 assertions); full `php artisan test` passed (185 tests / 1,121 assertions). Applied the additive migration to the configured XAMPP MariaDB and confirmed the `Supervisor` role and permission table exist.
+
+## 2026-10-12 — Add thermal summary for closing shift reports
+
+Print closing shift reports as a compact 80mm summary with cashier/time, sales by method, returns, net sales, cash movements, expected and counted cash, and balance status. Keep the full movement history available on screen.
+
+## 2026-10-12 — Cashier shift reconciliation, transfers, returns and exchanges
+
+Implemented an append-only shift movement ledger, server-based elapsed timer, manual cash in/out with scoped manager approvals, confirmed two-drawer transfers/cancellations, cross-day/cross-cashier approved refunds, resellable/damaged disposition, atomic item exchanges and Find receipt. Added immutable printable closing reports with per-method sales/settlements, opening and carried-forward cash, all movement categories, counted cash, difference and required discrepancy explanations. Pending transfers/payments and stale counts block closure. Preserved existing signed-in-manager self-approval and removed success/duplicate CRM popups.
+
+Private MariaDB backup taken before additive migrations. Existing balances carried forward without invented history. Return paid cents allocated deterministically, duplicate requests protected, and exchange loyalty credit lineage retained for later refunds. Stock/loyalty events use existing durable contracts; damaged returns do not send sellable-stock increases. No remote source-system schema, API tokens, customer addresses or Git state changed.
+
+Verification: final full POS suite passed 177 tests / 1,074 assertions; timer tests passed 2 / 2. Isolated MariaDB exchange/retry/transfer/other-cashier-refund/stock/closed-snapshot checks and a concurrent price-change rejection passed. Browser verified timer, counted cash/discrepancy closure without alert, exchange end to end, and desktop/mobile saved reports. Blade/JavaScript syntax and whitespace checks passed. Cash payouts require sufficient expected cash; extra funding can come from Cash In or a confirmed transfer. Local POS, database and integration workers restarted after the session interruption. Inventory currently reports a connection failure; notifications/events remain durable for retry. Isolated MariaDB verification database removed.
+
+## 2026-10-12 — Remove duplicate POS CRM search panel
+
+Removed the extra read-only CRM customer lookup panel and its unused JavaScript. Kept the existing checkout Customer / Find customer selector and its CRM integration, Walk-in Customer, and Discount controls. Updated the existing register rendering check for the single customer selector.
+
+## 2026-10-12 — Remove default administrator account
+
+After the user confirmed login as Athan, backed up the live database privately and deleted the default admin account in a transaction. Reassigned all employee foreign-key references, including closed drawers and sales/audit history, to the active Athan manager and recorded the deletion in the audit log. Verified admin is absent and Athan remains active.
+
+## 2026-10-12 — Remove shift closure success popup
+
+Removed the browser alert after successful POS shift closure. The close-shift dialog still dismisses and refreshes drawer status; reconciliation records remain available in Cash Drawers.
+
+## 2026-10-12 — Remove Cash Drawers description
+
+Removed the introductory description beneath the Cash Drawers page heading at the user's request.
+
 ## 2026-10-10 — Initialize local Git history
 
 At the user's explicit request to commit locally, initialized the previously unversioned POS project. Prepared an initial project snapshot with source, integration/webhook kits, documentation and tests. Excluded private `.env` tokens, SQL backups, local notes, dependency runtimes, session/cache/compiled-view/log data; added standard writable-directory Git placeholders. No remote push requested or performed. Live database contents and Inventory/HRMS project folders are outside this POS commit.

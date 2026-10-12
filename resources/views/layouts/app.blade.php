@@ -740,7 +740,7 @@
 <body class="{{ auth()->check() ? 'authenticated-shell' : '' }} {{ request()->routeIs('pos.*') ? 'pos-shell' : '' }}">
     @auth
         <aside class="sidebar">
-            <a class="sidebar-brand" href="{{ $navEmployee?->hasRole('Cashier') ? route('pos.index') : route('dashboard') }}" title="Supermarket POS">
+            <a class="sidebar-brand" href="{{ $navEmployee?->hasRole('Cashier', 'Supervisor') ? route('pos.index') : route('dashboard') }}" title="Supermarket POS">
                 <span class="sidebar-brand-icon">
                     <img src="{{ asset('branding/market-canopy-symbol.svg') }}" alt="Market Canopy" width="44" height="44">
                 </span>

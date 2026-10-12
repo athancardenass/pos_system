@@ -8,7 +8,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class SaleRefundItem extends Model
 {
     protected $table = 'sale_refund_item';
+
     protected $primaryKey = 'refund_item_id';
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -16,6 +18,7 @@ class SaleRefundItem extends Model
         'sale_detail_id',
         'quantity',
         'amount',
+        'condition',
     ];
 
     protected function casts(): array

@@ -31,6 +31,9 @@
                         <td><x-ui.badge :variant="$employee->status === 'active' ? 'active' : 'inactive'">{{ $employee->status }}</x-ui.badge></td>
                         <td class="actions">
                             <x-ui.button variant="slate" size="compact" :href="route('employees.edit', $employee)">Edit</x-ui.button>
+                            @if ($employee->hasRole('Supervisor'))
+                                <x-ui.button variant="slate" size="compact" :href="route('employees.supervisor-permissions.edit', $employee)">Set permissions</x-ui.button>
+                            @endif
                             <form class="inline-form" method="POST" action="{{ route('employees.destroy', $employee) }}" onsubmit="return confirm('Delete this employee?')">
                                 @csrf
                                 @method('DELETE')

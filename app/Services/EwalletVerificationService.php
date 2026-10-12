@@ -19,8 +19,7 @@ class EwalletVerificationService
         private readonly InventoryService $inventory,
         private readonly CheckoutService $checkout,
         private readonly PaymentReferenceService $paymentReferences,
-    ) {
-    }
+    ) {}
 
     public function submit(array $checkoutPayload, int $employeeId): PendingEwalletVerification
     {
@@ -38,90 +37,91 @@ class EwalletVerificationService
 
         try {
             return DB::transaction(function () use ($checkoutPayload, $employeeId, $provider, $fingerprint, $ciphertext, $quantities, $idempotencyKey): PendingEwalletVerification {
-            if ($idempotencyKey !== null && ($existing = $this->findPendingByIdempotencyKey($idempotencyKey))) {
-                $this->ensureSameCashier($existing, $employeeId);
-
-                return $existing;
-            }
-
-            if ($this->paymentReferences->alreadyUsed('e-wallet', $provider, $fingerprint)) {
-                throw ValidationException::withMessages([
-                    'reference_number' => 'This e-wallet reference has already been used.',
-                ]);
-            }
-
-            $itemSnapshots = [];
-
-            foreach ($quantities as $productId => $quantity) {
-                $product = Product::query()->lockForUpdate()->findOrFail($productId);
-                $inventory = Inventory::query()->where('product_id', $productId)->lockForUpdate()->first();
+                app(CashDrawerService::class)->lockForCheckout($employeeId);
                 if ($idempotencyKey !== null && ($existing = $this->findPendingByIdempotencyKey($idempotencyKey))) {
                     $this->ensureSameCashier($existing, $employeeId);
 
                     return $existing;
                 }
-                $available = (float) ($inventory?->stock_quantity ?? 0);
 
-                if ($quantity > $available) {
+                if ($this->paymentReferences->alreadyUsed('e-wallet', $provider, $fingerprint)) {
                     throw ValidationException::withMessages([
-                        'items' => "Not enough stock for {$product->product_name} (available: {$available}, requested: {$quantity}).",
+                        'reference_number' => 'This e-wallet reference has already been used.',
                     ]);
                 }
 
-                $itemSnapshots[] = [
-                    'product_id' => (int) $product->product_id,
-                    'product_name' => (string) $product->product_name,
-                    'unit_price' => (float) $product->unit_price,
-                    'quantity' => $quantity,
-                ];
-            }
+                $itemSnapshots = [];
 
-            $checkoutPayload['item_snapshot'] = $itemSnapshots;
+                foreach ($quantities as $productId => $quantity) {
+                    $product = Product::query()->lockForUpdate()->findOrFail($productId);
+                    $inventory = Inventory::query()->where('product_id', $productId)->lockForUpdate()->first();
+                    if ($idempotencyKey !== null && ($existing = $this->findPendingByIdempotencyKey($idempotencyKey))) {
+                        $this->ensureSameCashier($existing, $employeeId);
 
-            $pending = PendingEwalletVerification::query()->create([
-                'employee_id' => $employeeId,
-                'checkout_idempotency_key' => $idempotencyKey,
-                'payment_provider' => $provider,
-                'reference_number' => '',
-                'reference_ciphertext' => $ciphertext,
-                'reference_fingerprint' => $fingerprint,
-                'submitted_amount' => $checkoutPayload['amount_paid'],
-                'checkout_payload' => $checkoutPayload,
-                'status' => PendingEwalletVerification::STATUS_PENDING,
-                'expires_at' => now()->addMinutes(self::RESERVATION_MINUTES),
-            ]);
+                        return $existing;
+                    }
+                    $available = (float) ($inventory?->stock_quantity ?? 0);
 
-            $this->paymentReferences->reserve(
-                'e-wallet',
-                $provider,
-                $fingerprint,
-                'pending_ewallet_verifications',
-                (int) $pending->id,
-            );
+                    if ($quantity > $available) {
+                        throw ValidationException::withMessages([
+                            'items' => "Not enough stock for {$product->product_name} (available: {$available}, requested: {$quantity}).",
+                        ]);
+                    }
 
-            foreach ($quantities as $productId => $quantity) {
-                $this->inventory->adjustStock(
-                    (int) $productId,
-                    -$quantity,
-                    'adjustment',
-                    'pending_ewallet_verification',
+                    $itemSnapshots[] = [
+                        'product_id' => (int) $product->product_id,
+                        'product_name' => (string) $product->product_name,
+                        'unit_price' => (float) $product->unit_price,
+                        'quantity' => $quantity,
+                    ];
+                }
+
+                $checkoutPayload['item_snapshot'] = $itemSnapshots;
+
+                $pending = PendingEwalletVerification::query()->create([
+                    'employee_id' => $employeeId,
+                    'checkout_idempotency_key' => $idempotencyKey,
+                    'payment_provider' => $provider,
+                    'reference_number' => '',
+                    'reference_ciphertext' => $ciphertext,
+                    'reference_fingerprint' => $fingerprint,
+                    'submitted_amount' => $checkoutPayload['amount_paid'],
+                    'checkout_payload' => $checkoutPayload,
+                    'status' => PendingEwalletVerification::STATUS_PENDING,
+                    'expires_at' => now()->addMinutes(self::RESERVATION_MINUTES),
+                ]);
+
+                $this->paymentReferences->reserve(
+                    'e-wallet',
+                    $provider,
+                    $fingerprint,
+                    'pending_ewallet_verifications',
                     (int) $pending->id,
-                    'Reserved while awaiting manual e-wallet verification',
                 );
-            }
 
-            AuditLogger::recordSensitive(
-                'payment_pending',
-                $employeeId,
-                null,
-                (string) ($checkoutPayload['register_id'] ?? ''),
-                ['payment_method' => 'e-wallet', 'provider' => $provider, 'amount' => $checkoutPayload['amount_paid']],
-                'pending_ewallet_verifications',
-                (int) $pending->id,
-                "E-wallet payment from {$provider} submitted for manager verification.",
-            );
+                foreach ($quantities as $productId => $quantity) {
+                    $this->inventory->adjustStock(
+                        (int) $productId,
+                        -$quantity,
+                        'adjustment',
+                        'pending_ewallet_verification',
+                        (int) $pending->id,
+                        'Reserved while awaiting manual e-wallet verification',
+                    );
+                }
 
-            return $pending;
+                AuditLogger::recordSensitive(
+                    'payment_pending',
+                    $employeeId,
+                    null,
+                    (string) ($checkoutPayload['register_id'] ?? ''),
+                    ['payment_method' => 'e-wallet', 'provider' => $provider, 'amount' => $checkoutPayload['amount_paid']],
+                    'pending_ewallet_verifications',
+                    (int) $pending->id,
+                    "E-wallet payment from {$provider} submitted for manager verification.",
+                );
+
+                return $pending;
             });
         } catch (QueryException $exception) {
             if ($idempotencyKey !== null && $this->isUniqueConstraintViolation($exception)) {
@@ -179,15 +179,21 @@ class EwalletVerificationService
 
     public function expireStale(): void
     {
-        DB::transaction(function (): void {
-            $expired = PendingEwalletVerification::query()
-                ->where('status', PendingEwalletVerification::STATUS_PENDING)
-                ->where('expires_at', '<=', now())
-                ->orderBy('id')
-                ->lockForUpdate()
-                ->get();
 
-            foreach ($expired as $pending) {
+        $expired = PendingEwalletVerification::query()
+            ->where('status', PendingEwalletVerification::STATUS_PENDING)
+            ->where('expires_at', '<=', now())
+            ->orderBy('id')
+            ->get();
+
+        foreach ($expired as $candidate) {
+            DB::transaction(function () use ($candidate): void {
+                app(CashDrawerService::class)->lockOpenDrawer((int) $candidate->employee_id, false);
+                $pending = PendingEwalletVerification::whereKey($candidate->id)->lockForUpdate()->first();
+                if (! $pending || $pending->status !== PendingEwalletVerification::STATUS_PENDING || $pending->expires_at->isFuture()) {
+                    return;
+                }
+
                 $this->releaseReservations($pending, 'Released after e-wallet verification request expired');
                 $pending->status = PendingEwalletVerification::STATUS_EXPIRED;
                 $pending->resolution_note = 'Verification window expired; inventory reservation released.';
@@ -203,8 +209,8 @@ class EwalletVerificationService
                     (int) $pending->id,
                     'E-wallet verification request expired; reserved inventory was released.',
                 );
-            }
-        });
+            });
+        }
     }
 
     public function verify(PendingEwalletVerification $pending, int $managerId): SaleTransaction
@@ -212,12 +218,14 @@ class EwalletVerificationService
         $this->expireStale();
 
         return DB::transaction(function () use ($pending, $managerId): SaleTransaction {
+            app(CashDrawerService::class)->lockOpenDrawer((int) $pending->employee_id, false);
             $locked = PendingEwalletVerification::query()->lockForUpdate()->findOrFail($pending->id);
             if ($locked->status === PendingEwalletVerification::STATUS_VERIFIED && $locked->sale_transaction_id) {
                 return $locked->sale()->firstOrFail();
             }
             $this->ensurePending($locked);
 
+            Product::whereIn('product_id', array_keys($this->aggregateQuantities($locked->checkout_payload['items'] ?? [])))->orderBy('product_id')->lockForUpdate()->get();
             $this->releaseReservations($locked, 'Released reservation before completing verified e-wallet sale');
             $checkoutPayload = $locked->checkout_payload;
             $checkoutPayload['reference_number'] = $locked->revealedReference();
@@ -254,6 +262,7 @@ class EwalletVerificationService
         $this->expireStale();
 
         DB::transaction(function () use ($pending, $managerId, $reason): void {
+            app(CashDrawerService::class)->lockOpenDrawer((int) $pending->employee_id, false);
             $locked = PendingEwalletVerification::query()->lockForUpdate()->findOrFail($pending->id);
             $this->ensurePending($locked);
 

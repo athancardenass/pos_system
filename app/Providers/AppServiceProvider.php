@@ -25,7 +25,8 @@ class AppServiceProvider extends ServiceProvider
             $employee?->loadMissing('role');
 
             $navModules = collect(config('roles.primary_navigation', []))
-                ->filter(fn (array $roles) => $employee?->hasRole(...$roles))
+                ->filter(fn (array $roles, string $module) => $employee?->hasRole(...$roles)
+                    || ($employee?->hasRole('Supervisor') && $module === 'pos.index'))
                 ->keys()
                 ->all();
 

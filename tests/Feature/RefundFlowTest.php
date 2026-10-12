@@ -7,24 +7,32 @@ use App\Models\Inventory;
 use App\Models\Product;
 use App\Models\SaleRefund;
 use App\Models\SaleTransaction;
+use App\Services\CashDrawerService;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class RefundFlowTest extends TestCase
 {
+    private string $refundOperationKey;
+
     use RefreshDatabase;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->seed(DatabaseSeeder::class);
+        foreach (Employee::whereIn('username', ['cashier', 'manager'])->get() as $employee) {
+            app(CashDrawerService::class)->openDrawer($employee->employee_id, 500);
+        }
     }
 
     /** @param array<int, float|string> $items */
     private function authorizeRefund(Employee $cashier, Employee $manager, SaleTransaction $sale, array $items): string
     {
+        $this->refundOperationKey = (string) Str::uuid();
         $manager->manager_pin_hash = Hash::make('2468');
         $manager->save();
 
@@ -32,8 +40,9 @@ class RefundFlowTest extends TestCase
             'action' => 'sale_refund',
             'pin' => '2468',
             'register_id' => 'REG 01',
-            'details' => ['sale_id' => $sale->transaction_id, 'items' => $items],
+            'details' => ['sale_id' => $sale->transaction_id, 'items' => $items, 'condition' => 'resellable', 'operation_key' => $this->refundOperationKey],
             'reason' => 'damaged',
+            'condition' => 'resellable',
         ]);
         $response->assertOk();
 
@@ -71,9 +80,11 @@ class RefundFlowTest extends TestCase
 
         $this->actingAs($cashier)
             ->post(route('pos.refund', $sale), [
+                'operation_key' => $this->refundOperationKey,
                 'manager_authorization_token' => $token,
                 'register_id' => 'REG 01',
                 'reason' => 'damaged',
+                'condition' => 'resellable',
                 'items' => [$detail->sale_detail_id => 1],
             ])
             ->assertRedirect(route('pos.show', $sale));
@@ -117,9 +128,11 @@ class RefundFlowTest extends TestCase
 
         $this->actingAs($cashier)
             ->post(route('pos.refund', $sale), [
+                'operation_key' => $this->refundOperationKey,
                 'manager_authorization_token' => $token,
                 'register_id' => 'REG 01',
                 'reason' => 'damaged',
+                'condition' => 'resellable',
                 'items' => [$detail->sale_detail_id => 1],
             ])
             ->assertRedirect(route('pos.show', $sale));
@@ -169,9 +182,11 @@ class RefundFlowTest extends TestCase
         $firstRefundToken = $this->authorizeRefund($cashier, $manager, $sale, [$detail->sale_detail_id => '0.500']);
         $this->actingAs($cashier)
             ->post(route('pos.refund', $sale), [
+                'operation_key' => $this->refundOperationKey,
                 'manager_authorization_token' => $firstRefundToken,
                 'register_id' => 'REG 01',
                 'reason' => 'damaged',
+                'condition' => 'resellable',
                 'items' => [$detail->sale_detail_id => '0.500'],
             ])
             ->assertRedirect(route('pos.show', $sale));
@@ -195,12 +210,14 @@ class RefundFlowTest extends TestCase
         $invalidRefundToken = $this->authorizeRefund($cashier, $manager, $sale, [$detail->sale_detail_id => '1.001']);
         $this->actingAs($cashier)
             ->post(route('pos.refund', $sale), [
+                'operation_key' => $this->refundOperationKey,
                 'manager_authorization_token' => $invalidRefundToken,
                 'register_id' => 'REG 01',
                 'reason' => 'damaged',
+                'condition' => 'resellable',
                 'items' => [$detail->sale_detail_id => '1.001'],
             ])
-            ->assertSessionHas('error');
+            ->assertSessionHasErrors('items');
 
         $this->assertEquals(4.0, (float) $product->fresh()->inventory->stock_quantity);
         $this->assertCount(1, $sale->refunds()->get());
@@ -208,9 +225,11 @@ class RefundFlowTest extends TestCase
         $secondRefundToken = $this->authorizeRefund($cashier, $manager, $sale, [$detail->sale_detail_id => '1.000']);
         $this->actingAs($cashier)
             ->post(route('pos.refund', $sale), [
+                'operation_key' => $this->refundOperationKey,
                 'manager_authorization_token' => $secondRefundToken,
                 'register_id' => 'REG 01',
                 'reason' => 'damaged',
+                'condition' => 'resellable',
                 'items' => [$detail->sale_detail_id => '1.000'],
             ])
             ->assertRedirect(route('pos.show', $sale));

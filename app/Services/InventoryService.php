@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Inventory;
+use App\Models\Product;
 use App\Models\StockMovement;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -14,7 +15,6 @@ class InventoryService
      * StockMovement. Runs inside a transaction with a row lock so concurrent
      * callers cannot read/interleave the same inventory row (TOCTOU guard).
      *
-     * @param  int  $productId
      * @param  float  $quantity  signed delta: negative deducts, positive adds
      * @param  string  $type  movement_type enum value (sale, purchase, refund, ...)
      * @param  string  $referenceType  e.g. 'sale_transaction', 'purchase_order'
@@ -30,6 +30,7 @@ class InventoryService
         ?string $reason = null
     ): void {
         DB::transaction(function () use ($productId, $quantity, $type, $referenceType, $referenceId, $reason): void {
+            Product::whereKey($productId)->lockForUpdate()->firstOrFail();
             $inventory = Inventory::query()
                 ->lockForUpdate()
                 ->firstOrCreate(['product_id' => $productId], ['stock_quantity' => 0]);

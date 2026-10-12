@@ -14,18 +14,35 @@ class ManagerAuthorizationController extends Controller
     public function authorizeAction(Request $request, ManagerAuthorizationService $authorizations): JsonResponse
     {
         $requester = $request->user();
-        abort_unless($requester instanceof Employee && $requester->hasRole('Cashier', 'Manager'), 403);
+        abort_unless($requester instanceof Employee && $requester->hasRole('Cashier', 'Manager', 'Supervisor'), 403);
 
         $isManager = $requester->hasRole('Manager');
+        $isSupervisor = $requester->hasRole('Supervisor');
         $rules = [
             'action' => ['required', 'string', Rule::in(ManagerAuthorizationService::ACTIONS)],
-            'pin' => [$isManager ? 'nullable' : 'required', 'string', 'regex:/^\d{4,6}$/'],
+            'pin' => [$isManager || $isSupervisor ? 'nullable' : 'required', 'string', 'regex:/^\d{4,6}$/'],
             'register_id' => 'required|string|max:50',
             'details' => 'present|array|max:15',
             'reason' => [Rule::requiredIf(fn () => in_array($request->input('action'), ['cart_item_void', 'held_transaction_delete', 'sale_refund'], true)), 'nullable', 'string', Rule::when(fn () => in_array($request->input('action'), ['cart_item_void', 'held_transaction_delete', 'sale_refund'], true), Rule::in(array_keys(RefundService::REASONS)))],
             'notes' => 'nullable|string|max:255',
         ];
         $rules += match ($request->input('action')) {
+            'cash_movement' => [
+                'details.kind' => 'required|in:manual_in,manual_out', 'details.amount' => 'required|numeric|min:0.01|decimal:0,2',
+                'details.reason' => 'required|string|max:255', 'details.operation_key' => 'required|uuid',
+            ],
+            'cash_transfer' => [
+                'details.destination_drawer_id' => 'required|integer|min:1', 'details.amount' => 'required|numeric|min:0.01|decimal:0,2',
+                'details.reason' => 'required|string|max:255', 'details.operation_key' => 'required|uuid',
+            ],
+            'cash_transfer_cancel' => ['details.transfer_id' => 'required|integer|min:1'],
+            'sale_exchange' => [
+                'details.sale_id' => 'required|integer|min:1', 'details.items' => 'required|array|min:1|max:100',
+                'details.items.*' => 'numeric|min:0|decimal:0,3', 'details.replacements' => 'required|array|min:1|max:100',
+                'details.replacements.*.product_id' => 'required|integer|min:1', 'details.replacements.*.quantity' => 'required|numeric|min:0.001|decimal:0,3',
+                'details.condition' => 'required|in:resellable,damaged', 'details.operation_key' => 'required|uuid',
+                'details.reason' => 'required|string|max:50', 'details.settlement_reference' => 'nullable|string|max:100',
+            ],
             'cart_item_void' => [
                 'details.product_id' => 'required|integer|min:1',
                 'details.product_name' => 'required|string|max:100',
@@ -46,6 +63,9 @@ class ManagerAuthorizationController extends Controller
                 'details.sale_id' => 'required|integer|min:1',
                 'details.items' => 'present|array|max:100',
                 'details.items.*' => 'nullable|numeric|min:0|decimal:0,3',
+                'details.condition' => 'nullable|in:resellable,damaged',
+                'details.operation_key' => 'nullable|uuid',
+                'details.settlement_reference' => 'nullable|string|max:100',
             ],
             'cash_drawer_open' => [
                 'details.opening_cash' => 'required|numeric|min:0|decimal:0,2',
@@ -63,7 +83,7 @@ class ManagerAuthorizationController extends Controller
             $requester,
             $data['action'],
             $details,
-            $isManager ? null : $data['pin'],
+            $isManager ? null : ($data['pin'] ?? null),
             $data['reason'] ?? null,
             $data['notes'] ?? null,
             $data['register_id'] ?? null,
@@ -79,6 +99,7 @@ class ManagerAuthorizationController extends Controller
     private function sanitizeDetails(string $action, array $details): array
     {
         return match ($action) {
+            'cash_movement', 'cash_transfer', 'cash_transfer_cancel', 'sale_exchange' => $details,
             'cart_item_void' => [
                 'product_id' => (int) ($details['product_id'] ?? 0),
                 'product_name' => mb_substr((string) ($details['product_name'] ?? 'Item'), 0, 100),
@@ -98,6 +119,9 @@ class ManagerAuthorizationController extends Controller
             'sale_refund' => [
                 'sale_id' => (int) ($details['sale_id'] ?? 0),
                 'items' => (array) ($details['items'] ?? []),
+                'condition' => $details['condition'] ?? null,
+                'operation_key' => $details['operation_key'] ?? null,
+                'settlement_reference' => $details['settlement_reference'] ?? null,
             ],
             'cash_drawer_open' => [
                 'opening_cash' => round((float) ($details['opening_cash'] ?? 0), 2),

@@ -53,6 +53,11 @@ class Employee extends Model implements Authenticatable
         return $this->hasMany(SaleTransaction::class, 'employee_id', 'employee_id');
     }
 
+    public function supervisorActionPermissions(): HasMany
+    {
+        return $this->hasMany(SupervisorActionPermission::class, 'employee_id', 'employee_id');
+    }
+
     public function isActive(): bool
     {
         return $this->status === 'active';
@@ -95,7 +100,8 @@ class Employee extends Model implements Authenticatable
     public function allowedModules(): array
     {
         return collect(config('roles.modules', []))
-            ->filter(fn (array $roles) => $this->hasRole(...$roles))
+            ->filter(fn (array $roles, string $module) => $this->hasRole(...$roles)
+                || ($this->hasRole('Supervisor') && $module === 'pos.index'))
             ->keys()
             ->all();
     }

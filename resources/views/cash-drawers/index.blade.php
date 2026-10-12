@@ -6,7 +6,6 @@
 <div class="page-head">
     <div>
         <h1>Cash Drawer Sessions</h1>
-        <p class="muted">Review cashier opening floats, sales collected, and shift closure reconciliation.</p>
     </div>
 </div>
 
@@ -25,6 +24,7 @@
                         <th style="text-align: right;">Expected in Drawer</th>
                         <th style="text-align: right;">Actual Counted</th>
                         <th style="text-align: center;">Accountability Status</th>
+                        <th>Report</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -60,6 +60,7 @@
                                     <x-ui.badge variant="shortage">-₱{{ number_format(abs($diff), 2) }} Shortage</x-ui.badge>
                                 @endif
                             </td>
+                            <td><a href="{{ route('cash-drawer.report',$drawer) }}">View / print</a></td>
                         </tr>
                     @endforeach
                 </tbody>

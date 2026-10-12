@@ -10,11 +10,17 @@ use Illuminate\Validation\ValidationException;
 
 class ManagerAuthorizationService
 {
+    public function __construct(private readonly SupervisorPermissionService $supervisorPermissions) {}
+
     public const ACTIONS = [
         'cart_item_void',
         'held_transaction_delete',
         'discount_apply',
         'sale_refund',
+        'cash_movement',
+        'cash_transfer',
+        'cash_transfer_cancel',
+        'sale_exchange',
         'cash_drawer_open',
         'pending_card_verify',
         'pending_card_reject',
@@ -23,6 +29,10 @@ class ManagerAuthorizationService
     ];
 
     private const GRANT_ACTIONS = [
+        'cash_movement',
+        'cash_transfer',
+        'cash_transfer_cancel',
+        'sale_exchange',
         'discount_apply',
         'sale_refund',
         'cash_drawer_open',
@@ -33,8 +43,8 @@ class ManagerAuthorizationService
     ];
 
     /**
-     * @param array<string, mixed> $details
-     * @return array{ok: bool, token?: string|null, approved_by?: string, attempts_remaining?: int, locked_for?: int, message?: string, status?: int}
+     * @param  array<string, mixed>  $details
+     * @return array{ok: bool, token?: string|null, approved_by?: string|null, attempts_remaining?: int, locked_for?: int, message?: string, status?: int, pin_required?: bool}
      */
     public function authorize(
         Request $request,
@@ -46,9 +56,22 @@ class ManagerAuthorizationService
         ?string $notes,
         ?string $registerId,
     ): array {
-        $approver = $requester->hasRole('Manager')
-            ? $requester
-            : $this->verifyManagerPin($request, $requester, $pin, $action, $registerId);
+        if ($requester->hasRole('Manager')) {
+            $approver = $requester;
+        } elseif ($requester->hasRole('Supervisor') && blank($pin)) {
+            if ($this->supervisorPermissions->allows($requester, $action, $details)) {
+                $approver = $requester;
+            } else {
+                return [
+                    'ok' => false,
+                    'status' => 428,
+                    'pin_required' => true,
+                    'message' => 'This action needs approval from a Supervisor with the assigned permission or a Manager.',
+                ];
+            }
+        } else {
+            $approver = $this->verifyManagerPin($request, $requester, $pin, $action, $details, $registerId);
+        }
 
         if (is_array($approver)) {
             return $approver;
@@ -84,7 +107,7 @@ class ManagerAuthorizationService
             (int) $approver->employee_id,
             $registerId,
             $auditDetails,
-            description: 'Manager authorization approved for '.$action.'.',
+            description: 'Sensitive action authorization approved for '.$action.'.',
         );
 
         return [
@@ -95,10 +118,10 @@ class ManagerAuthorizationService
     }
 
     /**
-     * Require a one-use authorization grant for a cashier, or allow managers to act directly.
+     * Require a one-use authorization grant for an employee, or allow managers to act directly.
      *
-     * @param array<string, mixed> $details
-     * @return array{requested_by_employee_id: int, approved_by_employee_id: int, register_id: ?string}
+     * @param  array<string, mixed>  $details
+     * @return array{requested_by_employee_id: int, approved_by_employee_id: ?int, register_id: ?string}
      */
     public function requireGrant(
         Request $request,
@@ -134,6 +157,13 @@ class ManagerAuthorizationService
 
         $request->session()->forget('manager_action_grants.'.$token);
 
+        $approver = Employee::query()->with('role')->find((int) $grant['approver_id']);
+        if ($approver?->hasRole('Supervisor') && ! $this->supervisorPermissions->allows($approver, $action, $details)) {
+            throw ValidationException::withMessages([
+                'manager_authorization_token' => 'The Supervisor approval is no longer valid for this action or amount. Ask a Manager.',
+            ]);
+        }
+
         return [
             'requested_by_employee_id' => (int) $grant['requester_id'],
             'approved_by_employee_id' => (int) $grant['approver_id'],
@@ -146,9 +176,10 @@ class ManagerAuthorizationService
         Employee $requester,
         ?string $pin,
         string $action,
+        array $details,
         ?string $registerId,
     ): Employee|array {
-        if (! $requester->hasRole('Cashier')) {
+        if (! $requester->hasRole('Cashier', 'Supervisor')) {
             abort(403);
         }
 
@@ -188,6 +219,21 @@ class ManagerAuthorizationService
             return $manager;
         }
 
+        $supervisors = Employee::query()
+            ->where('status', 'active')
+            ->whereNotNull('manager_pin_hash')
+            ->where('employee_id', '!=', $requester->employee_id)
+            ->whereHas('role', fn ($query) => $query->whereRaw('LOWER(role_name) = ?', ['supervisor']))
+            ->get();
+        $supervisor = $supervisors->first(fn (Employee $candidate) => Hash::check((string) $pin, (string) $candidate->manager_pin_hash)
+            && $this->supervisorPermissions->allows($candidate, $action, $details));
+
+        if ($supervisor) {
+            $request->session()->forget($stateKey);
+
+            return $supervisor;
+        }
+
         $attempts = (int) ($state['attempts'] ?? 0) + 1;
         $lockedFor = $attempts >= 3 ? 60 : 0;
         $request->session()->put($stateKey, $lockedFor > 0
@@ -202,7 +248,7 @@ class ManagerAuthorizationService
             [
                 'requested_action' => $action,
                 'attempt' => $attempts,
-                'reason' => $managers->isEmpty() ? 'no_active_manager_pin_configured' : 'invalid_pin',
+                'reason' => $managers->isEmpty() && $supervisors->isEmpty() ? 'no_active_approver_pin_configured' : 'invalid_or_unauthorized_pin',
                 'locked_for_seconds' => $lockedFor,
             ],
             description: 'Manager PIN authorization failed for '.$action.'.',
@@ -215,9 +261,9 @@ class ManagerAuthorizationService
             'locked_for' => $lockedFor,
             'message' => $lockedFor > 0
                 ? 'Three incorrect PIN attempts. The prompt is locked for 60 seconds.'
-                : ($managers->isEmpty()
-                    ? 'No active manager PIN is configured. A manager must set one in Employees.'
-                    : 'Incorrect manager PIN. '.$attempts.' of 3 attempts used.'),
+                : ($managers->isEmpty() && $supervisors->isEmpty()
+                    ? 'No other active approver PIN is configured. A Manager must set an approval PIN in Employees.'
+                    : 'This PIN does not authorize the action. Ask an eligible approver. '.$attempts.' of 3 attempts used.'),
         ];
     }
 
@@ -225,12 +271,16 @@ class ManagerAuthorizationService
     private function scopeHash(string $action, array $details, ?string $reason, ?string $notes): string
     {
         $scope = match ($action) {
+            'cash_movement', 'cash_transfer', 'cash_transfer_cancel', 'sale_exchange' => $this->normalizeDetails($action, $details),
             'discount_apply' => [
                 'discount_id' => (int) ($details['discount_id'] ?? 0),
             ],
             'sale_refund' => [
                 'sale_id' => (int) ($details['sale_id'] ?? 0),
                 'items' => $this->normalizeRefundItems((array) ($details['items'] ?? [])),
+                'condition' => $details['condition'] ?? (in_array($reason, ['damaged', 'defective'], true) ? 'damaged' : 'resellable'),
+                'operation_key' => $details['operation_key'] ?? null,
+                'settlement_reference' => $details['settlement_reference'] ?? null,
                 'reason' => $reason,
                 'notes' => filled($notes) ? trim((string) $notes) : null,
             ],
@@ -263,5 +313,21 @@ class ManagerAuthorizationService
         ksort($normalized, SORT_NUMERIC);
 
         return $normalized;
+    }
+
+    public function normalizeDetails(string $action, array $details): array
+    {
+        return match ($action) {
+            'cash_movement' => ['kind' => (string) ($details['kind'] ?? ''), 'amount' => round((float) ($details['amount'] ?? 0), 2),
+                'reason' => trim((string) ($details['reason'] ?? '')), 'operation_key' => (string) ($details['operation_key'] ?? '')],
+            'cash_transfer' => ['destination_drawer_id' => (int) ($details['destination_drawer_id'] ?? 0), 'amount' => round((float) ($details['amount'] ?? 0), 2),
+                'reason' => trim((string) ($details['reason'] ?? '')), 'operation_key' => (string) ($details['operation_key'] ?? '')],
+            'cash_transfer_cancel' => ['transfer_id' => (int) ($details['transfer_id'] ?? 0)],
+            'sale_exchange' => ['sale_id' => (int) ($details['sale_id'] ?? 0), 'items' => $this->normalizeRefundItems((array) ($details['items'] ?? [])),
+                'replacements' => array_values(array_map(fn ($r) => ['product_id' => (int) $r['product_id'], 'quantity' => round((float) $r['quantity'], 3)], $details['replacements'] ?? [])),
+                'condition' => $details['condition'] ?? 'resellable', 'operation_key' => $details['operation_key'] ?? '',
+                'reason' => $details['reason'] ?? null, 'settlement_reference' => $details['settlement_reference'] ?? null],
+            default => $details,
+        };
     }
 }

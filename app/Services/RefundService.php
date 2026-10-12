@@ -2,11 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\SaleDetail;
+use App\Models\Product;
 use App\Models\SaleRefund;
 use App\Models\SaleTransaction;
-use App\Services\InventoryService;
-use App\Services\InventoryOutboxService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -16,8 +14,8 @@ class RefundService
         private readonly InventoryService $inventory,
         private readonly InventoryOutboxService $inventoryOutbox,
         private readonly CustomerOutboxService $customerOutbox,
-    ) {
-    }
+    ) {}
+
     public const REASONS = [
         'damaged' => 'Damaged item',
         'wrong_item' => 'Wrong item',
@@ -47,14 +45,14 @@ class RefundService
      *
      * @throws ValidationException on invalid input or permission denial
      */
-    public function refund(SaleTransaction $sale, array $items, string $reason, ?string $notes = null, ?array $authorization = null): SaleRefund
+    public function refund(SaleTransaction $sale, array $items, string $reason, ?string $notes = null, ?array $authorization = null, array $options = []): SaleRefund
     {
         $employee = auth()->user();
 
         // Role gate: Cashiers may only refund their own sales; Managers can refund any sale.
         // (Admin role merged into Manager — see CHANGELOG 2026-09-08.)
         $isManager = $employee->hasRole('Manager');
-        if ($employee->hasRole('Cashier') && ! $isManager
+        if (! $authorization && $employee->hasRole('Cashier') && ! $isManager
             && (int) $sale->employee_id !== (int) $employee->employee_id) {
             throw ValidationException::withMessages([
                 'refund' => 'Cashiers can only refund their own sales. Ask a manager.',
@@ -75,7 +73,7 @@ class RefundService
 
         if ($outsideWindow) {
             $isManager = $employee && $employee->hasRole('Manager');
-            if (! $isManager) {
+            if (! $isManager && ! $authorization) {
                 throw ValidationException::withMessages([
                     'refund' => 'This sale is older than '.self::WINDOW_DAYS.' days — only a manager can refund it.',
                 ]);
@@ -83,75 +81,47 @@ class RefundService
             $windowOverride = true;
         }
 
-        return DB::transaction(function () use ($sale, $items, $reason, $notes, $employee, $windowOverride, $authorization): SaleRefund {
+        ksort($items, SORT_NUMERIC);
+        $condition = $options['condition'] ?? (in_array($reason, ['damaged', 'defective'], true) ? 'damaged' : 'resellable');
+        if (! in_array($condition, ['damaged', 'resellable'], true)) {
+            throw ValidationException::withMessages(['condition' => 'Choose the returned item condition.']);
+        }
+        $fingerprint = hash('sha256', json_encode([$sale->transaction_id, $employee->employee_id, $items, $reason, $notes, $condition, $options['settlement_reference'] ?? null]));
+
+        return DB::transaction(function () use ($sale, $items, $reason, $notes, $employee, $windowOverride, $authorization, $options, $condition, $fingerprint): SaleRefund {
+            $drawer = app(CashDrawerService::class)->lockOpenDrawer((int) $employee->employee_id);
             // Lock + reload the sale so two concurrent refunds serialize (TOCTOU-safe).
             $sale = SaleTransaction::query()->lockForUpdate()->findOrFail($sale->transaction_id);
+
+            if (! empty($options['operation_key']) && $previous = SaleRefund::where('operation_key', $options['operation_key'])->lockForUpdate()->first()) {
+                if ($previous->request_fingerprint !== $fingerprint) {
+                    throw ValidationException::withMessages(['operation_key' => 'This refund ID has already been used with different data.']);
+                }
+
+                return $previous;
+            }
+            if (! in_array($sale->status, ['completed', 'refunded'], true)) {
+                throw ValidationException::withMessages(['refund' => 'Only completed sales can be returned.']);
+            }
+            if ($sale->payment_method !== 'cash' && blank($options['settlement_reference'] ?? null) && ($options['record_movement'] ?? true)) {
+                throw ValidationException::withMessages(['settlement_reference' => 'Confirm the refund in the original payment app/terminal and enter its reference.']);
+            }
 
             if ($sale->isFullyRefunded()) {
                 throw ValidationException::withMessages(['refund' => 'This sale is already fully refunded.']);
             }
+            app(LoyaltySettlementService::class)->prepare($sale);
 
-            $details = $sale->saleDetails()->lockForUpdate()->get()->keyBy('sale_detail_id');
-
-            // Empty items => full refund of everything still refundable.
-            if (empty($items)) {
-                $items = $details->map(fn (SaleDetail $d) => $d->refundableQuantity())->all();
+            $quote = app(ReturnPricingService::class)->quote($sale, $items, true);
+            $lines = $quote['lines'];
+            $refundAmount = $quote['amount'];
+            $isFull = $quote['is_full'];
+            if (($options['record_movement'] ?? true) && $sale->payment_method === 'cash'
+                && $refundAmount > max(0, (float) $drawer->expected_cash)) {
+                throw ValidationException::withMessages(['drawer' => 'Not enough expected cash for this refund. Add Cash In or receive a drawer transfer before paying out.']);
             }
-            $normalizedItems = [];
-            foreach ($items as $detailId => $quantity) {
-                if (! is_numeric($quantity) || ! is_finite((float) $quantity)) {
-                    throw ValidationException::withMessages(['items' => 'Refund quantities must be valid numbers.']);
-                }
-
-                $quantity = (float) $quantity;
-                $roundedQuantity = round($quantity, 3);
-                if (abs($quantity - $roundedQuantity) > 0.0000001) {
-                    throw ValidationException::withMessages(['items' => 'Refund quantities can have at most three decimal places.']);
-                }
-
-                if ($roundedQuantity > 0) {
-                    $normalizedItems[(int) $detailId] = $roundedQuantity;
-                }
-            }
-            $items = $normalizedItems;
-
-            if (empty($items)) {
-                throw ValidationException::withMessages(['items' => 'Nothing selected to refund.']);
-            }
-
-            // Discount ratio: what fraction of the subtotal was actually paid.
-            $paidRatio = $sale->subtotal > 0 ? (float) $sale->total_amount / (float) $sale->subtotal : 1.0;
-
-            $refundAmount = 0.0;
-            $lines = [];
-
-            foreach ($items as $detailId => $qty) {
-                $detail = $details->get($detailId);
-                if (! $detail) {
-                    throw ValidationException::withMessages(['items' => 'Invalid refund line.']);
-                }
-                $refundableQuantity = $detail->refundableQuantity();
-                if ($qty - $refundableQuantity > 0.0000001) {
-                    throw ValidationException::withMessages([
-                        'items' => "Only {$refundableQuantity} of {$detail->product?->product_name} remaining to refund.",
-                    ]);
-                }
-
-                // Pro-rate: line paid-share × refunded fraction of that line.
-                $linePaid = round((float) $detail->subtotal * $paidRatio, 2);
-                $amount = round($linePaid * ($qty / max(0.001, (float) $detail->quantity)), 2);
-                $refundAmount += $amount;
-
-                $lines[] = ['detail' => $detail, 'qty' => $qty, 'amount' => $amount];
-            }
-
-            $refundAmount = round($refundAmount, 2);
-
-            // Full refund = this event consumes every remaining refundable quantity.
-            $isFull = $details->every(
-                fn (SaleDetail $d, $id) => ($items[$id] ?? 0) >= $d->refundableQuantity()
-            );
-
+            Product::whereIn('product_id', array_map(fn ($line) => $line['detail']->product_id, $lines))->orderBy('product_id')->lockForUpdate()->get();
+            usort($lines, fn ($a, $b) => $a['detail']->product_id <=> $b['detail']->product_id);
             $refund = SaleRefund::query()->create([
                 'transaction_id' => $sale->transaction_id,
                 'employee_id' => $employee?->employee_id,
@@ -161,6 +131,11 @@ class RefundService
                 'is_full_refund' => $isFull,
                 'window_override' => $windowOverride,
                 'refunded_at' => now(),
+                'drawer_id' => $drawer->drawer_id,
+                'payment_method' => $sale->payment_method,
+                'settlement_reference' => $options['settlement_reference'] ?? null,
+                'operation_key' => $options['operation_key'] ?? null,
+                'request_fingerprint' => $fingerprint,
             ]);
 
             $restockedItems = [];
@@ -169,21 +144,26 @@ class RefundService
                     'sale_detail_id' => $line['detail']->sale_detail_id,
                     'quantity' => $line['qty'],
                     'amount' => $line['amount'],
+                    'condition' => $condition,
                 ]);
 
                 // Restore the refunded quantity to on-hand stock.
-                $this->inventory->adjustStock(
-                    $line['detail']->product_id,
-                    $line['qty'],
-                    'refund',
-                    'sale_refund',
-                    $refund->refund_id,
-                    $reason,
-                );
-                $restockedItems[] = [
-                    'product_id' => (int) $line['detail']->product_id,
-                    'quantity' => (float) $line['qty'],
-                ];
+                if ($condition === 'resellable') {
+                    $this->inventory->adjustStock(
+                        $line['detail']->product_id,
+                        $line['qty'],
+                        'refund',
+                        'sale_refund',
+                        $refund->refund_id,
+                        $reason,
+                    );
+                }
+                if ($condition === 'resellable') {
+                    $restockedItems[] = [
+                        'product_id' => (int) $line['detail']->product_id,
+                        'quantity' => (float) $line['qty'],
+                    ];
+                }
             }
 
             $this->inventoryOutbox->recordRefundEvent(
@@ -192,12 +172,17 @@ class RefundService
                 $restockedItems,
             );
 
-            $this->customerOutbox->recordRefundEvent(
-                $sale->transaction_id,
-                $refund->refund_id,
-                $sale->customer_id,
-                $refundAmount,
-            );
+            if ($options['record_loyalty'] ?? true) {
+                app(LoyaltySettlementService::class)->refund($sale, $refund);
+            }
+
+            if ($options['record_movement'] ?? true) {
+                app(CashDrawerService::class)->record($drawer, [
+                    'kind' => 'refund', 'amount' => -$refundAmount, 'payment_method' => $sale->payment_method,
+                    'refund_id' => $refund->refund_id, 'reason' => $reason, 'approved_by_employee_id' => $authorization['approved_by_employee_id'] ?? $employee->employee_id,
+                    'operation_key' => 'refund:'.$refund->refund_id,
+                ]);
+            }
 
             if ($isFull) {
                 $sale->update(['status' => 'refunded', 'refunded_at' => now()]);

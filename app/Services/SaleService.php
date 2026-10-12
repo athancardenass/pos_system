@@ -7,10 +7,26 @@ use App\Models\Customer;
 use App\Models\Discount;
 use App\Models\Product;
 use App\Models\SaleTransaction;
+use App\Services\Integration\CRM\CustomerService;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 class SaleService
 {
+    public function findReceipt(string $query): ?SaleTransaction
+    {
+        $query = trim($query);
+        if ($query === '') {
+            return null;
+        }
+        $sales = SaleTransaction::with(['receipt', 'employee']);
+        if (ctype_digit($query) && filter_var($query, FILTER_VALIDATE_INT) !== false) {
+            return $sales->find((int) $query);
+        }
+
+        return $sales->whereHas('receipt', fn ($q) => $q->where('receipt_number', $query))->first();
+    }
+
     /**
      * Prepare catalog and discount data required for the POS checkout terminal.
      *
@@ -85,9 +101,9 @@ class SaleService
             }
         }
 
-        $result = app(\App\Services\Integration\CRM\CustomerService::class)->searchReadOnly($search);
+        $result = app(CustomerService::class)->searchReadOnly($search);
         if ($result['status'] !== 200) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
+            throw ValidationException::withMessages([
                 'customer' => 'CRM customer search is unavailable. Try again.',
             ]);
         }
@@ -103,7 +119,6 @@ class SaleService
             'points' => $customer['loyalty']['points'],
         ], array_slice($result['customers'], 0, $limit));
     }
-
 
     public function getProductStockSnapshot(): array
     {

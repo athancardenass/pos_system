@@ -182,7 +182,7 @@ class CrmCustomerLookupTest extends TestCase
             ->assertDontSee('upstream timeout detail must not be exposed');
     }
 
-    public function test_register_keeps_crm_results_separate_from_the_checkout_customer_field(): void
+    public function test_register_uses_checkout_customer_field_without_duplicate_crm_panel(): void
     {
         $cashier = Employee::query()->where('username', 'cashier')->firstOrFail();
 
@@ -191,8 +191,8 @@ class CrmCustomerLookupTest extends TestCase
             ->assertOk();
 
         $html = $response->getContent();
-        self::assertTrue(str_contains($html, 'CRM customer lookup (read-only)'));
-        self::assertTrue(str_contains($html, 'Use this CRM customer for checkout'));
+        self::assertFalse(str_contains($html, 'CRM customer lookup (read-only)'));
+        self::assertFalse(str_contains($html, 'crm-customer-search-input'));
         self::assertTrue(str_contains($html, 'name="customer_id" id="store-customer-id"'));
     }
 

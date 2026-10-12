@@ -76,16 +76,16 @@
         </div>
         <div class="employee-form-subsection employee-manager-pin-fields" id="employee-manager-pin-fields" data-required="{{ ! $employee || blank($employee->manager_pin_hash) ? 'true' : 'false' }}" hidden>
             <div class="employee-form-subheading">
-                <h3>Manager approval PIN</h3>
-                <p id="manager-pin-help">{{ $employee && filled($employee->manager_pin_hash) ? 'Used only to approve sensitive actions, not to sign in. Leave both fields blank to keep the current PIN.' : 'Used only to approve sensitive actions, not to sign in. Set and confirm a 4–6 digit PIN.' }}</p>
+                <h3>Approval PIN</h3>
+                <p id="manager-pin-help">{{ $employee && filled($employee->manager_pin_hash) ? 'Used only for authorized approvals, not to sign in. Leave both fields blank to keep the current PIN.' : 'Used for authorized approvals, not to sign in. Set and confirm a 4–6 digit PIN.' }}</p>
             </div>
             <div class="form-grid employee-fields">
                 <div>
-                    <label for="manager_pin">New manager PIN</label>
+                    <label for="manager_pin">New approval PIN</label>
                     <input id="manager_pin" type="password" name="manager_pin" class="input-lg bordered" inputmode="numeric" pattern="[0-9]{4,6}" minlength="4" maxlength="6" autocomplete="new-password" aria-describedby="manager-pin-help">
                 </div>
                 <div>
-                    <label for="manager_pin_confirmation">Confirm manager PIN</label>
+                    <label for="manager_pin_confirmation">Confirm approval PIN</label>
                     <input id="manager_pin_confirmation" type="password" name="manager_pin_confirmation" class="input-lg bordered" inputmode="numeric" pattern="[0-9]{4,6}" minlength="4" maxlength="6" autocomplete="new-password" aria-describedby="manager-pin-help">
                 </div>
             </div>
@@ -114,12 +114,12 @@
         if (!role || !fields || !pin || !confirmation) return;
 
         const syncManagerPinFields = () => {
-            const managerSelected = role.selectedOptions[0]?.dataset.roleName === 'manager';
-            fields.hidden = !managerSelected;
-            pin.disabled = !managerSelected;
-            confirmation.disabled = !managerSelected;
-            pin.required = managerSelected && fields.dataset.required === 'true';
-            confirmation.required = managerSelected && (pin.value.length > 0 || pin.required);
+            const approvalRoleSelected = ['manager', 'supervisor'].includes(role.selectedOptions[0]?.dataset.roleName);
+            fields.hidden = !approvalRoleSelected;
+            pin.disabled = !approvalRoleSelected;
+            confirmation.disabled = !approvalRoleSelected;
+            pin.required = approvalRoleSelected && fields.dataset.required === 'true';
+            confirmation.required = approvalRoleSelected && (pin.value.length > 0 || pin.required);
         };
 
         role.addEventListener('change', syncManagerPinFields);

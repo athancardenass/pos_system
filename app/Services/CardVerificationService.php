@@ -19,8 +19,7 @@ class CardVerificationService
         private readonly InventoryService $inventory,
         private readonly CheckoutService $checkout,
         private readonly PaymentReferenceService $paymentReferences,
-    ) {
-    }
+    ) {}
 
     public function submit(array $checkoutPayload, int $employeeId): PendingCardVerification
     {
@@ -50,6 +49,7 @@ class CardVerificationService
                 $quantities,
                 $idempotencyKey,
             ): PendingCardVerification {
+                app(CashDrawerService::class)->lockForCheckout($employeeId);
                 if ($idempotencyKey !== null && ($existing = $this->findPendingByIdempotencyKey($idempotencyKey))) {
                     $this->ensureSameCashier($existing, $employeeId);
 
@@ -174,15 +174,21 @@ class CardVerificationService
 
     public function expireStale(): void
     {
-        DB::transaction(function (): void {
-            $expired = PendingCardVerification::query()
-                ->where('status', PendingCardVerification::STATUS_PENDING)
-                ->where('expires_at', '<=', now())
-                ->orderBy('id')
-                ->lockForUpdate()
-                ->get();
 
-            foreach ($expired as $pending) {
+        $expired = PendingCardVerification::query()
+            ->where('status', PendingCardVerification::STATUS_PENDING)
+            ->where('expires_at', '<=', now())
+            ->orderBy('id')
+            ->get();
+
+        foreach ($expired as $candidate) {
+            DB::transaction(function () use ($candidate): void {
+                app(CashDrawerService::class)->lockOpenDrawer((int) $candidate->employee_id, false);
+                $pending = PendingCardVerification::whereKey($candidate->id)->lockForUpdate()->first();
+                if (! $pending || $pending->status !== PendingCardVerification::STATUS_PENDING || $pending->expires_at->isFuture()) {
+                    return;
+                }
+
                 $this->releaseReservations($pending, 'Released after Card terminal verification request expired');
                 $pending->status = PendingCardVerification::STATUS_EXPIRED;
                 $pending->resolution_note = 'Verification window expired; inventory reservation released.';
@@ -198,8 +204,8 @@ class CardVerificationService
                     (int) $pending->id,
                     'Card verification request expired; reserved inventory was released.',
                 );
-            }
-        });
+            });
+        }
     }
 
     public function verify(PendingCardVerification $pending, int $managerId): SaleTransaction
@@ -207,12 +213,14 @@ class CardVerificationService
         $this->expireStale();
 
         return DB::transaction(function () use ($pending, $managerId): SaleTransaction {
+            app(CashDrawerService::class)->lockOpenDrawer((int) $pending->employee_id, false);
             $locked = PendingCardVerification::query()->lockForUpdate()->findOrFail($pending->id);
             if ($locked->status === PendingCardVerification::STATUS_VERIFIED && $locked->sale_transaction_id) {
                 return $locked->sale()->firstOrFail();
             }
             $this->ensurePending($locked);
 
+            Product::whereIn('product_id', array_keys($this->aggregateQuantities($locked->checkout_payload['items'] ?? [])))->orderBy('product_id')->lockForUpdate()->get();
             $this->releaseReservations($locked, 'Released reservation before completing verified Card sale');
             $checkoutPayload = $locked->checkout_payload;
             $checkoutPayload['reference_number'] = $locked->revealedReference();
@@ -250,6 +258,7 @@ class CardVerificationService
         $this->expireStale();
 
         DB::transaction(function () use ($pending, $managerId, $reason): void {
+            app(CashDrawerService::class)->lockOpenDrawer((int) $pending->employee_id, false);
             $locked = PendingCardVerification::query()->lockForUpdate()->findOrFail($pending->id);
             $this->ensurePending($locked);
 

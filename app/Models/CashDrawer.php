@@ -23,6 +23,9 @@ class CashDrawer extends Model
         'status',
         'opened_at',
         'closed_at',
+        'ledger_start_cash',
+        'reconciliation_notes',
+        'report_snapshot',
     ];
 
     protected function casts(): array
@@ -35,6 +38,8 @@ class CashDrawer extends Model
             'difference' => 'decimal:2',
             'opened_at' => 'datetime',
             'closed_at' => 'datetime',
+            'ledger_start_cash' => 'decimal:2',
+            'report_snapshot' => 'array',
         ];
     }
 

@@ -1,0 +1,53 @@
+.shift-actions { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+#last-shift-report[hidden] { display:none; }
+.shift-overview { display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:24px; }
+.shift-report-columns { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; margin:24px 0; }
+.shift-report h2,.shift-report h3 { margin:24px 0 12px; }
+.shift-meta { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.shift-meta dt { color:var(--muted); font-size:.85rem; }
+.shift-meta dd { margin:4px 0 0; font-weight:600; }
+.shift-totals { margin:0; }
+.shift-totals>div { display:flex; justify-content:space-between; align-items:baseline; gap:20px; padding:9px 0; }
+.shift-totals dd { margin:0; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.shift-total-line { border-top:1px solid var(--border); font-weight:700; margin-top:8px; }
+.shift-report-columns form { display:grid; gap:10px; }
+.shift-report-columns form label { margin-top:8px; }
+.shift-form-error { color:var(--danger); }
+.shift-table { width:100%; border-collapse:collapse; }
+.shift-table th { text-align:left; color:var(--muted); font-size:.85rem; }
+.shift-movement-heading { color:var(--text); }
+.shift-movement-table thead th { background:var(--text); color:#fff; border-bottom:0; box-shadow:none; }
+.shift-table th,.shift-table td { padding:12px; border-bottom:1px solid var(--border); vertical-align:top; }
+.shift-table .shift-money { text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.shift-table small { display:block; color:var(--muted); margin-top:5px; }
+.shift-note { font-size:.85rem; color:var(--muted); }
+.shift-close-breakdown { max-height:280px; overflow:auto; }
+.shift-inline-error { color:var(--danger); margin-top:12px; }
+.exchange-form { margin:24px 0; }
+.exchange-lines { display:grid; gap:12px; }
+.exchange-line { display:grid; grid-template-columns:minmax(0,1fr) 100px auto; gap:12px; align-items:end; }
+.exchange-summary { padding:16px 0; font-weight:700; }
+.shift-check { display:flex; gap:10px; align-items:start; margin:16px 0; }
+.shift-check input { width:auto; }
+.shift-print-summary { display:none; }
+@media (max-width:720px) { .shift-report-columns,.shift-meta { grid-template-columns:1fr; } .exchange-line { grid-template-columns:1fr; } .shift-table { min-width:580px; } }
+@media print {
+    @page { size:80mm auto; margin:3mm; }
+    body * { visibility:hidden; }
+    #shift-report,#shift-report * { visibility:visible; }
+    #shift-report { position:absolute; left:0; top:0; width:100%; max-width:74mm; box-sizing:border-box; box-shadow:none; border:0; border-radius:0; background:white; color:black; padding:2mm; margin:0; font:9pt/1.3 ui-monospace,SFMono-Regular,Consolas,monospace; }
+    .shift-no-print,.shift-report-detail { display:none !important; }
+    .shift-print-summary { display:block; }
+    .shift-print-heading { display:grid; gap:3px; padding-bottom:8px; border-bottom:1px dashed #555; text-align:center; }
+    .shift-print-heading strong { font-size:11pt; }
+    .shift-print-summary h3 { margin:12px 0 4px; padding-bottom:3px; border-bottom:1px dashed #777; font-size:9pt; text-transform:uppercase; }
+    .shift-print-meta,.shift-print-totals { margin:0; }
+    .shift-print-meta>div,.shift-print-totals>div { display:flex; justify-content:space-between; align-items:baseline; gap:8px; padding:2px 0; }
+    .shift-print-meta dt,.shift-print-totals dt { overflow-wrap:anywhere; }
+    .shift-print-meta dd,.shift-print-totals dd { margin:0; white-space:nowrap; text-align:right; font-variant-numeric:tabular-nums; }
+    .shift-print-emphasis { margin-top:3px; padding-top:4px !important; border-top:1px solid #555; font-weight:700; }
+    .shift-print-notes { border-top:1px dashed #777; padding-top:5px; overflow-wrap:anywhere; }
+    .shift-print-summary footer { margin-top:10px; padding-top:5px; border-top:1px dashed #555; text-align:center; }
+    .shift-table th,.shift-table td { color:black; border-color:#999; }
+    .table-wrap { overflow:visible; } .shift-table { min-width:0; font-size:10pt; }
+}

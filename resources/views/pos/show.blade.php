@@ -3,6 +3,7 @@
 @section('title', 'Receipt '.$sale->receipt?->receipt_number)
 
 @section('content')
+@include('cash-drawers.errors')
     @php
         $taxBreakdown = $sale->taxBreakdown();
         $discountBreakdown = $sale->discountBreakdown();
@@ -118,7 +119,12 @@
                 <div><span>VAT-exempt sales</span><strong>₱{{ number_format($taxBreakdown['vat_exempt_sales'], 2) }}</strong></div>
                 <div class="receipt-total"><span>TOTAL</span><strong>₱{{ number_format($sale->total_amount, 2) }}</strong></div>
                 <div><span>Payment method</span><strong>{{ strtoupper($sale->payment_method) }}{{ $sale->payment?->payment_provider ? ' — '.$sale->payment->payment_provider : '' }}</strong></div>
-                <div><span>{{ $sale->payment_method === 'cash' ? 'Cash received' : 'Amount received' }}</span><strong>₱{{ number_format($sale->payment?->amount_paid ?? 0, 2) }}</strong></div>
+                @if ($replacementExchange)
+                    <div><span>Exchange credit from {{ $replacementExchange->original?->receipt?->receipt_number ?? 'original receipt' }}</span><strong>₱{{ number_format($replacementExchange->refund->refund_amount,2) }}</strong></div>
+                    <div><span>{{ $replacementExchange->difference<0 ? 'Difference refunded' : 'Additional payment collected' }}</span><strong>₱{{ number_format(abs($replacementExchange->difference),2) }}</strong></div>
+                @else
+                    <div><span>{{ $sale->payment_method === 'cash' ? 'Cash received' : 'Amount received' }}</span><strong>₱{{ number_format($sale->payment?->amount_paid ?? 0, 2) }}</strong></div>
+                @endif
                 @if ($sale->payment?->reference_ciphertext || $sale->payment?->card_last4)
                     <div><span>Payment reference</span><strong class="receipt-mono"><x-masked-value :value="$sale->payment->maskedReference()" /></strong></div>
                 @endif
@@ -171,6 +177,7 @@
                     @csrf
                     <input type="hidden" name="manager_authorization_token" id="refund-manager-auth-token">
                     <input type="hidden" name="register_id" id="refund-register-id">
+                    <input type="hidden" name="operation_key" value="{{ old('operation_key', (string)\Illuminate\Support\Str::uuid()) }}">
                     <div class="form-grid">
                         @foreach ($sale->saleDetails as $line)
                             <div>
@@ -181,6 +188,13 @@
                                     max="{{ $line->refundableQuantity() }}" value="0" name="items[{{ $line->sale_detail_id }}]">
                             </div>
                         @endforeach
+                        <div>
+                            <label for="refund-condition">Returned item condition</label>
+                            <select id="refund-condition" name="condition" required><option value="resellable">Resellable — restore available stock</option><option value="damaged">Damaged — keep out of available stock</option></select>
+                        </div>
+                        @if ($sale->payment_method!=='cash')
+                            <div><label for="refund-settlement-reference">{{ ucfirst($sale->payment_method) }} refund reference</label><input id="refund-settlement-reference" name="settlement_reference" maxlength="100" required><p class="shift-note">Complete the refund in the original payment app or terminal before submitting.</p></div>
+                        @endif
                         <div>
                             <label for="refund_reason">Reason</label>
                             <select id="refund_reason" name="reason" required>
@@ -205,6 +219,10 @@
         </div>
     @endif
     {{-- Refund history --}}
+    @include('pos.exchange-panel')
+    @if ($originalExchanges->isNotEmpty())
+        <div class="card"><h2>Exchanges</h2>@foreach ($originalExchanges as $exchange)<p>Exchange #{{ $exchange->id }} · <a href="{{ route('pos.show',$exchange->replacement_sale_id) }}">Replacement receipt {{ $exchange->replacement?->receipt?->receipt_number }}</a> · Difference ₱{{ number_format($exchange->difference,2) }}</p>@endforeach</div>
+    @endif
     @if ($sale->refunds->isNotEmpty())
         <div style="max-width: 560px; margin: 1.5rem auto 0;">
             <div class="card">
@@ -233,6 +251,7 @@
 @endsection
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('css/shift.css') }}">
 <style>
     .receipt-complete-banner { display: grid; grid-template-columns: minmax(180px, 1fr) auto auto; align-items: center; gap: 18px; margin-bottom: 16px; padding: 18px 20px; border: 1px solid rgba(45,138,78,.16); border-radius: 16px; background: linear-gradient(115deg, #f0f7f1, #fff); box-shadow: 0 8px 24px rgba(32,60,61,.07); }
     .receipt-complete-banner h1 { margin: 2px 0; font-size: 1.35rem; }
@@ -315,6 +334,7 @@
 @endpush
 
 @push('scripts')
+<script src="{{ asset('js/exchange-form.js') }}" defer></script>
 <script>
     const checkoutKeyToClear = @json($checkoutKeyToClear);
     if (checkoutKeyToClear) {
@@ -381,7 +401,9 @@
 
             const authorization = await window.requestManagerAuthorization({
                 action: 'sale_refund',
-                details: { sale_id: {{ (int) $sale->transaction_id }}, items },
+                details: { sale_id: {{ (int) $sale->transaction_id }}, items,
+                    condition: refundForm.elements.condition.value, operation_key: refundForm.elements.operation_key.value,
+                    settlement_reference: refundForm.elements.settlement_reference?.value.trim() || null },
                 reason: document.getElementById('refund_reason').value,
                 notes: document.getElementById('refund_notes').value.trim()
             });

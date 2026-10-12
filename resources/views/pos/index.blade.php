@@ -3,6 +3,7 @@
 @section('title', 'Point of Sale')
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('css/shift.css') }}">
 <style>
     /* ===== Main POS Frame ===== */
     .pos-container {
@@ -933,6 +934,9 @@
                 <a class="pos-header-action pos-header-ewallet {{ ($pendingCardCount ?? 0) > 0 ? 'has-pending' : '' }}" href="{{ route('pos.pending-card.index') }}" aria-label="Pending Card, {{ $pendingCardCount ?? 0 }} payments">
                     <span>Pending Card</span><span class="pos-header-badge" id="pending-card-count-badge">{{ $pendingCardCount ?? 0 }}</span>
                 </a>
+                <a class="pos-header-action" href="{{ route('cash-drawer.movements') }}">Cash movements</a>
+                <a class="pos-header-action" href="{{ route('pos.receipts.search') }}">Find receipt</a>
+                <a class="pos-header-action" id="last-shift-report" hidden>Last shift report</a>
                 <button type="button" class="pos-header-action pos-header-shift" id="drawer-toggle-btn">
                     <span class="pos-header-shift-copy">
                         <span id="drawer-toggle-label">Open Shift</span>
@@ -1068,14 +1072,7 @@
                 <div id="discount-description" aria-live="polite"></div>
             </section>
 
-            <section class="pos-panel" aria-labelledby="crm-customer-lookup-title">
-                <div class="pos-section-title" id="crm-customer-lookup-title">CRM customer lookup (read-only)</div>
-                <div class="pos-field">
-                    <label for="crm-customer-search-input">Search CRM customers</label>
-                    <input id="crm-customer-search-input" type="search" maxlength="100" autocomplete="off" aria-controls="crm-customer-search-results">
-                </div>
-                <div id="crm-customer-search-results" class="pos-customer-results" role="status" aria-live="polite" hidden></div>
-            </section>
+
 
         </aside>
     </div>
@@ -1136,17 +1133,17 @@
             <span class="pos-modal-title">Close Register / End Shift</span>
             <button type="button" class="pos-remove-link" onclick="closeModal('close-register-modal')">✕</button>
         </div>
-        <div style="display:flex; flex-direction:column; gap:0.4rem; font-size:0.9rem;">
-            <div style="display:flex; justify-content:space-between;"><span class="muted">Opening Cash:</span><span id="close-modal-opening" style="font-weight:700;">₱0.00</span></div>
-            <div style="display:flex; justify-content:space-between;"><span class="muted">Cash Sales:</span><span id="close-modal-sales" style="font-weight:700;">₱0.00</span></div>
-            <div style="display:flex; justify-content:space-between; border-top:1px solid var(--rule-faint); padding-top:0.35rem;"><span class="muted">Expected in Drawer:</span><span id="close-modal-expected" style="font-weight:800;">₱0.00</span></div>
-        </div>
+        <dl class="shift-totals shift-close-breakdown" id="close-shift-breakdown"></dl>
+        <a id="close-shift-report-link" target="_blank" rel="noopener">View full shift report</a>
         <div>
-            <label for="close-actual-input">Actual Cash Counted</label>
-            <input id="close-actual-input" type="number" step="0.01" min="0" placeholder="Count and enter total cash in drawer">
+            <label for="close-actual-input">Money on hand — actual cash counted</label>
+            <input id="close-actual-input" type="number" step="0.01" min="0" required placeholder="Count and enter total cash in drawer">
         </div>
         <div class="pos-diff-banner pos-diff-balanced" id="close-diff-banner">Difference: ₱0.00</div>
-        <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:0.5rem;">
+        <label for="close-reconciliation-notes">Explanation of shortage / overage</label>
+        <textarea id="close-reconciliation-notes" class="input-lg bordered" maxlength="1000" rows="2"></textarea>
+        <p class="shift-inline-error" role="alert" id="close-shift-error" hidden></p>
+        <div class="shift-actions">
             <button type="button" class="btn btn-secondary" onclick="closeModal('close-register-modal')">Cancel</button>
             <button type="button" class="btn" id="confirm-close-btn">Confirm & Close Shift</button>
         </div>
@@ -1186,6 +1183,7 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('js/shift-timer.js') }}"></script>
 <script>
     const products = @json($productsJson ?? []);
     const vatRate = Number(@json($vatRate ?? 0.12));
@@ -2505,123 +2503,10 @@
         }
     });
 
-    const crmCustomerSearchUrl = @json(route('pos.customers.crm-search'));
-    const crmCustomerSyncUrl = @json(route('pos.customers.crm-sync'));
-    const crmCustomerInput = document.getElementById('crm-customer-search-input');
-    const crmCustomerResults = document.getElementById('crm-customer-search-results');
-    let crmCustomerSearchTimer = null;
-    let crmCustomerSearchRequest = null;
-    let crmCustomerSearchSequence = 0;
-
-    async function renderCrmCustomerMatches(query) {
-        clearTimeout(crmCustomerSearchTimer);
-        crmCustomerSearchRequest?.abort();
-        crmCustomerSearchRequest = null;
-        crmCustomerResults.replaceChildren();
-
-        if (!query) {
-            crmCustomerResults.hidden = true;
-            return;
-        }
-
-        const sequence = ++crmCustomerSearchSequence;
-        crmCustomerResults.hidden = false;
-        crmCustomerResults.textContent = 'Searching CRM customers…';
-
-        crmCustomerSearchTimer = setTimeout(async () => {
-            const controller = new AbortController();
-            crmCustomerSearchRequest = controller;
-            const url = new URL(crmCustomerSearchUrl, window.location.origin);
-            url.searchParams.set('q', query);
-
-            try {
-                const response = await fetch(url.toString(), {
-                    method: 'GET',
-                    credentials: 'same-origin',
-                    headers: { Accept: 'application/json' },
-                    signal: controller.signal
-                });
-                if (!response.ok) throw new Error('CRM lookup unavailable.');
-
-                const payload = await response.json();
-                if (sequence !== crmCustomerSearchSequence || query !== crmCustomerInput.value.trim()) return;
-                if (!Array.isArray(payload.customers) || !Number.isInteger(payload.meta?.total)) {
-                    throw new Error('CRM lookup unavailable.');
-                }
-
-                crmCustomerResults.replaceChildren();
-                if (!payload.customers.length) {
-                    crmCustomerResults.textContent = 'No active CRM customers found.';
-                    return;
-                }
-
-                const summary = document.createElement('div');
-                summary.className = 'pos-customer-result';
-                summary.textContent = `Showing ${payload.customers.length} of ${payload.meta.total} active CRM customers`;
-                crmCustomerResults.appendChild(summary);
-
-                payload.customers.forEach(customer => {
-                    const result = document.createElement('div');
-                    result.className = 'pos-customer-result';
-                    const discount = customer.discount_eligibility?.eligible
-                        ? `eligible for ${customer.discount_eligibility.type}`
-                        : 'no verified CRM discount eligibility';
-                    const summary = document.createElement('div');
-                    summary.textContent = `${customer.display_name} · ${customer.customer_code} · ${customer.status} · ${customer.loyalty.points} pts (${customer.loyalty.label}) · ${discount}`;
-                    const select = document.createElement('button');
-                    select.type = 'button';
-                    select.className = 'pos-customer-result';
-                    select.textContent = 'Use this CRM customer for checkout';
-                    select.addEventListener('click', async () => {
-                        select.disabled = true;
-                        select.textContent = 'Syncing CRM customer…';
-                        try {
-                            const response = await fetch(crmCustomerSyncUrl, {
-                                method: 'POST',
-                                credentials: 'same-origin',
-                                headers: {
-                                    Accept: 'application/json',
-                                    'Content-Type': 'application/json',
-                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
-                                },
-                                body: JSON.stringify({ external_id: customer.external_id })
-                            });
-                            const payload = await response.json();
-                            const posCustomer = payload.customer;
-                            if (!response.ok || !Number.isInteger(posCustomer?.customer_id) || posCustomer.external_id !== customer.external_id) {
-                                throw new Error(payload.error?.message || 'CRM customer could not be selected.');
-                            }
-
-                            selectedCustomerId = String(posCustomer.customer_id);
-                            customerInput.value = `${customer.display_name} · CRM ${customer.customer_code}`;
-                            customerLoyaltyBadge.textContent = `${customer.display_name} · CRM ${customer.customer_code} · ${customer.loyalty.points} loyalty points · ${discount}`;
-                            select.textContent = 'Selected for this checkout';
-                        } catch (error) {
-                            select.disabled = false;
-                            select.textContent = 'Use this CRM customer for checkout';
-                            const message = document.createElement('div');
-                            message.className = 'pos-customer-result';
-                            message.setAttribute('role', 'alert');
-                            message.textContent = error.message || 'CRM customer could not be selected.';
-                            result.appendChild(message);
-                        }
-                    });
-                    result.append(summary, select);
-                    crmCustomerResults.appendChild(result);
-                });
-            } catch (error) {
-                if (error.name === 'AbortError' || sequence !== crmCustomerSearchSequence) return;
-                crmCustomerResults.replaceChildren();
-                crmCustomerResults.textContent = 'CRM customer lookup is unavailable. Try again.';
-            }
-        }, 220);
-    }
-
-    crmCustomerInput.addEventListener('input', () => renderCrmCustomerMatches(crmCustomerInput.value.trim()));
-
     // Submit Sale Handler
     submitSaleBtn.addEventListener('click', () => {
         if (checkoutSubmissionStarted) return;
+        if (!currentDrawer) { openModal('open-register-modal'); return; }
 
         if (cart.length === 0) {
             alert('Add at least one item to the receipt.');
@@ -2751,33 +2636,57 @@
     const topStatusBadge = document.getElementById('top-status-badge');
     const topStatusDot = document.getElementById('top-status-dot');
     const topStatusText = document.getElementById('top-status-text');
+    let closingExpected = null;
+
+    function renderCloseBreakdown(report) {
+        const list = document.getElementById('close-shift-breakdown');
+        list.replaceChildren();
+        const rows = [ ['Opening float', report.opening_cash], ['Sales before returns',report.gross_sales],
+            ['Returns processed',report.refunds], ['Net sales',report.net_sales],
+            ['Cash sales collected',report.cash_by_kind.sale || 0], ['Other Cash In',report.cash_by_kind.manual_in || 0],
+            ['Other Cash Out',-(report.cash_by_kind.manual_out || 0)], ['Cash refunds',-(report.cash_by_kind.refund || 0)],
+            ['Exchange cash difference',report.cash_by_kind.exchange || 0], ['Transfers In',report.cash_by_kind.transfer_in || 0],
+            ['Transfers Out',-(report.cash_by_kind.transfer_out || 0)], ['Cancelled transfer returned',report.cash_by_kind.transfer_reversal || 0],
+            ['Total Cash In',report.cash_in], ['Total Cash Out',report.cash_out],
+            ['Card — net settlement',report.payment_totals.card], ['E-wallet — net settlement',report.payment_totals['e-wallet']],
+            ['Expected cash',report.expected_cash] ];
+        if (report.brought_forward) rows.splice(1,0,['Balance brought forward',report.brought_forward]);
+        rows.forEach(([label,amount]) => { const row=document.createElement('div'); const dt=document.createElement('dt');
+            const dd=document.createElement('dd'); dt.textContent=label; dd.textContent=formatMoney(amount); row.append(dt,dd); list.append(row); });
+    }
 
     async function checkDrawerStatus() {
         try {
             const res = await fetch('{{ route("cash-drawer.status") }}');
+            if (!res.ok) throw new Error('Shift status unavailable.');
             const data = await res.json();
             currentDrawer = data.drawer;
             const shiftTime = document.getElementById('drawer-toggle-time');
+            const lastReport = document.getElementById('last-shift-report');
+            lastReport.hidden = !data.last_report_url;
+            if (data.last_report_url) lastReport.href = data.last_report_url;
 
             if (data.has_open_drawer && currentDrawer) {
                 topStatusDot.className = 'pos-status-dot-active';
                 topStatusText.textContent = 'ACTIVE';
                 topStatusBadge.classList.remove('is-inactive');
                 document.getElementById('drawer-toggle-label').textContent = 'Close Shift';
-                shiftTime.textContent = currentDrawer.opened_at ? 'Opened ' + formatShiftTime(currentDrawer.opened_at) : '';
+                if (currentDrawer.opened_at) window.PosShiftTimer.start(shiftTime,currentDrawer.opened_at,data.server_time);
                 document.getElementById('drawer-toggle-amount').textContent = '(' + formatMoney(currentDrawer.expected_cash) + ')';
                 drawerToggleBtn.onclick = () => {
                     const heldCount = loadHeldState().items.length;
                     if (heldCount > 0 && !window.confirm(`${heldCount} held ${heldCount === 1 ? 'transaction is' : 'transactions are'} still on this register. They will remain saved for up to 24 hours. Continue to Close Shift?`)) return;
-                    document.getElementById('close-modal-opening').textContent = formatMoney(currentDrawer.opening_cash);
-                    const sales = Math.max(0, currentDrawer.expected_cash - currentDrawer.opening_cash);
-                    document.getElementById('close-modal-sales').textContent = formatMoney(sales);
-                    document.getElementById('close-modal-expected').textContent = formatMoney(currentDrawer.expected_cash);
-                    document.getElementById('close-actual-input').value = currentDrawer.expected_cash;
+                    closingExpected = Number(currentDrawer.expected_cash);
+                    renderCloseBreakdown(data.report);
+                    document.getElementById('close-shift-report-link').href = '{{ url('/cash-drawer') }}/' + currentDrawer.drawer_id + '/report';
+                    document.getElementById('close-actual-input').value = '';
+                    document.getElementById('close-reconciliation-notes').value = '';
+                    document.getElementById('close-shift-error').hidden = true;
                     updateCloseDiff();
                     openModal('close-register-modal');
                 };
             } else {
+                window.PosShiftTimer.stop();
                 topStatusDot.className = 'pos-status-dot-closed';
                 topStatusText.textContent = 'NO SHIFT';
                 topStatusBadge.classList.add('is-inactive');
@@ -2803,9 +2712,11 @@
     function updateCloseDiff() {
         if (!currentDrawer) return;
         const actual = parseNumeric(document.getElementById('close-actual-input').value);
-        const expected = parseFloat(currentDrawer.expected_cash);
+        const expected = closingExpected ?? parseFloat(currentDrawer.expected_cash);
         const diff = actual - expected;
         const banner = document.getElementById('close-diff-banner');
+        if (!document.getElementById('close-actual-input').value) { banner.textContent='Count and enter money on hand.'; return; }
+        document.getElementById('close-reconciliation-notes').required = Math.abs(diff) >= .01;
 
         if (Math.abs(diff) < 0.01) {
             banner.className = 'pos-diff-banner pos-diff-balanced';
@@ -2844,21 +2755,28 @@
     });
 
     document.getElementById('confirm-close-btn').addEventListener('click', async () => {
+        const button = document.getElementById('confirm-close-btn');
+        const error = document.getElementById('close-shift-error');
+        if (!document.getElementById('close-actual-input').reportValidity() || !document.getElementById('close-reconciliation-notes').reportValidity() || button.disabled) return;
         const actual = parseNumeric(document.getElementById('close-actual-input').value);
         if (actual < 0) { alert('Invalid actual cash amount.'); return; }
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
 
+        button.disabled = true;
+        try {
         const res = await fetch('{{ route("cash-drawer.close") }}', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
-            body: JSON.stringify({ actual_cash: actual })
+            body: JSON.stringify({ actual_cash: actual, expected_cash: closingExpected, reconciliation_notes: document.getElementById('close-reconciliation-notes').value.trim() })
         });
         const data = await res.json();
+        if (!res.ok) throw new Error(Object.values(data.errors || {}).flat().join(' ') || 'Shift could not be closed. Try again.');
         if (data.status === 'ok') {
-            alert(data.message);
             closeModal('close-register-modal');
             checkDrawerStatus();
         }
+        } catch (e) { error.hidden=false; error.textContent=e.message || 'Connection failed. Your shift remains open.'; }
+        finally { button.disabled=false; }
     });
 
     discountSelect.addEventListener('change', async () => {
@@ -3073,5 +2991,6 @@
     renderCart();
     renderSearchResults();
     checkDrawerStatus();
+    window.setInterval(checkDrawerStatus, 15000);
 </script>
 @endpush

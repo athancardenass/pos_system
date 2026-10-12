@@ -21,9 +21,9 @@
 <div class="manager-pin-backdrop" id="manager-pin-modal" role="dialog" aria-modal="true" aria-labelledby="manager-pin-title" hidden>
     <form class="manager-pin-panel" id="manager-pin-form">
         <h2 class="manager-pin-heading" id="manager-pin-title">Manager approval required</h2>
-        <p class="manager-pin-copy" id="manager-pin-copy">Ask a manager to enter their PIN to continue.</p>
+        <p class="manager-pin-copy" id="manager-pin-copy">Ask a manager or an assigned Supervisor to enter their approval PIN.</p>
         <div class="manager-pin-entry" id="manager-pin-entry">
-            <label for="manager-pin-input">Manager PIN</label>
+            <label for="manager-pin-input">Approval PIN</label>
             <input id="manager-pin-input" class="input-lg bordered" type="password" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="6" autocomplete="one-time-code" required>
             <div class="manager-pin-keypad" aria-label="Numeric PIN keypad">
                 @foreach (['1', '2', '3', '4', '5', '6', '7', '8', '9', 'clear', '0', 'backspace'] as $key)
@@ -60,6 +60,7 @@
         if (!modal || !form) return;
 
         const managerRole = @json((bool) $isManager);
+        const supervisorRole = @json((bool) auth()->user()?->hasRole('Supervisor'));
         const endpoint = @json(route('manager-authorization.authorize'));
         const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
         const pinEntry = document.getElementById('manager-pin-entry');
@@ -124,8 +125,9 @@
                 reasonSelect.focus();
                 return;
             }
-            if (!managerRole && !/^\d{4,6}$/.test(pinInput.value)) {
-                message.textContent = 'Enter a 4–6 digit manager PIN.';
+            const pinRequired = !managerRole && !(supervisorRole && !pending.pinPrompt);
+            if (pinRequired && !/^\d{4,6}$/.test(pinInput.value)) {
+                message.textContent = 'Enter a 4–6 digit approval PIN.';
                 pinInput.focus();
                 return;
             }
@@ -139,7 +141,7 @@
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
                     body: JSON.stringify({
                         action: pending.action,
-                        pin: managerRole ? null : pinInput.value,
+                        pin: managerRole || (supervisorRole && !pending.pinPrompt) ? null : pinInput.value,
                         register_id: registerId(),
                         details: pending.details,
                         reason: reason || null,
@@ -151,6 +153,16 @@
                     pinInput.value = '';
                     submitButton.disabled = false;
                     const failureMessage = data.message || Object.values(data.errors || {}).flat()[0] || 'Manager authorization failed.';
+                    if (data.pin_required && supervisorRole) {
+                        pending.pinPrompt = true;
+                        pinEntry.hidden = false;
+                        pinInput.required = true;
+                        document.getElementById('manager-pin-title').textContent = 'Approval required';
+                        document.getElementById('manager-pin-copy').textContent = 'Enter the PIN of a Supervisor with this permission or a Manager.';
+                        message.textContent = failureMessage;
+                        pinInput.focus();
+                        return;
+                    }
                     message.textContent = failureMessage;
                     if (managerRole && !pending.requiresReason) {
                         window.alert(failureMessage);
@@ -158,7 +170,7 @@
                         return;
                     }
                     if (Number(data.locked_for) > 0) showLock(Number(data.locked_for));
-                    else if (!managerRole) pinInput.focus();
+                    else if (!managerRole && (!supervisorRole || pending.pinPrompt)) pinInput.focus();
                     return;
                 }
                 finish({ token: data.token || null, approver: data.approved_by, reason, notes });
@@ -181,20 +193,38 @@
                 });
             }
 
+            if (supervisorRole && !settings.requiresReason) {
+                pending = { ...settings, pinPrompt: false, resolve: () => {} };
+                pinEntry.hidden = true;
+                pinInput.required = false;
+                reasonPanel.hidden = true;
+                document.getElementById('manager-pin-title').textContent = 'Check assigned permission';
+                document.getElementById('manager-pin-copy').textContent = 'Your assigned permission will be checked. If the action is outside it, enter an authorized approval PIN.';
+                message.textContent = '';
+                modal.hidden = false;
+                return new Promise(resolve => {
+                    pending.resolve = resolve;
+                    submitAuthorization();
+                });
+            }
+
             return new Promise(resolve => {
                 pending = { ...settings, resolve };
-                pinEntry.hidden = managerRole;
-                pinInput.required = !managerRole;
+                pending.pinPrompt = false;
+                pinEntry.hidden = managerRole || supervisorRole;
+                pinInput.required = !managerRole && !supervisorRole;
                 reasonPanel.hidden = !settings.requiresReason;
-                document.getElementById('manager-pin-title').textContent = managerRole ? 'Confirm sensitive action' : 'Manager approval required';
+                document.getElementById('manager-pin-title').textContent = managerRole ? 'Confirm sensitive action' : supervisorRole ? 'Check assigned permission' : 'Approval required';
                 document.getElementById('manager-pin-copy').textContent = managerRole
                     ? 'Record a reason for this action.'
-                    : 'Ask a manager to enter their PIN to continue.';
+                    : supervisorRole
+                        ? 'Your assigned permission will be checked. If the action is outside it, enter an authorized approval PIN.'
+                        : 'Ask a manager or an assigned Supervisor to enter their approval PIN.';
                 message.textContent = '';
                 pinInput.value = '';
                 modal.hidden = false;
                 modal.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                requestAnimationFrame(() => (managerRole && settings.requiresReason ? reasonSelect : pinInput).focus());
+                requestAnimationFrame(() => ((managerRole || supervisorRole) && settings.requiresReason ? reasonSelect : (supervisorRole ? submitButton : pinInput)).focus());
             });
         };
 

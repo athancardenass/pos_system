@@ -9,7 +9,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class SaleRefund extends Model
 {
     protected $table = 'sale_refund';
+
     protected $primaryKey = 'refund_id';
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -21,6 +23,11 @@ class SaleRefund extends Model
         'is_full_refund',
         'window_override',
         'refunded_at',
+        'operation_key',
+        'request_fingerprint',
+        'drawer_id',
+        'payment_method',
+        'settlement_reference',
     ];
 
     protected function casts(): array

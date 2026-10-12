@@ -28,7 +28,7 @@ class LoginController extends Controller
             $request->session()->regenerate();
 
             $employee = Auth::user();
-            $target = $employee && $employee->hasRole('Cashier')
+            $target = $employee && $employee->hasRole('Cashier', 'Supervisor')
                 ? route('pos.index')
                 : route('dashboard');
 

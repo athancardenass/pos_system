@@ -1,0 +1,18 @@
+# Progress — plan: 2026-10-12-shift-reconciliation.md
+
+Design basis approved in chat; remaining defaults explicitly approved. Implementing inline. Ruling: keep existing checkout and current uncommitted UI edits; no worktree/commits because the user asks to build into this running POS. Legacy checkout without drawer remains compatible, while new money operations require an open drawer. Reports disclose brought-forward legacy balances. No invented damaged-stock API.
+
+Pre-flight: ledger/report interfaces shared by cash movements, transfers, checkout, returns and exchange. Exchange reuses return/checkout with internal movement suppression; reports count exchange return/replacement full values but drawer settlement only once. Lock active drawer before sale/products; lock transfer drawer pair in numeric order. Task status pending.
+
+Task 1: complete — ShiftAccountingTest RED (missing ledger + duplicate opening/discrepancy failures) → GREEN 5 tests / 17 assertions.
+Builder review: original payment method only for exchange differences; CRM events reflect net new spend/refund only, avoiding minimum-point duplication on same-price exchange. Existing signed-in-manager approval behavior is preserved; cashier requires PIN grant for all sensitive money actions.
+
+Tasks 2–5: complete. Transfer tests 4 / 11, cross-day/condition/payment/refund-retry tests 4 / 14, UI + initial exchange checks 8 / 58 passed. Added Find receipt because the front cashier otherwise had no entry to an older receipt (2 / 5 RED→GREEN).
+
+Review repairs: paid-cent allocation (three discounted lines, full credit 100.00) RED→GREEN; loyalty inheritance for later equal/upgraded replacement refunds RED→GREEN; removed oversized internal CHAR(36) key; normalized sparse replacement indexes; refund approval binds disposition/settlement/UUID; HTTP refund UUID required; current locking reads protect retries; visible form errors; pending lifecycle acquires cashier/drawer before pending/products/inventory, and closed shifts cannot start pending payments (RED→GREEN). Stock locks are ordered and read current quantities. Exchange commit quotes current locked prices and rechecks final settlement.
+
+Task 6 verification in progress. First full suite: 169 / 1,047; updated suite: 173 / 1,060. Isolated MariaDB and Node timer tests passed. Live migrations ran with private backup; actual POS rows unchanged by test data (all test records isolated). Independent reviewer delivered material findings and confirmed most repairs before its review session ended; remaining locking/price fixes are being verified directly rather than claiming a final clean reviewer verdict.
+
+Task 6: complete — final full `php artisan test --compact`: 177 passed / 1,074 assertions. Two Node timer tests passed. MariaDB concurrent stale-price race rejected with no refund/exchange writes. Browser exchange completed with return credit 100 / replacement 150 / actual additional payment 50, then balanced closure and desktop/mobile report inspection. Cash refund/cheaper-exchange funding checks RED→GREEN (2 / 9). Blade compilation, JS syntax, whitespace and scoped mechanical UI checks passed. All required material repairs verified. No deferred minor findings. Local source changes are uncommitted as intended. Private backups retained; scratch MariaDB database removed.
+
+Runtime note: restarted POS/MySQL and scheduler/webhook worker after the interrupted session. Current Inventory connection failure is retained/retried; no successful cross-laptop delivery is claimed. Damaged-return quarantine remains a POS record until Inventory provides a supported damaged-stock API. Final report screenshot is explicitly synthetic test data.

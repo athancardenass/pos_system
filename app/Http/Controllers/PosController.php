@@ -2,20 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CashDrawer;
-use App\Models\Category;
-use App\Models\Discount;
-use App\Models\PendingEwalletVerification;
 use App\Models\PendingCardVerification;
+use App\Models\PendingEwalletVerification;
 use App\Models\Product;
+use App\Models\SaleExchange;
+use App\Models\SaleRefund;
 use App\Models\SaleTransaction;
-use App\Services\CheckoutService;
+use App\Services\AuditLogger;
 use App\Services\CardVerificationService;
+use App\Services\CheckoutService;
+use App\Services\EwalletVerificationService;
 use App\Services\Integration\CRM\CustomerService as CrmCustomerService;
 use App\Services\Integration\HR\EmployeeService as HrmsEmployeeService;
 use App\Services\Integration\Inventory\ProductLookupService as InventoryProductLookupService;
-use App\Services\AuditLogger;
-use App\Services\EwalletVerificationService;
 use App\Services\ManagerAuthorizationService;
 use App\Services\ReceiptSettingsService;
 use App\Services\RefundService;
@@ -36,8 +35,7 @@ class PosController extends Controller
         private readonly SaleService $saleService,
         private readonly ManagerAuthorizationService $authorizations,
         private readonly CardVerificationService $cardVerifications,
-    ) {
-    }
+    ) {}
 
     public function index(VatSettingsService $vatSettings): View
     {
@@ -64,6 +62,14 @@ class PosController extends Controller
         return response()->json([
             'stocks' => $this->saleService->getProductStockSnapshot(),
         ]);
+    }
+
+    public function findReceipt(Request $request): View
+    {
+        $data = $request->validate(['q' => 'nullable|string|max:100']);
+        $query = trim((string) ($data['q'] ?? ''));
+
+        return view('pos.receipt-search', ['query' => $query, 'sale' => $this->saleService->findReceipt($query)]);
     }
 
     /** Search CRM customers when the audited CRM integration is configured. */
@@ -581,8 +587,7 @@ class PosController extends Controller
         Request $request,
         SaleTransaction $saleTransaction,
         ReceiptSettingsService $receiptSettings,
-    ): View
-    {
+    ): View {
         $sale = $this->saleService->loadSaleForReceipt($saleTransaction);
         $daysOld = $sale->transaction_date
             ? (int) $sale->transaction_date->diffInDays(now())
@@ -600,10 +605,13 @@ class PosController extends Controller
             'receiptSettings' => $receiptSettings->forReceipt($sale->receipt),
             'isReprint' => $request->boolean('reprint'),
             'saleCompleted' => $request->boolean('completed') && ! $request->boolean('reprint'),
+            'exchangeProducts' => Product::where('is_active', true)->orderBy('product_name')->get(['product_id', 'product_name', 'unit_price']),
+            'replacementExchange' => SaleExchange::with(['original.receipt', 'refund'])->where('replacement_sale_id', $sale->transaction_id)->first(),
+            'originalExchanges' => SaleExchange::with('replacement.receipt')->where('original_sale_id', $sale->transaction_id)->get(),
         ]);
     }
 
-    public function slip(\App\Models\SaleRefund $refund): View
+    public function slip(SaleRefund $refund): View
     {
         $refund->load(['sale.receipt', 'sale.employee', 'items.saleDetail.product', 'employee']);
         $sale = $this->saleService->loadSaleForReceipt($refund->sale);
@@ -618,6 +626,9 @@ class PosController extends Controller
             'notes' => 'nullable|string|max:255',
             'items' => 'nullable|array',
             'items.*' => 'nullable|numeric|min:0|decimal:0,3',
+            'condition' => 'nullable|in:resellable,damaged',
+            'operation_key' => 'required|uuid',
+            'settlement_reference' => 'nullable|string|max:100',
             'manager_authorization_token' => 'nullable|string|max:100',
             'register_id' => 'nullable|string|max:50',
         ]);
@@ -628,10 +639,15 @@ class PosController extends Controller
             static fn (float $quantity) => $quantity > 0,
         );
 
+        if (isset($data['items']) && ! count($items)) {
+            throw ValidationException::withMessages(['items' => 'Select at least one returned quantity.']);
+        }
+
         $approval = $this->authorizations->requireGrant(
             $request,
             'sale_refund',
-            ['sale_id' => (int) $saleTransaction->transaction_id, 'items' => $items],
+            ['sale_id' => (int) $saleTransaction->transaction_id, 'items' => $items,
+                'condition' => $data['condition'] ?? null, 'operation_key' => $data['operation_key'] ?? null, 'settlement_reference' => $data['settlement_reference'] ?? null],
             $data['manager_authorization_token'] ?? null,
             $data['reason'],
             $data['notes'] ?? null,
@@ -639,13 +655,14 @@ class PosController extends Controller
         );
 
         try {
-            $refund = $refunds->refund($saleTransaction, $items, $data['reason'], $data['notes'] ?? null, $approval);
+            $refund = $refunds->refund($saleTransaction, $items, $data['reason'], $data['notes'] ?? null, $approval,
+                array_intersect_key($data, array_flip(['condition', 'operation_key', 'settlement_reference'])));
         } catch (ValidationException $e) {
-            return back()->with('error', $e->validator->errors()->first('refund') ?: $e->getMessage());
+            return back()->withErrors($e->errors())->withInput();
         }
 
         $msg = $refund->is_full_refund
-            ? 'Sale fully refunded — inventory restored, points reversed.'
+            ? 'Sale fully refunded. Return condition and settlement recorded.'
             : 'Partial refund of ₱'.number_format((float) $refund->refund_amount, 2).' processed.';
 
         return redirect()->route('pos.show', $saleTransaction)->with('status', $msg);

@@ -3,6 +3,8 @@
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CashDrawerController;
+use App\Http\Controllers\DrawerMovementController;
+use App\Http\Controllers\ExchangeController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
@@ -14,6 +16,7 @@ use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ReceiptSettingsController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SupervisorPermissionController;
 use App\Http\Controllers\VatSettingsController;
 use Illuminate\Support\Facades\Route;
 
@@ -22,7 +25,7 @@ Route::get('/', function () {
         return redirect()->route('login');
     }
 
-    return auth()->user()->hasRole('Cashier')
+    return auth()->user()->hasRole('Cashier', 'Supervisor')
         ? redirect()->route('pos.index')
         : redirect()->route('dashboard');
 });
@@ -37,10 +40,11 @@ Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth')->
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', DashboardController::class)->middleware('role:Manager')->name('dashboard');
 
-    Route::middleware('role:Cashier,Manager')->group(function () {
+    Route::middleware('role:Cashier,Manager,Supervisor')->group(function () {
         Route::get('/pos', [PosController::class, 'index'])->name('pos.index');
         Route::post('/pos', [PosController::class, 'store'])->name('pos.store');
         Route::get('/pos/customers/search', [PosController::class, 'searchCustomers'])->name('pos.customers.search');
+        Route::get('/pos/receipts/search',[PosController::class,'findReceipt'])->name('pos.receipts.search');
         Route::get('/pos/customers/crm-search', [PosController::class, 'searchCrmCustomers'])->name('pos.customers.crm-search');
         Route::post('/pos/customers/crm-sync', [PosController::class, 'syncCrmCustomer'])->name('pos.customers.crm-sync');
         Route::get('/pos/integrations/inventory/product', [PosController::class, 'lookupInventoryProduct'])->name('pos.integrations.inventory.product');
@@ -64,10 +68,18 @@ Route::middleware('auth')->group(function () {
         });
         Route::get('/pos/{saleTransaction}', [PosController::class, 'show'])->name('pos.show');
         Route::post('/pos/{saleTransaction}/refund', [PosController::class, 'refund'])->name('pos.refund');
+        Route::post('/pos/{saleTransaction}/exchange/preview', [ExchangeController::class, 'preview'])->name('pos.exchange.preview');
+        Route::post('/pos/{saleTransaction}/exchange', [ExchangeController::class, 'store'])->name('pos.exchange');
         Route::get('/pos/refund/{refund}/slip', [PosController::class, 'slip'])->name('pos.refund.slip');
         Route::post('/cash-drawer/open', [CashDrawerController::class, 'open'])->name('cash-drawer.open');
         Route::post('/cash-drawer/close', [CashDrawerController::class, 'close'])->name('cash-drawer.close');
         Route::get('/cash-drawer/status', [CashDrawerController::class, 'status'])->name('cash-drawer.status');
+        Route::get('/cash-drawer/movements',[DrawerMovementController::class,'index'])->name('cash-drawer.movements');
+        Route::post('/cash-drawer/movements',[DrawerMovementController::class,'store'])->name('cash-drawer.movements.store');
+        Route::post('/cash-drawer/transfers',[DrawerMovementController::class,'transfer'])->name('cash-drawer.transfers.store');
+        Route::post('/cash-drawer/transfers/{transfer}/accept',[DrawerMovementController::class,'accept'])->name('cash-drawer.transfers.accept');
+        Route::post('/cash-drawer/transfers/{transfer}/cancel',[DrawerMovementController::class,'cancel'])->name('cash-drawer.transfers.cancel');
+        Route::get('/cash-drawer/{drawer}/report',[CashDrawerController::class,'report'])->name('cash-drawer.report');
     });
 
     // Manager-only: the two previous `role:Manager` groups are merged into one so the
@@ -92,6 +104,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/cash-drawers', [CashDrawerController::class, 'index'])->name('cash-drawers.index');
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('/reports/export/{type}', [ReportController::class, 'export'])->name('reports.export');
+        Route::get('/employees/{employee}/supervisor-permissions', [SupervisorPermissionController::class, 'edit'])->name('employees.supervisor-permissions.edit');
+        Route::put('/employees/{employee}/supervisor-permissions', [SupervisorPermissionController::class, 'update'])->name('employees.supervisor-permissions.update');
         Route::resource('employees', EmployeeController::class)->except('show');
         Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
     });

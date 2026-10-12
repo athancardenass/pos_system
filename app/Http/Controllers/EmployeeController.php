@@ -8,6 +8,7 @@ use App\Models\Role;
 use App\Models\SaleRefund;
 use App\Models\SaleTransaction;
 use App\Services\AuditLogger;
+use App\Services\SupervisorPermissionService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\RedirectResponse;
@@ -69,18 +70,28 @@ class EmployeeController extends Controller
             unset($data['password']);
         }
 
-        $isManager = Role::query()
+        $isApprovalRole = Role::query()
             ->where('role_id', $data['role_id'])
-            ->whereRaw('LOWER(role_name) = ?', ['manager'])
+            ->whereRaw('LOWER(role_name) IN (?, ?)', ['manager', 'supervisor'])
+            ->exists();
+        $isSupervisor = Role::query()
+            ->where('role_id', $data['role_id'])
+            ->whereRaw('LOWER(role_name) = ?', ['supervisor'])
             ->exists();
 
-        $employee->fill($data);
-        if ($isManager && filled($managerPin)) {
-            $employee->manager_pin_hash = Hash::make($managerPin);
-        } elseif (! $isManager) {
-            $employee->manager_pin_hash = null;
-        }
-        $employee->save();
+        DB::transaction(function () use ($employee, $data, $managerPin, $isApprovalRole, $isSupervisor): void {
+            $employee->fill($data);
+            if ($isApprovalRole && filled($managerPin)) {
+                $employee->manager_pin_hash = Hash::make($managerPin);
+            } elseif (! $isApprovalRole) {
+                $employee->manager_pin_hash = null;
+            }
+            $employee->save();
+
+            if (! $isSupervisor) {
+                app(SupervisorPermissionService::class)->revokeAll($employee);
+            }
+        });
 
         AuditLogger::record('update', 'employee', $employee->employee_id, 'Updated employee '.$employee->username);
 
@@ -131,11 +142,11 @@ class EmployeeController extends Controller
 
         $passwordPresenceRule = $employee ? 'nullable' : 'required';
         $roleId = $request->input('role_id');
-        $isManagerRole = Role::query()
+        $isApprovalRole = Role::query()
             ->where('role_id', $roleId)
-            ->whereRaw('LOWER(role_name) = ?', ['manager'])
+            ->whereRaw('LOWER(role_name) IN (?, ?)', ['manager', 'supervisor'])
             ->exists();
-        $pinRequired = $isManagerRole && (! $employee || blank($employee->manager_pin_hash));
+        $pinRequired = $isApprovalRole && (! $employee || blank($employee->manager_pin_hash));
 
         try {
             return $request->validate([
@@ -148,7 +159,7 @@ class EmployeeController extends Controller
             'hire_date' => 'required|date_format:Y-m-d|after_or_equal:1900-01-01|before_or_equal:today',
             'status' => 'required|in:active,inactive',
             'manager_pin' => [
-                $isManagerRole ? 'nullable' : 'prohibited',
+                $isApprovalRole ? 'nullable' : 'prohibited',
                 $pinRequired ? 'required' : 'nullable',
                 'string',
                 'regex:/^\d{4,6}$/',
