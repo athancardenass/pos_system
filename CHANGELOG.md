@@ -1,5 +1,25 @@
 # POS System — Changelog
 
+## 2026-10-14 — Rebuild the actual screenshot layouts
+
+Replaced the previous color-focused pass with the reference compositions. Pending e-wallet/card screens now have selectable transaction rows on the left, a large selected-payment amount and masked reference on the right, a manual verification checklist, and bottom actions. Existing authorized request collections and review routes remain in use; no QR simulation, payment polling, or terminal API was introduced. Review pages now use continuous two-pane layouts with existing verification and rejection forms intact.
+
+Cash movements now show five real shift totals, cash movement history beside the new-movement form, functional cash-in/out segments and reason chips, and the existing drawer-transfer controls in an expandable section. Find receipt now shows the found receipt in a selected row and an itemized paper preview, including saved discount/VAT adjustments, with existing reprint and return/exchange links.
+
+Held transactions now show time badges, customer/product summaries, prominent amounts and item counts, and Recall/Delete actions. Rebuilt the close-shift dialog as a two-column denomination count and reconciliation sheet. Bill counts and coin totals update the existing actual-cash field; invalid quantities, excessive precision, and out-of-range counts cannot produce a closing total. The original server reconciliation and close endpoint remain authoritative.
+
+The void dialog now displays the actual item, line amount, existing allowed reasons as chips, approval PIN, before/after total preview, and a red Void line action. Preview totals retain existing fixed/percentage discount and VAT-exemption math. Authorization clears this presentation before subsequent role-specific requests, preserving supervisor and manager flows. No backend, integration, credential, configuration, schema, dependency, or thermal-receipt files were edited for this correction.
+
+Verification: full Laravel suite passed 186 tests / 1,125 assertions with temporary CLI SQLite extension loading; eight browser tests passed, including invalid denomination and void-preview coverage. Blade compilation and whitespace checks passed. Inspected populated isolated test-data previews for payments, cash history, held transactions, itemized receipts, void confirmation, and the denomination sheet; checked payment layout at 390px without horizontal page overflow. A read-only independent review identified two issues, both fixed and confirmed by the reviewer.
+
+## 2026-10-13 — Apply supplied cashier design references
+
+Added a screen-only, scoped POS reference stylesheet and connected it to the register, manual e-wallet/card lists and review pages, receipt search, and cash-movement workspace. Matched the supplied screenshots with dark brown headers, cream separators, green primary actions, red destructive actions, larger amounts, flat payment panels, spacious held-cart rows, and updated manager/shift dialogs. Receipt lookup now separates search from its real sale summary. Preserved required hidden states, removed existing inline register styles, and corrected mobile header overflow.
+
+Kept existing manual merchant-app and terminal verification, manager authorization, checkout forms, routes, scripts, held-cart retention, and stock/money workflows. Did not add QR, automatic payment polling, or terminal integrations. No HRMS/inventory integration code, keys, tokens, environment files, configuration, dependencies, backend files, or CRM schemas were edited. Thermal receipt styles remain independent.
+
+Verification: `php artisan test` passed all 186 tests / 1,125 assertions with SQLite extensions enabled through a temporary PHP CLI scan directory (the default XAMPP CLI did not load SQLite). Browser feedback and shift-timer smoke tests passed 5 / 5. Inspected isolated Laravel-rendered test-data previews on desktop and at 390px; register and receipt lookup have no page-width overflow. Live visual login was unavailable with the seeded default account, so preview rendering used an in-memory test database. The design detector reported no findings on the new stylesheet and receipt-search markup.
+
 ## 2026-10-12 — Match shift note fields to Store Information style
 
 Styled the Close Register reconciliation notes box and Cash In / Cash Out reason field with the same shared textbox classes as Store Information / address, including vertical resizing and scrolling for longer explanations. Set the Movement history title and table header to the POS theme color `rgb(56, 43, 45)` for clearer section hierarchy.

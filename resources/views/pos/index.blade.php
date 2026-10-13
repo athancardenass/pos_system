@@ -901,6 +901,7 @@
 @endpush
 
 @section('content')
+<div class="pos-reference">
 @php
     $employee = auth()->user()->employee;
     $cashierName = $employee ? $employee->fullName() : auth()->user()->username;
@@ -1083,7 +1084,7 @@
 </div>
 
 {{-- Hidden Form to Submit Sale Data --}}
-<form id="pos-store-form" method="POST" action="{{ route('pos.store') }}" style="display:none;">
+<form id="pos-store-form" method="POST" action="{{ route('pos.store') }}" hidden>
     @csrf
     <input type="hidden" name="idempotency_key" id="store-idempotency-key">
     <input type="hidden" name="customer_id" id="store-customer-id">
@@ -1108,7 +1109,7 @@
             <span class="pos-modal-title">Open Cash Register</span>
             <button type="button" class="pos-remove-link" onclick="closeModal('open-register-modal')">✕</button>
         </div>
-        <p class="muted" style="font-size:0.85rem;">Set opening cash float for Cashier <strong>{{ $cashierName }}</strong>.</p>
+        <p class="muted pos-register-copy">Set opening cash float for Cashier <strong>{{ $cashierName }}</strong>.</p>
         <div>
             <label for="open-float-input">Opening Cash Float</label>
             <input id="open-float-input" type="number" step="0.01" min="0" value="5000.00">
@@ -1119,7 +1120,7 @@
                 <button type="button" class="pos-chip-btn" onclick="setFloat(10000)">₱10,000</button>
             </div>
         </div>
-        <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:0.5rem;">
+        <div class="pos-register-actions">
             <button type="button" class="btn btn-secondary" onclick="closeModal('open-register-modal')">Cancel</button>
             <button type="button" class="btn" id="confirm-open-btn">Open Register</button>
         </div>
@@ -1128,24 +1129,46 @@
 
 {{-- MODAL: Close Cash Register --}}
 <div class="pos-modal-backdrop" id="close-register-modal">
-    <div class="pos-modal-card">
+    <div class="pos-modal-card reference-close-sheet">
         <div class="pos-modal-header">
-            <span class="pos-modal-title">Close Register / End Shift</span>
-            <button type="button" class="pos-remove-link" onclick="closeModal('close-register-modal')">✕</button>
+            <span class="pos-modal-title">Close shift <span class="reference-header-meta">Register 01 · {{ $cashierName }}</span></span>
+            <button type="button" class="pos-remove-link" onclick="closeModal('close-register-modal')">Cancel (Esc)</button>
         </div>
+        <div class="reference-close-columns">
+        <section class="reference-close-count" aria-label="Count drawer cash">
+            <h2 class="reference-section-bar">1. Before closing</h2>
+            <div class="reference-preflight-row"><span>Held transactions</span><strong id="close-held-count">0</strong></div>
+            <div class="reference-preflight-row"><a href="{{ route('pos.pending-ewallet.index') }}">Pending E-Wallet</a><strong class="{{ ($pendingEwalletCount ?? 0) > 0 ? 'has-pending' : '' }}">{{ $pendingEwalletCount ?? 0 }}</strong></div>
+            <div class="reference-preflight-row"><a href="{{ route('pos.pending-card.index') }}">Pending Card</a><strong class="{{ ($pendingCardCount ?? 0) > 0 ? 'has-pending' : '' }}">{{ $pendingCardCount ?? 0 }}</strong></div>
+            <h2 class="reference-section-bar">2. Count the cash in the drawer</h2>
+            @foreach ([1000, 500, 200, 100, 50, 20, 1] as $denomination)
+                <div class="reference-denomination-row">
+                    <label for="cash-count-{{ $denomination }}">{{ $denomination === 1 ? 'Coins (total amount)' : '₱'.number_format($denomination).' bills' }}</label>
+                    <input id="cash-count-{{ $denomination }}" type="number" min="0" max="999999" step="{{ $denomination === 1 ? '0.01' : '1' }}" inputmode="{{ $denomination === 1 ? 'decimal' : 'numeric' }}" placeholder="0" data-cash-denomination="{{ $denomination }}" data-cash-output="cash-count-total-{{ $denomination }}">
+                    <output id="cash-count-total-{{ $denomination }}" for="cash-count-{{ $denomination }}">0.00</output>
+                </div>
+            @endforeach
+            <h2 class="reference-section-bar">Sales by payment</h2>
+            <dl class="reference-payment-totals" id="close-payment-totals"></dl>
+        </section>
+        <section class="reference-close-compare" aria-label="Compare cash totals">
+        <h2 class="reference-section-bar">3. Compare</h2>
         <dl class="shift-totals shift-close-breakdown" id="close-shift-breakdown"></dl>
-        <a id="close-shift-report-link" target="_blank" rel="noopener">View full shift report</a>
-        <div>
-            <label for="close-actual-input">Money on hand — actual cash counted</label>
+        <div class="reference-counted-row">
+            <label for="close-actual-input">Counted</label>
             <input id="close-actual-input" type="number" step="0.01" min="0" required placeholder="Count and enter total cash in drawer">
         </div>
         <div class="pos-diff-banner pos-diff-balanced" id="close-diff-banner">Difference: ₱0.00</div>
         <label for="close-reconciliation-notes">Explanation of shortage / overage</label>
+        <div class="reference-reason-chips" data-reason-chips="close-reconciliation-notes"><button type="button" data-choice="Wrong change given">Wrong change given</button><button type="button" data-choice="Counting mistake">Counting mistake</button><button type="button" data-choice="Unknown">Unknown</button><button type="button" data-choice="">Other</button></div>
         <textarea id="close-reconciliation-notes" class="input-lg bordered" maxlength="1000" rows="2"></textarea>
         <p class="shift-inline-error" role="alert" id="close-shift-error" hidden></p>
+        <p class="reference-detail-note">After closing, this register cannot take sales until a new shift is opened.</p>
         <div class="shift-actions">
-            <button type="button" class="btn btn-secondary" onclick="closeModal('close-register-modal')">Cancel</button>
+            <a class="btn btn-secondary" id="close-shift-report-link" target="_blank" rel="noopener">View full shift report</a>
             <button type="button" class="btn" id="confirm-close-btn">Confirm & Close Shift</button>
+        </div>
+        </section>
         </div>
     </div>
 </div>
@@ -1154,8 +1177,8 @@
 <div class="pos-modal-backdrop" id="held-transactions-modal" role="dialog" aria-modal="true" aria-labelledby="held-transactions-title">
     <div class="pos-modal-card pos-held-modal-card">
         <div class="pos-modal-header">
-            <span class="pos-modal-title" id="held-transactions-title">Held transactions</span>
-            <button type="button" class="pos-remove-link" onclick="closeModal('held-transactions-modal')" aria-label="Close held transactions">✕</button>
+            <span class="pos-modal-title" id="held-transactions-title">Held transactions <span class="reference-count" id="held-transactions-count">0</span></span>
+            <button type="button" class="pos-remove-link" onclick="closeModal('held-transactions-modal')" aria-label="Close held transactions">Close (Esc)</button>
         </div>
         <p class="pos-held-modal-copy">Held carts stay on this register for up to 24 hours and do not reserve stock.</p>
         <div class="pos-held-list" id="held-transactions-list"></div>
@@ -1180,6 +1203,7 @@
 </div>
 
 <x-manager-pin-modal :is-manager="auth()->user()->hasRole('Manager')" />
+</div>
 @endsection
 
 @push('scripts')
@@ -1589,6 +1613,7 @@
         const empty = document.getElementById('held-transactions-empty');
         const state = loadHeldState();
         list.replaceChildren();
+        document.getElementById('held-transactions-count').textContent = String(state.items.length);
         empty.hidden = state.items.length > 0;
 
         state.items.forEach(hold => {
@@ -1599,31 +1624,45 @@
             main.className = 'pos-held-main';
             const number = document.createElement('strong');
             number.className = 'pos-held-number';
-            number.textContent = `${hold.holdNumber || 'Held transaction'} · ${hold.registerId}`;
+            number.textContent = hold.holdNumber || 'Held transaction';
+            const time = document.createElement('time');
+            time.className = 'reference-held-time';
+            time.textContent = new Date(hold.heldAt).toLocaleTimeString('en-PH', {hour:'numeric', minute:'2-digit'});
+            const heading = document.createElement('div');
+            heading.className = 'reference-held-heading';
+            heading.append(number, time);
             const meta = document.createElement('span');
             meta.className = 'pos-held-meta';
-            meta.textContent = `${new Date(hold.heldAt).toLocaleString()} · ${hold.items.length} ${hold.items.length === 1 ? 'item' : 'items'} · ${hold.cashierName || 'Unknown cashier'}`;
-            main.append(number, meta);
+            meta.textContent = hold.customerSearchValue || 'Walk-in Customer';
+            const names = document.createElement('span');
+            names.className = 'pos-held-meta';
+            names.textContent = hold.items.slice(0, 3).map(line => products.find(product => String(product.id) === String(line.productId))?.name || 'Product').join(', ') + (hold.items.length > 3 ? ' +' + (hold.items.length - 3) + ' more' : '');
+            main.append(heading, meta, names);
 
             const total = document.createElement('strong');
             total.className = 'pos-held-total';
             total.textContent = formatMoney(hold.total);
+            const amount = document.createElement('div');
+            amount.className = 'reference-held-amount';
+            const count = document.createElement('span');
+            count.textContent = hold.items.length + (hold.items.length === 1 ? ' item' : ' items');
+            amount.append(total, count);
 
             const actions = document.createElement('div');
             actions.className = 'pos-held-actions';
             const resume = document.createElement('button');
             resume.type = 'button';
             resume.className = 'btn';
-            resume.textContent = 'Resume';
+            resume.textContent = 'Recall';
             resume.addEventListener('click', () => requestResumeHeldTransaction(hold.id));
             const remove = document.createElement('button');
             remove.type = 'button';
             remove.className = 'btn btn-danger';
-            remove.textContent = 'Remove';
+            remove.textContent = 'Delete';
             remove.addEventListener('click', () => removeHeldTransaction(hold.id));
 
             actions.append(resume, remove);
-            row.append(main, total, actions);
+            row.append(main, amount, actions);
             list.appendChild(row);
         });
     }
@@ -2121,8 +2160,14 @@
         const item = cart.find(cartItem => cartItem.id === productId);
         if (!item) return;
 
+        const option = discountSelect.selectedOptions[0];
+        const remainingSubtotal = cart.filter(cartItem => cartItem.id !== productId).reduce((sum, cartItem) => sum + cartItem.price * cartItem.qty, 0);
         const authorization = await window.requestManagerAuthorization({
             action: 'cart_item_void',
+            presentation: {
+                totalBefore: parseNumeric(totalVal.textContent),
+                totalAfter: window.PosReference.previewTotal(remainingSubtotal, {specialType: option?.dataset.specialType || '', type: option?.dataset.type || '', value: option?.value ? option.dataset.value : 0}, configVatEnabled, vatRate)
+            },
             details: {
                 product_id: item.id,
                 product_name: item.name,
@@ -2203,7 +2248,7 @@
         }).slice(0, 20);
 
         if (matched.length === 0) {
-            searchResultsList.innerHTML = '<div class="pos-cart-empty" style="padding:1.5rem 0;">No matching products found.</div>';
+            searchResultsList.innerHTML = '<div class="pos-cart-empty pos-search-no-results">No matching products found.</div>';
             return;
         }
 
@@ -2641,18 +2686,27 @@
     function renderCloseBreakdown(report) {
         const list = document.getElementById('close-shift-breakdown');
         list.replaceChildren();
-        const rows = [ ['Opening float', report.opening_cash], ['Sales before returns',report.gross_sales],
-            ['Returns processed',report.refunds], ['Net sales',report.net_sales],
-            ['Cash sales collected',report.cash_by_kind.sale || 0], ['Other Cash In',report.cash_by_kind.manual_in || 0],
-            ['Other Cash Out',-(report.cash_by_kind.manual_out || 0)], ['Cash refunds',-(report.cash_by_kind.refund || 0)],
-            ['Exchange cash difference',report.cash_by_kind.exchange || 0], ['Transfers In',report.cash_by_kind.transfer_in || 0],
-            ['Transfers Out',-(report.cash_by_kind.transfer_out || 0)], ['Cancelled transfer returned',report.cash_by_kind.transfer_reversal || 0],
-            ['Total Cash In',report.cash_in], ['Total Cash Out',report.cash_out],
-            ['Card — net settlement',report.payment_totals.card], ['E-wallet — net settlement',report.payment_totals['e-wallet']],
-            ['Expected cash',report.expected_cash] ];
+        const rows = [ ['Opening float', report.opening_cash],
+            ['Cash sales', report.cash_by_kind.sale || 0], ['Cash in', report.cash_by_kind.manual_in || 0],
+            ['Cash out', report.cash_by_kind.manual_out || 0] ];
+        const adjustments = [['Cash refunds', 'refund'], ['Exchange cash difference', 'exchange'], ['Transfers in', 'transfer_in'], ['Transfers out', 'transfer_out'], ['Cancelled transfer returned', 'transfer_reversal']];
+        adjustments.forEach(([label, kind]) => { if (report.cash_by_kind[kind]) rows.push([label, report.cash_by_kind[kind]]); });
+        rows.push(['Expected in drawer', report.expected_cash]);
         if (report.brought_forward) rows.splice(1,0,['Balance brought forward',report.brought_forward]);
         rows.forEach(([label,amount]) => { const row=document.createElement('div'); const dt=document.createElement('dt');
-            const dd=document.createElement('dd'); dt.textContent=label; dd.textContent=formatMoney(amount); row.append(dt,dd); list.append(row); });
+            const dd=document.createElement('dd'); dt.textContent=label; dd.textContent=formatMoney(amount);
+            if (label === 'Expected in drawer') row.className='reference-expected-row';
+            else if (amount < 0) dd.className='reference-negative';
+            else if (label === 'Cash in') dd.className='reference-positive';
+            row.append(dt,dd); list.append(row); });
+        const paymentTotals = document.getElementById('close-payment-totals');
+        paymentTotals.replaceChildren();
+        [['Cash','cash'],['Card','card'],['E-Wallet','e-wallet']].forEach(([label, method]) => {
+            const row=document.createElement('div'), dt=document.createElement('dt'), dd=document.createElement('dd');
+            dt.textContent=label; dd.textContent=formatMoney(report.sales_by_method?.[method] || 0); row.append(dt,dd); paymentTotals.append(row);
+        });
+        document.getElementById('close-held-count').textContent = String(loadHeldState().items.length);
+        document.getElementById('close-held-count').classList.toggle('has-pending', loadHeldState().items.length > 0);
     }
 
     async function checkDrawerStatus() {
@@ -2680,6 +2734,7 @@
                     renderCloseBreakdown(data.report);
                     document.getElementById('close-shift-report-link').href = '{{ url('/cash-drawer') }}/' + currentDrawer.drawer_id + '/report';
                     document.getElementById('close-actual-input').value = '';
+                    window.PosReference?.resetCount();
                     document.getElementById('close-reconciliation-notes').value = '';
                     document.getElementById('close-shift-error').hidden = true;
                     updateCloseDiff();
@@ -2993,4 +3048,11 @@
     checkDrawerStatus();
     window.setInterval(checkDrawerStatus, 15000);
 </script>
+@endpush
+
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/pos-reference.css') }}">
+@endpush
+@push('scripts')
+<script src="{{ asset('js/pos-reference.js') }}" defer></script>
 @endpush

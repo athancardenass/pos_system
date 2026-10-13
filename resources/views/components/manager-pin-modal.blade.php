@@ -22,6 +22,9 @@
     <form class="manager-pin-panel" id="manager-pin-form">
         <h2 class="manager-pin-heading" id="manager-pin-title">Manager approval required</h2>
         <p class="manager-pin-copy" id="manager-pin-copy">Ask a manager or an assigned Supervisor to enter their approval PIN.</p>
+        @if (request()->routeIs('pos.index'))
+            <div class="reference-void-item" id="manager-void-item" hidden><div><strong id="manager-void-product"></strong><p id="manager-void-quantity"></p></div><strong id="manager-void-amount"></strong></div>
+        @endif
         <div class="manager-pin-entry" id="manager-pin-entry">
             <label for="manager-pin-input">Approval PIN</label>
             <input id="manager-pin-input" class="input-lg bordered" type="password" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="6" autocomplete="one-time-code" required>
@@ -41,9 +44,24 @@
                     <option value="{{ $key }}">{{ $label }}</option>
                 @endforeach
             </select>
-            <label for="manager-pin-notes">Note (optional)</label>
-            <textarea id="manager-pin-notes" class="input-lg bordered" rows="2" maxlength="255"></textarea>
+            @if (request()->routeIs('pos.index'))
+                <div class="reference-reason-chips" data-select-chips="manager-pin-reason-select">
+                    <button type="button" data-choice="changed_mind">Customer changed mind</button><button type="button" data-choice="wrong_item">Wrong item scanned</button><button type="button" data-choice="damaged">Damaged item</button><button type="button" data-choice="defective">Defective</button><button type="button" data-choice="other">Other</button>
+                </div>
+            @endif
+            @if (request()->routeIs('pos.index'))
+                <details class="reference-void-note"><summary>Add a note (optional)</summary>
+                    <label for="manager-pin-notes">Note (optional)</label>
+                    <textarea id="manager-pin-notes" class="input-lg bordered" rows="2" maxlength="255"></textarea>
+                </details>
+            @else
+                <label for="manager-pin-notes">Note (optional)</label>
+                <textarea id="manager-pin-notes" class="input-lg bordered" rows="2" maxlength="255"></textarea>
+            @endif
         </div>
+        @if (request()->routeIs('pos.index'))
+            <div class="reference-void-total" id="manager-void-total" hidden><span>Total after void</span><div><s id="manager-void-total-before"></s><strong id="manager-void-total-after"></strong></div></div>
+        @endif
         <p class="manager-pin-message" id="manager-pin-message" role="alert" aria-live="polite"></p>
         <div class="manager-pin-actions">
             <button type="button" class="btn btn-secondary" id="manager-pin-cancel">Cancel</button>
@@ -185,6 +203,15 @@
             const settings = options || {};
             if (pending) return Promise.resolve(null);
 
+            modal.classList.remove('is-line-void');
+            ['manager-void-item', 'manager-void-total'].forEach(id => {
+                const element = document.getElementById(id);
+                if (element) element.hidden = true;
+            });
+            submitButton.textContent = 'Authorize';
+            const noteDisclosure = modal.querySelector('.reference-void-note');
+            if (noteDisclosure) noteDisclosure.open = false;
+
             if (managerRole && !settings.requiresReason) {
                 pending = { ...settings, resolve: () => {} };
                 return new Promise(resolve => {
@@ -222,6 +249,28 @@
                         : 'Ask a manager or an assigned Supervisor to enter their approval PIN.';
                 message.textContent = '';
                 pinInput.value = '';
+                const voidItem = document.getElementById('manager-void-item');
+                if (voidItem) {
+                    const isVoid = settings.action === 'cart_item_void';
+                    voidItem.hidden = !isVoid;
+                    modal.classList.toggle('is-line-void', isVoid);
+                    const totalPreview = document.getElementById('manager-void-total');
+                    totalPreview.hidden = !isVoid || !settings.presentation;
+                    if (isVoid) {
+                        document.getElementById('manager-pin-title').textContent = 'Void this line?';
+                        document.getElementById('manager-pin-copy').textContent = 'The item is removed from this sale and the void is saved in Audit Logs.';
+                        document.getElementById('manager-void-product').textContent = settings.details.product_name;
+                        document.getElementById('manager-void-quantity').textContent = 'Quantity: ' + settings.details.quantity;
+                        document.getElementById('manager-void-amount').textContent = '₱' + Number(settings.details.line_total).toLocaleString('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2});
+                        if (settings.presentation) {
+                            const money = value => '₱' + Number(value).toLocaleString('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2});
+                            document.getElementById('manager-void-total-before').textContent = money(settings.presentation.totalBefore);
+                            document.getElementById('manager-void-total-after').textContent = money(settings.presentation.totalAfter);
+                        }
+                    }
+                }
+                submitButton.textContent = settings.action === 'cart_item_void' ? 'Void line' : 'Authorize';
+                reasonSelect.dispatchEvent(new Event('change', {bubbles:true}));
                 modal.hidden = false;
                 modal.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 requestAnimationFrame(() => ((managerRole || supervisorRole) && settings.requiresReason ? reasonSelect : (supervisorRole ? submitButton : pinInput)).focus());

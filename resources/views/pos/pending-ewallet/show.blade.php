@@ -70,12 +70,13 @@
 @endpush
 
 @section('content')
+<div class="pos-reference">
 @php
     $customerId = data_get($pending->checkout_payload, 'customer_id');
     $customerLabel = $customerId ? 'CRM #'.$customerId : 'Walk-in customer';
     $receiptNumber = $pending->sale?->receipt?->receipt_number ?? '#'.$pending->sale?->transaction_id;
 @endphp
-<section class="ewallet-review" aria-label="E-wallet payment review">
+<section class="ewallet-review reference-review-workspace" aria-label="E-wallet payment review">
     <header class="ewallet-review-heading">
         <div>
             <p class="ewallet-review-eyebrow">Payment review</p>
@@ -109,7 +110,7 @@
     @include('partials.errors')
 
     <div class="ewallet-review-grid">
-        <section class="ewallet-review-panel" aria-labelledby="ewallet-request-title">
+        <section class="ewallet-review-panel reference-review-request" aria-labelledby="ewallet-request-title">
             <h2 id="ewallet-request-title">Request details</h2>
             <dl class="ewallet-details">
                 <dt>Status</dt><dd><span class="ewallet-status-pill">{{ $pending->status }}</span></dd>
@@ -129,7 +130,7 @@
             </dl>
         </section>
 
-        <section class="ewallet-review-panel" aria-labelledby="ewallet-cart-title">
+        <section class="ewallet-review-panel reference-review-decision" aria-labelledby="ewallet-cart-title">
             <h2 id="ewallet-cart-title">Cart summary</h2>
             <div class="ewallet-review-table-wrap"><table class="ewallet-review-table">
                 <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
@@ -220,6 +221,7 @@
     </div>
 </section>
 <x-manager-pin-modal :is-manager="auth()->user()->hasRole('Manager')" />
+</div>
 @endsection
 
 @php
@@ -406,4 +408,12 @@
         }
     })();
 </script>
+@endpush
+
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/pos-reference.css') }}">
+@endpush
+
+@push('scripts')
+<script src="{{ asset('js/pos-reference.js') }}" defer></script>
 @endpush

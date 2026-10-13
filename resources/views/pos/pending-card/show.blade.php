@@ -62,12 +62,13 @@
 @endpush
 
 @section('content')
+<div class="pos-reference">
 @php
     $customerId = data_get($pending->checkout_payload, 'customer_id');
     $customerLabel = $customerId ? 'CRM #'.$customerId : 'Walk-in customer';
     $receiptNumber = $pending->sale?->receipt?->receipt_number ?? '#'.$pending->sale?->transaction_id;
 @endphp
-<section class="card-review" aria-label="Card payment review">
+<section class="card-review reference-review-workspace" aria-label="Card payment review">
     <header class="card-review-heading">
         <div>
             <p class="card-review-eyebrow">Payment review</p>
@@ -93,7 +94,7 @@
     @include('partials.errors')
 
     <div class="card-review-grid">
-        <section class="card-review-panel" aria-labelledby="card-request-title">
+        <section class="card-review-panel reference-review-request" aria-labelledby="card-request-title">
             <h2 id="card-request-title">Request details</h2>
             <dl class="card-review-details">
                 <dt>Status</dt><dd><span class="card-review-status">{{ $pending->status }}</span></dd>
@@ -120,7 +121,7 @@
             @endif
         </section>
 
-        <section class="card-review-panel" aria-labelledby="card-cart-title">
+        <section class="card-review-panel reference-review-decision" aria-labelledby="card-cart-title">
             <h2 id="card-cart-title">Cart summary</h2>
             <div class="card-review-table-wrap"><table class="card-review-table">
                 <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
@@ -209,6 +210,7 @@
     </div>
 </section>
 <x-manager-pin-modal :is-manager="auth()->user()->hasRole('Manager')" />
+</div>
 @endsection
 
 @php
@@ -393,4 +395,12 @@
         }
     })();
 </script>
+@endpush
+
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/pos-reference.css') }}">
+@endpush
+
+@push('scripts')
+<script src="{{ asset('js/pos-reference.js') }}" defer></script>
 @endpush
