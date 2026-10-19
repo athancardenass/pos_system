@@ -11,14 +11,28 @@ use Illuminate\View\View;
 
 class ProductController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View|\Illuminate\Http\JsonResponse
     {
+        try {
+            $stocks = app(\App\Services\SaleService::class)->getProductStockSnapshot(true);
+        } catch (\Illuminate\Validation\ValidationException $exception) {
+            if ($request->expectsJson()) throw $exception;
+            $stocks = [];
+        }
         $products = Product::query()
             ->with(['category', 'inventory', 'inventoryMapping'])
             ->orderBy('product_name')
             ->paginate(15);
 
-        return view('products.index', compact('products'));
+        if ($request->expectsJson()) {
+            return response()->json(['stocks' => $products->getCollection()->map(fn (Product $product) => [
+                'id' => $product->product_id,
+                'quantity' => $stocks[$product->product_id]['stock'] ?? 0,
+                'low' => ($stocks[$product->product_id]['stock'] ?? 0) <= $product->reorder_level,
+            ])->values()])->header('Cache-Control', 'no-store');
+        }
+
+        return view('products.index', compact('products', 'stocks'));
     }
 
     public function create(): View

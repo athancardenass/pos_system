@@ -336,7 +336,7 @@
                     }
 
                     if (typeof window.requestManagerAuthorization !== 'function') {
-                        alert('Manager PIN authorization is not available.');
+                        window.AppFeedback.notify('Manager PIN authorization is not available.');
                         return;
                     }
 

@@ -46,6 +46,16 @@ class ExchangeFlowTest extends TestCase
         $this->seed(DatabaseSeeder::class);
     }
 
+    public function test_exchange_replacement_fields_use_a_responsive_pos_form_layout(): void
+    {
+        [, , , , $sale] = $this->fixture(100);
+
+        $this->get(route('pos.show', ['saleTransaction' => $sale, 'completed' => 1]))
+            ->assertOk()
+            ->assertSee('class="exchange-line"', false)
+            ->assertSee('.exchange-line { display: grid;', false);
+    }
+
     public static function prices(): array
     {
         return [[100, 0, 1100], [150, 50, 1150], [70, -30, 1070]];

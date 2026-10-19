@@ -61,7 +61,7 @@ class PosController extends Controller
     {
         return response()->json([
             'stocks' => $this->saleService->getProductStockSnapshot(),
-        ]);
+        ])->header('Cache-Control', 'no-store');
     }
 
     public function findReceipt(Request $request): View
@@ -196,10 +196,11 @@ class PosController extends Controller
                 'required',
                 'string',
                 'max:50',
-                'not_regex:/^(?:\d[\s-]*){13,19}$/',
+                'regex:/\A(?=[A-Za-z0-9-]*[A-Za-z0-9])[A-Za-z0-9-]+\z/',
+                'not_regex:/^(?:\d[\s-]*){13,}$/',
                 'not_regex:/^\d{3,4}$/',
             ],
-            'e-wallet' => 'required|string|max:100',
+            'e-wallet' => ['required', 'string', 'max:100', 'regex:/\A(?=[A-Za-z0-9-]*[A-Za-z0-9])[A-Za-z0-9-]+\z/'],
             default => 'nullable|string|max:100',
         };
 
@@ -220,6 +221,8 @@ class PosController extends Controller
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:product,product_id',
             'items.*.quantity' => 'required|numeric|min:0.001',
+        ], [
+            'reference_number.regex' => 'Use only letters, numbers, and dashes for the payment reference, with at least one letter or number. Spaces and other symbols are not allowed.',
         ]);
 
         $idempotencyKey = strtolower((string) ($data['idempotency_key'] ?? Str::uuid()));

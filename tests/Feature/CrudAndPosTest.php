@@ -37,6 +37,32 @@ class CrudAndPosTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_product_stock_refresh_returns_current_stock_and_keeps_page(): void
+    {
+        $this->actingAs($this->employee('manager'));
+        for ($i = 0; $i < 16; $i++) {
+            $product = Product::create([
+                'product_name' => sprintf('Refresh %02d', $i),
+                'barcode' => Product::generateBarcode(),
+                'unit_price' => 10, 'cost_price' => 5, 'reorder_level' => 5,
+            ]);
+        }
+        $inventory = Inventory::create(['product_id' => $product->product_id, 'stock_quantity' => 9]);
+        $orderedIds = Product::orderBy('product_name')->pluck('product_id');
+        $position = $orderedIds->search($product->product_id);
+        $page = intdiv($position, 15) + 1;
+        $index = $position % 15;
+        $this->assertGreaterThan(1, $page);
+        $url = route('products.index', ['page' => $page]);
+        $this->getJson($url)->assertOk()
+            ->assertJsonPath("stocks.$index.id", $product->product_id)
+            ->assertJsonPath("stocks.$index.low", false);
+        $inventory->update(['stock_quantity' => 2.5]);
+        $this->getJson($url)->assertOk()->assertJsonPath("stocks.$index.quantity", 2.5)
+            ->assertJsonPath("stocks.$index.low", true);
+        $this->actingAs($this->employee('cashier'))->getJson($url)->assertForbidden();
+    }
+
     public function test_manager_can_create_category_and_product(): void
     {
         $manager = $this->employee('manager');
@@ -163,6 +189,24 @@ class CrudAndPosTest extends TestCase
             ->assertSee('Monthly')
             ->assertSee('Yearly')
             ->assertSee('Apply');
+    }
+
+    public function test_payment_controls_render_below_the_live_transaction_workspace(): void
+    {
+        $response = $this->actingAs($this->employee('cashier'))
+            ->get(route('pos.index'))
+            ->assertOk();
+
+        $document = new \DOMDocument();
+        @$document->loadHTML($response->getContent());
+        $xpath = new \DOMXPath($document);
+
+        $this->assertSame(1, $xpath->query('//*[contains(concat(" ", normalize-space(@class), " "), " pos-main-workspace ")]//*[contains(concat(" ", normalize-space(@class), " "), " pos-transaction-panel ")]')->length);
+        $this->assertSame(1, $xpath->query('//*[contains(concat(" ", normalize-space(@class), " "), " pos-main-workspace ")]//*[contains(concat(" ", normalize-space(@class), " "), " pos-payment-panel ")]')->length);
+        $this->assertSame(0, $xpath->query('//*[contains(concat(" ", normalize-space(@class), " "), " pos-right-rail ")]//*[contains(concat(" ", normalize-space(@class), " "), " pos-payment-panel ")]')->length);
+        $this->assertSame(1, $xpath->query('//*[contains(concat(" ", normalize-space(@class), " "), " pos-right-rail ")]//*[@id="customer_id_input"]')->length);
+        $this->assertSame(1, $xpath->query('//*[contains(concat(" ", normalize-space(@class), " "), " pos-right-rail ")]//*[@id="discount_id_select"]')->length);
+        $this->assertSame(0, $xpath->query('//*[@aria-label="System update acknowledgements"]')->length);
     }
 
     private function employee(string $username): Employee

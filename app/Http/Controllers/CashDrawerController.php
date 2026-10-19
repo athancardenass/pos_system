@@ -93,7 +93,7 @@ class CashDrawerController extends Controller
             ]);
         }
 
-        return back()->with('status', $msg);
+        return back();
     }
 
     /**

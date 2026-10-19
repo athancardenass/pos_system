@@ -31,13 +31,13 @@
                             <td>{{ $product->inventoryMapping?->inventory_sku ?? '—' }}</td>
                             <td class="muted">{{ $product->category->category_name ?? '—' }}</td>
                             <td style="font-weight: 700;">₱{{ number_format($product->unit_price, 2) }}</td>
-                            <td class="{{ $product->stockQuantity() <= $product->reorder_level ? 'warn' : '' }}">
-                                {{ $product->stockQuantity() }}
+                            <td data-product-stock="{{ $product->product_id }}" class="{{ ($stocks[$product->product_id]['stock'] ?? 0) <= $product->reorder_level ? 'warn' : '' }}">
+                                {{ $stocks[$product->product_id]['stock'] ?? 'Unavailable' }}
                             </td>
                             <td class="actions">
                                 <x-ui.button variant="slate" size="compact" :href="route('products.edit', $product)">Edit</x-ui.button>
                                 <button type="button" class="btn-ghost print-barcode-btn" data-id="{{ $product->product_id }}" data-name="{{ $product->product_name }}" data-barcode="{{ $product->barcode }}" data-price="{{ number_format($product->unit_price, 2) }}">Print Label</button>
-                                <form class="inline-form" method="POST" action="{{ route('products.destroy', $product) }}" onsubmit="return confirm('Delete this product?')">
+                                <form class="inline-form" method="POST" action="{{ route('products.destroy', $product) }}" data-confirm="Delete this product?" data-confirm-label="Delete">
                                     @csrf
                                     @method('DELETE')
                                     <x-ui.button variant="danger" type="submit" size="compact">Delete</x-ui.button>
@@ -69,6 +69,41 @@
 @push('scripts')
 <script src="{{ asset('js/JsBarcode.all.min.js') }}"></script>
 <script>
+    (() => {
+        let pending = false;
+        let stopped = false;
+        const refreshStock = async () => {
+            if (document.hidden || pending || stopped) return;
+            pending = true;
+            try {
+                const response = await fetch(window.location.href, {
+                    headers: { Accept: 'application/json' },
+                    cache: 'no-store',
+                    signal: AbortSignal.timeout(10000),
+                });
+                if (response.redirected || response.status === 401 || response.status === 403) {
+                    stopped = true;
+                    return;
+                }
+                if (!response.ok) return;
+                const data = await response.json();
+                for (const stock of data.stocks ?? []) {
+                    if (!Number.isInteger(stock.id) || !Number.isFinite(stock.quantity)) continue;
+                    const cell = document.querySelector(`[data-product-stock="${stock.id}"]`);
+                    if (!cell) continue;
+                    cell.textContent = String(stock.quantity);
+                    cell.classList.toggle('warn', stock.low === true);
+                }
+            } catch {
+                // Keep displayed values during a network outage; retry on the next tick.
+            } finally {
+                pending = false;
+            }
+        };
+        window.setInterval(refreshStock, 5000);
+        document.addEventListener('visibilitychange', refreshStock);
+    })();
+
     document.querySelectorAll('.print-barcode-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const name = this.dataset.name;
@@ -108,7 +143,7 @@
                         err.setAttribute('style', 'color:red;font-size:8pt;text-align:center;padding:2mm;');
                         err.append('Invalid EAN-13', document.createElement('br'), '(' + barcode + ')');
                         svg.replaceWith(err);
-                        alert('Barcode invalid — label printed with error notice');
+                        window.AppFeedback.notify('Barcode invalid — label printed with error notice');
                     }
                 }
             });

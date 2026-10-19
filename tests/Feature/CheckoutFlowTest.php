@@ -628,7 +628,8 @@ class CheckoutFlowTest extends TestCase
             ->post(route('pos.store'), [
                 'payment_method' => 'card',
                 'payment_provider' => 'Visa',
-                'reference_number' => 'APPR-998822 (**** 1234)',
+                'reference_number' => 'APPR-998822',
+                'card_last4' => '1234',
                 'amount_paid' => 250.00,
                 'items' => [
                     ['product_id' => $product->product_id, 'quantity' => 1],
@@ -686,6 +687,46 @@ class CheckoutFlowTest extends TestCase
             ->assertSessionHasErrors('amount_paid');
 
         $this->assertDatabaseCount('sale_transaction', $beforeCount);
+    }
+
+    public function test_card_rejects_numeric_references_longer_than_a_card_number(): void
+    {
+        $product = Product::create(['product_name' => 'Card reference length item', 'barcode' => '4006381333931', 'unit_price' => 10, 'cost_price' => 5, 'reorder_level' => 1]);
+        Inventory::create(['product_id' => $product->product_id, 'stock_quantity' => 10]);
+        $before = PendingCardVerification::count();
+        foreach (['19238172938719287391823', '12345678901234567890', '1234-5678-9012-3456-7890', str_repeat('1', 50)] as $reference) {
+            $this->actingAs($this->employee('cashier'))->post(route('pos.store'), [
+                'payment_method' => 'card', 'payment_provider' => 'Visa', 'reference_number' => $reference,
+                'amount_paid' => 10, 'items' => [['product_id' => $product->product_id, 'quantity' => 1]],
+            ])->assertSessionHasErrors('reference_number');
+        }
+        $this->assertDatabaseCount('pending_card_verifications', $before);
+        $this->assertEquals(10, $product->inventory->stock_quantity);
+    }
+
+    public function test_card_and_ewallet_reject_invalid_reference_characters_without_creating_payments(): void
+    {
+        $product = Product::create(['product_name' => 'Reference validation item', 'barcode' => '4006381333931', 'unit_price' => 10, 'cost_price' => 5, 'reorder_level' => 1]);
+        Inventory::create(['product_id' => $product->product_id, 'stock_quantity' => 10]);
+        $cashier = $this->employee('cashier');
+        $tables = ['sale_transaction', 'pending_card_verifications', 'pending_ewallet_verifications', 'payment_reference_registry'];
+        $before = [];
+        foreach ($tables as $table) {
+            $before[$table] = \Illuminate\Support\Facades\DB::table($table)->count();
+        }
+        foreach (['card' => 'Visa', 'e-wallet' => 'GCash'] as $method => $provider) {
+            foreach (['AUTH 1001', 'AUTH@1001', '---', '<script>', 'AUTH_1001', 'AUTH/1001', "AUTH\n1001"] as $reference) {
+                $this->actingAs($cashier)->post(route('pos.store'), [
+                    'payment_method' => $method, 'payment_provider' => $provider,
+                    'reference_number' => $reference, 'amount_paid' => '10.00',
+                    'items' => [['product_id' => $product->product_id, 'quantity' => 1]],
+                ])->assertSessionHasErrors('reference_number');
+            }
+        }
+        foreach ($tables as $table) {
+            $this->assertDatabaseCount($table, $before[$table]);
+        }
+        $this->assertEquals(10, $product->inventory->stock_quantity);
     }
 
     public function test_card_and_ewallet_require_payment_reference_and_provider(): void

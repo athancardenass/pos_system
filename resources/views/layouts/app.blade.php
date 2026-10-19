@@ -625,12 +625,39 @@
             font-weight: 500; font-size: 0.88rem;
         }
         .flash-ok { background: rgba(45, 138, 78, 0.08); border-color: rgba(43, 128, 80, 0.24); color: var(--success-ink); }
-        .flash-error, .flash-danger { background: var(--danger-soft); border-color: rgba(174, 63, 59, 0.24); color: var(--danger); }
+        .flash-error, .flash-danger {
+            padding: 0.95rem 1.1rem;
+            border-color: rgba(174, 63, 59, 0.28);
+            border-radius: var(--r-lg);
+            background: #FFF2EF;
+            color: var(--danger);
+            font-weight: 600;
+            line-height: 1.55;
+            overflow-wrap: anywhere;
+        }
+        .flash-error ul, .flash-danger ul {
+            display: grid;
+            gap: 0.24rem;
+            margin: 0.3rem 0 0;
+            padding-inline-start: 1.15rem;
+        }
+        .flash-error li, .flash-danger li { padding-inline-start: 0.1rem; }
         .flash-warning { background: var(--warn-soft); border-color: rgba(173, 128, 80, 0.28); color: var(--warn-ink); }
         .flash-info {
             background: #F1F7F3; border-color: rgba(24, 118, 94, 0.2); color: var(--text);
             box-shadow: 0 3px 8px rgba(32,60,61,.1), inset 0 1px rgba(255,255,255,.9);
         }
+        .app-feedback { white-space: pre-line; overflow-wrap: anywhere; }
+        .app-confirm-dialog {
+            width: min(92vw, 440px); max-width: none; margin: auto; padding: 1.25rem;
+            border: 1px solid var(--rule); border-radius: var(--r-lg);
+            background: var(--surface); color: var(--text); box-shadow: var(--shadow-pop);
+        }
+        .app-confirm-dialog::backdrop { background: rgba(56, 43, 45, 0.52); }
+        .app-confirm-title { margin-bottom: 0.55rem; }
+        .app-confirm-message { color: var(--muted); overflow-wrap: anywhere; white-space: pre-line; }
+        .app-confirm-actions { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.2rem; }
+        .app-confirm-dialog button:focus-visible { outline: none; box-shadow: var(--ring); }
         .error, .error li { color: var(--danger); }
 
         /* --- Pagination --- */
@@ -733,6 +760,7 @@
             .sidebar-user-info { display: none; }
             .sidebar-user { padding: 0 .35rem; }
             .sidebar-nav a { min-height: 30px; padding: .3rem .45rem; }
+            .flash-error, .flash-danger { padding: .82rem .9rem; margin-bottom: 1rem; }
         }
     </style>
     @stack('styles')
@@ -751,9 +779,12 @@
                 $visibleNavModules = array_values(array_filter($navOrder, fn ($name) => in_array($name, $allowedNavModules, true)));
             @endphp
             <nav class="sidebar-nav">
+                @if ($navEmployee?->hasRole('Cashier', 'Supervisor') && ! in_array('reports.index', $visibleNavModules, true))
+                    <a href="{{ route('incidents.index') }}" class="{{ request()->routeIs('incidents.*') ? 'active' : '' }}">Reports</a>
+                @endif
                 @foreach ($visibleNavModules as $name)
                     <a href="{{ $name === 'dashboard' ? route('dashboard') : route($name) }}"
-                       class="{{ request()->routeIs($name) || request()->routeIs(str_replace('.index', '.*', $name)) ? 'active' : '' }}">
+                       class="{{ request()->routeIs($name) || request()->routeIs(str_replace('.index', '.*', $name)) || ($name === 'reports.index' && request()->routeIs('incidents.*')) ? 'active' : '' }}">
                         {{ config('roles.labels')[$name] ?? $name }}
                     </a>
                 @endforeach
@@ -776,10 +807,20 @@
             <div class="flash flash-ok">{{ session('status') }}</div>
         @endif
         @if (session('error'))
-            <div class="flash flash-error" @if (session('pos_reprint_no_receipt')) data-auto-dismiss-ms="3000" @endif>{{ session('error') }}</div>
+            <div class="flash flash-error" role="alert" @if (session('pos_reprint_no_receipt')) data-auto-dismiss-ms="3000" @endif>{{ session('error') }}</div>
         @endif
+        <div class="flash app-feedback" id="app-feedback" hidden></div>
         @yield('content')
     </main>
+    <dialog class="app-confirm-dialog" id="app-confirm-dialog" aria-labelledby="app-confirm-title" aria-describedby="app-confirm-message">
+        <h2 class="app-confirm-title" id="app-confirm-title">Confirm action</h2>
+        <p class="app-confirm-message" id="app-confirm-message"></p>
+        <div class="app-confirm-actions">
+            <button class="btn btn-secondary" id="app-confirm-cancel" type="button">Cancel</button>
+            <button class="btn" id="app-confirm-accept" type="button">Continue</button>
+        </div>
+    </dialog>
+    <script src="{{ asset('js/app-feedback.js') }}"></script>
     <script>
     document.querySelectorAll('[data-auto-dismiss-ms]').forEach(function(flash) {
         var delay = Number(flash.dataset.autoDismissMs);
@@ -794,7 +835,7 @@
             if (startEl && endEl && startEl.value && endEl.value) {
                 if (endEl.value < startEl.value) {
                     e.preventDefault();
-                    alert('End date must be on or after the start date.');
+                    window.AppFeedback.notify('End date must be on or after the start date.');
                     endEl.focus();
                     return false;
                 }
@@ -805,7 +846,7 @@
                 var today = new Date().toISOString().split('T')[0];
                 if (hireEl.value > today) {
                     e.preventDefault();
-                    alert('Hire date cannot be in the future.');
+                    window.AppFeedback.notify('Hire date cannot be in the future.');
                     hireEl.focus();
                     return false;
                 }
@@ -818,7 +859,7 @@
                 var minStr = minDate.toISOString().split('T')[0];
                 if (orderEl.value < minStr) {
                     e.preventDefault();
-                    alert('Order date cannot be more than 7 days in the past.');
+                    window.AppFeedback.notify('Order date cannot be more than 7 days in the past.');
                     orderEl.focus();
                     return false;
                 }

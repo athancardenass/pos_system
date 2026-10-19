@@ -4,7 +4,7 @@
 
 @php
     $columns = [
-        'sales' => ['Transaction', 'Date', 'Cashier', 'Customer', 'Payment', 'Subtotal', 'Discount', 'Total', 'Status'],
+        'sales' => ['Transaction', 'Receipt No.', 'Date', 'Cashier', 'Customer', 'Payment', 'Subtotal', 'Discount', 'Total', 'Status'],
         'products' => ['Product', 'Category', 'Units Sold', 'Revenue'],
         'inventory' => ['Product', 'Category', 'Price', 'Cost', 'Stock', 'Reorder Level', 'Status'],
         'refunds' => ['Refund', 'Sale', 'Date', 'Processed By', 'Amount', 'Type', 'Reason', 'Notes'],
@@ -15,6 +15,13 @@
     <div class="page-head">
         <h1>Reports</h1>
     </div>
+
+    <section class="card" aria-labelledby="incident-reports-heading">
+        <h2 id="incident-reports-heading">Incident reports</h2>
+        <p>Review product safety concerns and cashier shortages or overages, record manager findings, and export cases for Inventory or HRMS handoff. Incident cases have their own register and are not limited by the sales date filter below.</p>
+        <a class="btn" href="{{ route('incidents.index') }}">View incident reports</a>
+        <a class="btn btn-secondary" href="{{ route('incidents.create') }}">Report safety concern</a>
+    </section>
 
     <div class="card">
         <form method="GET" action="{{ route('reports.index') }}" id="report-filter-form">
@@ -55,6 +62,9 @@
             color: #fff;
             border-color: var(--text);
         }
+        .report-results-summary { margin-top: 0.75rem; color: var(--muted); font-size: 0.8rem; }
+        .report-receipt-link { font-weight: 700; text-decoration: underline; text-underline-offset: 0.12em; white-space: nowrap; }
+        .report-receipt-link:hover { color: var(--interactive-ink); }
     </style>
     @endpush
 
@@ -100,7 +110,9 @@
                 @if ($key === 'refunds' && ($refund_breakdown ?? []) !== [])
                     <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
                         @foreach ($refund_breakdown as $reason => $b)
-                            @php($barW = 8 + ($b['count'] * 6))
+                            @php
+                                $barW = 8 + ($b['count'] * 6);
+                            @endphp
                             <div style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem;">
                                 <div style="width: {{ $barW }}px; height: 14px; background: var(--accent); border-radius: 3px;"></div>
                                 <span style="color: var(--muted);">{{ $b['label'] }}:</span>
@@ -112,9 +124,12 @@
                 @endif
                 <x-ui.button :href="route('reports.export', ['type' => $key, 'from' => $from->toDateString(), 'to' => $to->toDateString()])">Export CSV</x-ui.button>
             </div>
-            @php($rows = $previews[$key])
+            @php
+                $isSales = $key === 'sales';
+                $rows = $isSales ? $transactions->items() : $previews[$key];
+            @endphp
             @if (count($rows) === 0)
-                <p class="empty">No data for this period.</p>
+                <p class="empty">{{ $isSales ? 'No completed transactions for this period.' : 'No data for this period.' }}</p>
             @else
                 <div class="table-wrap">
                     <x-ui.table>
@@ -122,13 +137,29 @@
                             <tr>@foreach ($columns[$key] as $col)<th>{{ $col }}</th>@endforeach</tr>
                         </thead>
                         <tbody>
-                            @foreach (array_slice($rows, 0, 5) as $row)
-                                <tr>@foreach ($row as $cell)<td>{{ $cell }}</td>@endforeach</tr>
+                            @foreach ($isSales ? $rows : array_slice($rows, 0, 5) as $row)
+                                <tr>
+                                    @foreach ($row as $columnIndex => $cell)
+                                        <td>
+                                            @if ($isSales && $columnIndex === 1 && $cell !== '—')
+                                                <a class="report-receipt-link" href="{{ route('pos.show', $row[0]) }}" aria-label="Open receipt {{ $cell }}">{{ $cell }}</a>
+                                            @else
+                                                {{ $cell }}
+                                            @endif
+                                        </td>
+                                    @endforeach
+                                </tr>
                             @endforeach
                         </tbody>
                     </x-ui.table>
                 </div>
-                @if (count($rows) > 5)
+                @if ($isSales)
+                    @if ($transactions->hasPages())
+                        {{ $transactions->links('partials.pagination') }}
+                    @else
+                        <p class="report-results-summary">Showing {{ $transactions->firstItem() }}–{{ $transactions->lastItem() }} of {{ $transactions->total() }} completed transactions in the selected period.</p>
+                    @endif
+                @elseif (count($rows) > 5)
                     <p class="muted" style="margin-top: 0.75rem; font-size: 0.8rem;">Showing 5 of {{ count($rows) }} rows — export the CSV for the full report.</p>
                 @endif
             @endif

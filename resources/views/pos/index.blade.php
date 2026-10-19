@@ -729,6 +729,7 @@
     .pos-product-info { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 5px; }
     .pos-product-name { color: var(--text); font-size: .84rem; font-weight: 800; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3; }
     .pos-product-sub { min-width: 0; margin: 0; color: #53615f; font-size: .66rem; }
+    .pos-product-category { color: #53615f; font-size: .72rem; line-height: 1.4; overflow-wrap: anywhere; }
     .pos-stock-label { display: inline-block; max-width: 100%; overflow: hidden; padding: 4px 8px; border-radius: 6px; background: var(--text); color: #fff; font-size: .61rem; font-weight: 800; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
     .pos-stock-label.low-stock { background: #fff2c7; color: #76520a; }
     .pos-stock-label.reorder-level, .pos-stock-label.out-of-stock { background: var(--danger); color: #fff; }
@@ -742,6 +743,7 @@
     .pos-transaction-heading { display: flex; align-items: center; justify-content: space-between; margin: -13px -13px 0; padding: 11px 14px; border: 0; border-radius: 13px 13px 0 0; background: rgb(24, 118, 94); color: #fff; }
     .pos-transaction-heading .pos-section-title { margin: 0; color: #fff; font-size: .8rem; }
     .pos-table-wrap { flex: 1; min-height: 0; max-height: none; margin-top: 5px; overflow: auto; scrollbar-color: rgba(32,60,61,.24) transparent; scrollbar-width: thin; }
+    .pos-cart-product-barcode { margin-top: 3px; color: var(--text-muted, #657271); font-size: .7rem; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; }
     .pos-cart-table { border-collapse: collapse; }
     .pos-cart-table thead { position: sticky; top: 0; z-index: 1; background: #fff; }
     .pos-cart-table th { padding: 8px 6px; border-bottom: 1px solid rgba(32,60,61,.12); color: #657271; font-size: .64rem; font-weight: 650; }
@@ -807,10 +809,13 @@
     #discount-description:not(:empty) { margin-top: 7px; padding: 8px 10px; border: 1px solid rgba(24,118,94,.13); border-left: 3px solid var(--accent); border-radius: 9px; background: #f0f7f2; color: var(--interactive-ink); font-size: .69rem; font-weight: 650; line-height: 1.45; }
     .pos-field { margin-bottom: 10px; }
     .pos-customer-search { position: relative; }
-    .pos-customer-results { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 8; max-height: 190px; overflow: auto; border: 1px solid rgba(32,60,61,.12); border-radius: 10px; background: #fff; box-shadow: 0 10px 26px rgba(32,60,61,.14); }
+    .pos-customer-results { position: relative; margin-top: 4px; max-height: min(320px, 40dvh); overflow-y: auto; border: 1px solid rgba(32,60,61,.12); border-radius: 10px; background: #fff; box-shadow: 0 10px 26px rgba(32,60,61,.14); }
     .pos-customer-results[hidden] { display: none; }
     .pos-customer-result { width: 100%; display: block; padding: 9px 10px; border: 0; border-bottom: 1px solid rgba(32,60,61,.07); background: #fff; color: var(--text); text-align: left; font: inherit; font-size: .74rem; cursor: pointer; }
     .pos-customer-result:hover, .pos-customer-result:focus { background: #f1f5f3; }
+    #customer_id_input { font-size: 1rem; }
+    .pos-customer-result-name { display: block; font-size: 1rem; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; }
+    .pos-customer-result-details { display: block; margin-top: 3px; color: var(--text-muted, #657271); font-size: .78rem; line-height: 1.4; overflow-wrap: anywhere; }
     #customer-loyalty-status { min-height: 22px; padding: 6px 8px; border-radius: 7px; background: #f5f7f5; color: #53615f; font-size: .7rem; line-height: 1.45; }
     .pos-pay-btn-group { display: flex; gap: 4px; margin: 0 0 8px; padding: 4px; border-radius: 9px; background: #f0f3f1; }
     .pos-payment-option { flex: 1; min-height: 35px; padding: 7px 5px; border: 0; border-radius: 7px; background: transparent; color: #596663; font-size: .7rem; font-weight: 650; letter-spacing: 0; text-transform: none; }
@@ -1000,7 +1005,6 @@
                 <div class="pos-grand-total-row"><span class="pos-grand-label">Total</span><span class="pos-grand-amount" id="total-val">₱0.00</span></div>
             </div>
         </section>
-
             <section class="pos-panel pos-payment-panel" aria-label="Payment controls">
                 <div class="pos-section-title" id="payment-box-title">Payment</div>
                 <div class="pos-payment-due"><span>Amount due</span><strong id="payment-due-val">₱0.00</strong></div>
@@ -1020,18 +1024,20 @@
                     <div><label for="card-provider-select">Card network</label><select id="card-provider-select" class="pos-select"><option value="Visa">Visa</option><option value="Mastercard">Mastercard</option><option value="BancNet">BancNet Debit</option><option value="JCB">JCB</option><option value="Other">Other Card</option></select></div>
                     <div><label for="card-approval-code">Terminal auth / approval code *</label><div class="pos-payment-reference-field"><input id="card-approval-code" type="text" maxlength="50" autocomplete="off" class="pos-customer-input" data-payment-reference-input><button type="button" class="pos-payment-visibility-toggle" data-payment-visibility-toggle aria-label="Hide Card approval code">Hide</button></div></div>
                     <div><label for="card-last4">Card last 4 digits (optional)</label><input id="card-last4" type="text" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" autocomplete="off" class="pos-customer-input"></div>
-                    <p class="pos-card-note">The sale waits for a manager to compare the approval code and amount with the terminal record. Do not enter a full card number or CVV.</p>
+                    <p id="card-approval-error" class="shift-inline-error" aria-live="polite" hidden></p>
+                    <p class="pos-card-note">Use the terminal approval code, with letters, numbers, and dashes only. Numeric codes with 13 or more digits are not allowed. The sale waits for manager verification. Do not enter a full card number or CVV.</p>
                 </div>
                 <div id="ewallet-payment-fields" class="pos-alt-payment-fields" hidden>
                     <div><label for="ewallet-provider-select">E-wallet service</label><select id="ewallet-provider-select" class="pos-select"><option value="GCash">GCash</option><option value="Maya">Maya</option><option value="ShopeePay">ShopeePay</option><option value="GrabPay">GrabPay</option><option value="Other">Other E-Wallet</option></select></div>
                     <div><label for="ewallet-reference-no">Reference / transaction number *</label><div class="pos-payment-reference-field"><input id="ewallet-reference-no" type="text" maxlength="100" autocomplete="off" class="pos-customer-input" data-payment-reference-input><button type="button" class="pos-payment-visibility-toggle" data-payment-visibility-toggle aria-label="Hide E-Wallet reference">Hide</button></div></div>
-                    <p class="pos-ewallet-note">This request stays pending. A manager must confirm the completed payment in the merchant app before a sale or receipt is created.</p>
+                    <p class="pos-ewallet-note">Use only letters, numbers, and dashes for the reference. This request stays pending. A manager must confirm the completed payment in the merchant app before a sale or receipt is created.</p>
                 </div>
                 <div class="pos-sale-actions">
                     <button type="button" class="pos-hold-sale-btn" id="hold-sale-btn" disabled>Hold <span class="pos-shortcut-key">F9</span></button>
                     <button type="button" class="pos-complete-sale-btn" id="submit-sale-btn" disabled>Complete sale</button>
                 </div>
             </section>
+
       </div>
 
         <aside class="pos-right-rail" aria-label="Customer and customer actions">
@@ -1075,11 +1081,12 @@
 
 
 
+
         </aside>
     </div>
 
     <div class="pos-shortcuts-bar">
-        <span><span class="pos-shortcut-key">F2</span> Search</span><span><span class="pos-shortcut-key">F4</span> Cash</span><span><span class="pos-shortcut-key">F8</span> Method</span><span><span class="pos-shortcut-key">F9</span> Hold</span><a class="pos-reprint-shortcut" href="{{ route('pos.reprint-last') }}"><span class="pos-shortcut-key">F10</span> Reprint last receipt</a><span><span class="pos-shortcut-key">Enter</span> Complete</span><span><span class="pos-shortcut-key">Esc</span> Close</span>
+        <span><span class="pos-shortcut-key">F2</span> Search</span><span><span class="pos-shortcut-key">F4</span> Cash</span><span><span class="pos-shortcut-key">F6</span> Void line</span><span><span class="pos-shortcut-key">F8</span> Method</span><span><span class="pos-shortcut-key">F9</span> Hold</span><a class="pos-reprint-shortcut" href="{{ route('pos.reprint-last') }}"><span class="pos-shortcut-key">F10</span> Reprint last receipt</a><span><span class="pos-shortcut-key">Enter</span> Complete</span><span><span class="pos-shortcut-key">Esc</span> Close</span>
     </div>
 </div>
 
@@ -1206,6 +1213,9 @@
 </div>
 @endsection
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/pos-reference.css') }}">
+@endpush
 @push('scripts')
 <script src="{{ asset('js/shift-timer.js') }}"></script>
 <script>
@@ -1314,7 +1324,6 @@
     const seniorPwdTypeInput = document.getElementById('store-senior-pwd-type');
     const seniorPwdNameInput = document.getElementById('senior_pwd_name');
     const seniorPwdIdInput = document.getElementById('senior_pwd_id_number');
-
     let selectedDiscountAmount = 0;
     let vatExemptionAmount = 0;
     let visibleSeniorPwdType = '';
@@ -1698,7 +1707,7 @@
 
         state.items.unshift(hold);
         if (!saveHeldState(state)) {
-            alert('This browser could not save the held transaction. The current cart is still open.');
+            window.AppFeedback.notify('This browser could not save the held transaction. The current cart is still open.');
             return false;
         }
 
@@ -1721,7 +1730,10 @@
         authorizedDiscountId = '';
         discountAuthorizationToken = '';
         amountPaidInput.value = '0.00';
-        if (cardApprovalCode) cardApprovalCode.value = '';
+        if (cardApprovalCode) {
+            cardApprovalCode.value = '';
+            cardApprovalCode.dispatchEvent(new Event('input'));
+        }
         if (document.getElementById('card-last4')) document.getElementById('card-last4').value = '';
         if (ewalletReferenceNo) ewalletReferenceNo.value = '';
 
@@ -1736,7 +1748,7 @@
     async function removeHeldTransaction(holdId) {
         const state = loadHeldState();
         const hold = state.items.find(item => item.id === holdId);
-        if (!hold || !window.confirm(`Remove ${hold.holdNumber}? This held transaction will be deleted from this register.`)) return;
+        if (!hold || !await window.AppFeedback.confirm(`Remove ${hold.holdNumber}? This held transaction will be deleted from this register.`)) return;
 
         const authorization = await window.requestManagerAuthorization({
             action: 'held_transaction_delete',
@@ -1747,7 +1759,7 @@
 
         state.items = state.items.filter(item => item.id !== holdId);
         if (!saveHeldState(state)) {
-            alert('The held transaction could not be removed from this browser.');
+            window.AppFeedback.notify('The held transaction could not be removed from this browser.');
             return;
         }
         renderHeldTransactions();
@@ -1765,6 +1777,7 @@
     async function refreshProductStock() {
         const response = await fetch(@json(route('pos.stock')), {
             headers: { Accept: 'application/json' },
+            cache: 'no-store',
             credentials: 'same-origin'
         });
         if (!response.ok) throw new Error('Stock could not be refreshed.');
@@ -1786,7 +1799,7 @@
         const state = loadHeldState();
         const hold = state.items.find(item => item.id === holdId);
         if (!hold) {
-            alert('That held transaction is no longer available.');
+            window.AppFeedback.notify('That held transaction is no longer available.');
             renderHeldTransactions();
             return;
         }
@@ -1795,7 +1808,7 @@
             await refreshProductStock();
         } catch (error) {
             console.error(error);
-            alert('Current stock could not be verified. The held transaction remains saved; try again when the register is online.');
+            window.AppFeedback.notify('Current stock could not be verified. The held transaction remains saved; try again when the register is online.');
             return;
         }
 
@@ -1846,7 +1859,7 @@
         });
 
         if (resumedItems.length === 0) {
-            alert('None of the held items are currently available. The held transaction remains saved.');
+            window.AppFeedback.notify('None of the held items are currently available. The held transaction remains saved.');
             return;
         }
 
@@ -1874,7 +1887,7 @@
 
         state.items = state.items.filter(item => item.id !== holdId);
         if (!saveHeldState(state)) {
-            alert('The held transaction could not be removed from storage. It remains available to resume.');
+            window.AppFeedback.notify('The held transaction could not be removed from storage. It remains available to resume.');
             return;
         }
 
@@ -1909,7 +1922,7 @@
         closeModal('resume-held-confirm-modal');
         closeModal('held-transactions-modal');
         pendingResumeHoldId = null;
-        if (adjustments.length) alert(`Stock or saved data changed while this cart was held:\n${adjustments.join('\n')}`);
+        if (adjustments.length) window.AppFeedback.notify(`Stock or saved data changed while this cart was held:\n${adjustments.join('\n')}`);
     }
 
     function parseNumeric(val) {
@@ -1951,6 +1964,8 @@
 
             const tr = document.createElement('tr');
             tr.dataset.productId = String(item.id);
+            tr.tabIndex = 0;
+            tr.setAttribute('aria-label', 'Cart line: ' + item.name);
 
             // Product column
             const tdProduct = document.createElement('td');
@@ -1958,6 +1973,14 @@
             pName.className = 'pos-cart-product-name';
             pName.textContent = item.name;
             tdProduct.appendChild(pName);
+            const product = products.find(product => String(product.id) === String(item.id));
+            const barcode = String(product?.barcode || '').trim();
+            if (barcode) {
+                const pBarcode = document.createElement('div');
+                pBarcode.className = 'pos-cart-product-barcode';
+                pBarcode.textContent = 'Barcode: ' + barcode;
+                tdProduct.appendChild(pBarcode);
+            }
 
             // Qty column with steppers
             const tdQty = document.createElement('td');
@@ -1985,7 +2008,7 @@
                 const hasTooManyDecimals = weightItem && Math.abs(requestedQty * 1000 - Math.round(requestedQty * 1000)) > 0.000001;
                 if (!Number.isFinite(requestedQty) || requestedQty <= 0 || hasTooManyDecimals || (!weightItem && !Number.isInteger(requestedQty))) {
                     playBeep('error');
-                    alert(weightItem ? 'Enter a weight greater than zero, up to three decimal places.' : 'Enter a whole-number quantity greater than zero.');
+                    window.AppFeedback.notify(weightItem ? 'Enter a weight greater than zero, up to three decimal places.' : 'Enter a whole-number quantity greater than zero.');
                     quantityInput.value = formatQuantity(item.qty, weightItem);
                     return;
                 }
@@ -2128,7 +2151,7 @@
             return;
         } else if (quantity > (product ? product.stock : Infinity) + 0.000001) {
             playBeep('error');
-            alert('Cannot add more. Reached available stock limit (' + formatStock(product ? product.stock : 0) + ').');
+            window.AppFeedback.notify('Cannot add more. Reached available stock limit (' + formatStock(product ? product.stock : 0) + ').');
             if (restoreFocus) {
                 const currentInput = cartRows.querySelector(`[data-product-id="${productId}"]`);
                 if (currentInput) {
@@ -2190,13 +2213,37 @@
         if (item) removeCartItem(item.id);
     }
 
+    let voidLineShortcutPending = false;
+    async function voidFocusedCartLine() {
+        if (checkoutSubmissionStarted || voidLineShortcutPending) return;
+        const dialogOpen = Array.from(document.querySelectorAll('[role="dialog"], dialog, .pos-modal-backdrop'))
+            .some(dialog => !dialog.hidden && dialog.getClientRects().length > 0);
+        if (dialogOpen) return;
+
+        const focusedRow = document.activeElement?.closest('tr[data-product-id]');
+        const item = focusedRow && cartRows.contains(focusedRow)
+            ? cart.find(item => String(item.id) === focusedRow.dataset.productId)
+            : cart[cart.length - 1];
+        if (!item) {
+            window.AppFeedback.notify('There is no cart line to void.', 'info');
+            return;
+        }
+
+        voidLineShortcutPending = true;
+        try {
+            await removeCartItem(item.id);
+        } finally {
+            voidLineShortcutPending = false;
+        }
+    }
+
     function addToCart(productId, qty = 1) {
         const product = products.find(p => p.id === productId);
         if (!product) return;
 
         if (product.stock <= 0) {
             playBeep('error');
-            alert('"' + product.name + '" is out of stock.');
+            window.AppFeedback.notify('"' + product.name + '" is out of stock.');
             return;
         }
 
@@ -2207,7 +2254,7 @@
             : qty;
         if (quantityToAdd <= 0 || quantityToAdd > remainingStock + 0.000001) {
             playBeep('error');
-            alert('Stock limit reached for ' + product.name + '. (Available: ' + formatStock(Math.max(0, remainingStock)) + ')');
+            window.AppFeedback.notify('Stock limit reached for ' + product.name + '. (Available: ' + formatStock(Math.max(0, remainingStock)) + ')');
             return;
         }
         if (cart.length === 0) getCheckoutIdempotencyKey();
@@ -2263,6 +2310,10 @@
             title.className = 'pos-product-name';
             title.textContent = p.name;
 
+            const category = document.createElement('div');
+            category.className = 'pos-product-category';
+            category.textContent = p.category_name || 'General';
+
             const sub = document.createElement('div');
             sub.className = 'pos-product-sub';
             const stock = document.createElement('span');
@@ -2279,7 +2330,7 @@
             stock.classList.toggle('out-of-stock', p.stock <= 0);
             sub.appendChild(stock);
 
-            info.append(title, sub);
+            info.append(title, category, sub);
 
             const actions = document.createElement('div');
             actions.className = 'pos-product-actions';
@@ -2350,6 +2401,23 @@
     const cardLast4Input = document.getElementById('card-last4');
     const ewalletReferenceNo = document.getElementById('ewallet-reference-no');
     const ewalletProviderSelect = document.getElementById('ewallet-provider-select');
+    const cardApprovalError = document.getElementById('card-approval-error');
+    cardApprovalCode?.setAttribute('aria-describedby', 'card-approval-error');
+    cardApprovalCode?.addEventListener('input', () => {
+        const approval = cardApprovalCode.value.trim();
+        let message = '';
+        if (approval && (approval.length > 50 || !/^(?=[A-Za-z0-9-]*[A-Za-z0-9])[A-Za-z0-9-]+$/.test(approval))) {
+            message = 'Use only letters, numbers, and dashes, with at least one letter or number (maximum 50 characters).';
+        } else if (/^(?:\d[\s-]*){13,}$/.test(approval)) {
+            message = 'Enter the terminal approval code. Numeric codes with 13 or more digits are not allowed.';
+        } else if (/^\d{3,4}$/.test(approval)) {
+            message = 'Enter the terminal approval code, not the card CVV.';
+        }
+        cardApprovalCode.setCustomValidity(message);
+        cardApprovalCode.setAttribute('aria-invalid', message ? 'true' : 'false');
+        cardApprovalError.textContent = message;
+        cardApprovalError.hidden = !message;
+    });
 
     document.querySelectorAll('[data-payment-visibility-toggle]').forEach(toggle => {
         toggle.addEventListener('click', function() {
@@ -2483,7 +2551,19 @@
                     option.type = 'button';
                     option.className = 'pos-customer-result';
                     option.setAttribute('role', 'option');
-                    option.textContent = `${customer.name} · ${customer.external_id ? 'CRM' : `#${customer.id}`}${customer.contact ? ` · ${customer.contact}` : ''}`;
+                    const customerName = document.createElement('span');
+                    customerName.className = 'pos-customer-result-name';
+                    customerName.textContent = customer.name;
+                    const customerDetails = document.createElement('span');
+                    customerDetails.className = 'pos-customer-result-details';
+                    const customerCode = customer.external_id
+                        ? String(customer.external_id).replace(/^crm:customer:/, '')
+                        : (customer.id != null ? `#${customer.id}` : 'Unavailable');
+                    const customerIdLabel = document.createElement('strong');
+                    customerIdLabel.textContent = `Customer ID: ${customerCode}`;
+                    customerDetails.appendChild(customerIdLabel);
+                    customerDetails.appendChild(document.createTextNode(`${customer.external_id && customer.id != null ? ` · POS #${customer.id}` : ''}${customer.contact ? ` · ${customer.contact}` : ''}`));
+                    option.append(customerName, customerDetails);
                     option.addEventListener('click', async () => {
                         option.disabled = true;
                         try {
@@ -2554,7 +2634,7 @@
         if (!currentDrawer) { openModal('open-register-modal'); return; }
 
         if (cart.length === 0) {
-            alert('Add at least one item to the receipt.');
+            window.AppFeedback.notify('Add at least one item to the receipt.');
             return;
         }
 
@@ -2568,7 +2648,7 @@
             paid = parseNumeric(amountPaidInput.value);
             if (paid + 0.000001 < total) {
                 playBeep('error');
-                alert('Amount received (' + formatMoney(paid) + ') is less than total due (' + formatMoney(total) + ').');
+                window.AppFeedback.notify('Amount received (' + formatMoney(paid) + ') is less than total due (' + formatMoney(total) + ').');
                 amountPaidInput.focus();
                 return;
             }
@@ -2576,20 +2656,32 @@
             const approval = cardApprovalCode ? cardApprovalCode.value.trim() : '';
             if (!approval) {
                 playBeep('error');
-                alert('Please enter the Card Terminal Auth / Approval Code before completing the sale.');
+                window.AppFeedback.notify('Please enter the Card Terminal Auth / Approval Code before completing the sale.');
                 cardApprovalCode && cardApprovalCode.focus();
+                return;
+            }
+            if (approval.length > 50 || !/^(?=[A-Za-z0-9-]*[A-Za-z0-9])[A-Za-z0-9-]+$/.test(approval)) {
+                playBeep('error');
+                window.AppFeedback.notify('Card approval code must be at most 50 characters and contain only letters, numbers, and dashes, with at least one letter or number.');
+                cardApprovalCode?.focus();
+                return;
+            }
+            if (/^(?:\d[\s-]*){13,}$/.test(approval)) {
+                playBeep('error');
+                window.AppFeedback.notify('Enter the terminal approval code, not a full card number.');
+                cardApprovalCode?.focus();
                 return;
             }
             if (/^\d{3,4}$/.test(approval)) {
                 playBeep('error');
-                alert('Enter the terminal approval code. Do not enter the card CVV.');
+                window.AppFeedback.notify('Enter the terminal approval code. Do not enter the card CVV.');
                 cardApprovalCode && cardApprovalCode.focus();
                 return;
             }
             const last4 = (cardLast4Input?.value || '').trim();
             if (last4 && !/^\d{4}$/.test(last4)) {
                 playBeep('error');
-                alert('Card last 4 digits must contain exactly four numbers.');
+                window.AppFeedback.notify('Card last 4 digits must contain exactly four numbers.');
                 document.getElementById('card-last4')?.focus();
                 return;
             }
@@ -2600,8 +2692,14 @@
             const eRef = ewalletReferenceNo ? ewalletReferenceNo.value.trim() : '';
             if (!eRef) {
                 playBeep('error');
-                alert('Please enter the E-Wallet Reference / Transaction Number (e.g. GCash/Maya reference) before completing the sale.');
+                window.AppFeedback.notify('Please enter the E-Wallet Reference / Transaction Number (e.g. GCash/Maya reference) before completing the sale.');
                 ewalletReferenceNo && ewalletReferenceNo.focus();
+                return;
+            }
+            if (eRef.length > 100 || !/^(?=[A-Za-z0-9-]*[A-Za-z0-9])[A-Za-z0-9-]+$/.test(eRef)) {
+                playBeep('error');
+                window.AppFeedback.notify('E-wallet reference must be at most 100 characters and contain only letters, numbers, and dashes, with at least one letter or number.');
+                ewalletReferenceNo?.focus();
                 return;
             }
             refNum = eRef;
@@ -2617,7 +2715,7 @@
         const selectedOption = discountSelect.selectedOptions[0];
         const specialType = selectedOption?.dataset.specialType || '';
         if (specialType && (!seniorPwdNameInput.value.trim() || !seniorPwdIdInput.value.trim())) {
-            alert('Enter the full name and ID number shown on the Senior Citizen/PWD ID.');
+            window.AppFeedback.notify('Enter the full name and ID number shown on the Senior Citizen/PWD ID.');
             (!seniorPwdNameInput.value.trim() ? seniorPwdNameInput : seniorPwdIdInput).focus();
             return;
         }
@@ -2727,9 +2825,9 @@
                 document.getElementById('drawer-toggle-label').textContent = 'Close Shift';
                 if (currentDrawer.opened_at) window.PosShiftTimer.start(shiftTime,currentDrawer.opened_at,data.server_time);
                 document.getElementById('drawer-toggle-amount').textContent = '(' + formatMoney(currentDrawer.expected_cash) + ')';
-                drawerToggleBtn.onclick = () => {
+                drawerToggleBtn.onclick = async () => {
                     const heldCount = loadHeldState().items.length;
-                    if (heldCount > 0 && !window.confirm(`${heldCount} held ${heldCount === 1 ? 'transaction is' : 'transactions are'} still on this register. They will remain saved for up to 24 hours. Continue to Close Shift?`)) return;
+                    if (heldCount > 0 && !await window.AppFeedback.confirm(`${heldCount} held ${heldCount === 1 ? 'transaction is' : 'transactions are'} still on this register. They will remain saved for up to 24 hours. Continue to Close Shift?`)) return;
                     closingExpected = Number(currentDrawer.expected_cash);
                     renderCloseBreakdown(data.report);
                     document.getElementById('close-shift-report-link').href = '{{ url('/cash-drawer') }}/' + currentDrawer.drawer_id + '/report';
@@ -2789,7 +2887,7 @@
 
     document.getElementById('confirm-open-btn').addEventListener('click', async () => {
         const floatVal = parseNumeric(document.getElementById('open-float-input').value);
-        if (floatVal < 0) { alert('Invalid opening float.'); return; }
+        if (floatVal < 0) { window.AppFeedback.notify('Invalid opening float.'); return; }
         const authorization = await window.requestManagerAuthorization({
             action: 'cash_drawer_open',
             details: { opening_cash: Math.round(floatVal * 100) / 100 }
@@ -2814,7 +2912,7 @@
         const error = document.getElementById('close-shift-error');
         if (!document.getElementById('close-actual-input').reportValidity() || !document.getElementById('close-reconciliation-notes').reportValidity() || button.disabled) return;
         const actual = parseNumeric(document.getElementById('close-actual-input').value);
-        if (actual < 0) { alert('Invalid actual cash amount.'); return; }
+        if (actual < 0) { window.AppFeedback.notify('Invalid actual cash amount.'); return; }
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
 
         button.disabled = true;
@@ -2888,7 +2986,7 @@
             syncDiscountDropdown();
             syncSeniorPwdProof();
             renderCart();
-            alert('The discount could not be changed. The previous discount has been restored. Try again.');
+            window.AppFeedback.notify('The discount could not be changed. The previous discount has been restored. Try again.');
         } finally {
             discountSelect.disabled = false;
             discountTrigger.disabled = false;
@@ -2931,6 +3029,12 @@
 
     // POS Global Keyboard Shortcuts
     window.addEventListener('keydown', (e) => {
+        if (e.key === 'F6') {
+            if (e.ctrlKey || e.altKey || e.metaKey) return;
+            e.preventDefault();
+            if (!e.repeat) voidFocusedCartLine();
+            return;
+        }
         const active = document.activeElement;
         const now = Date.now();
         const diff = now - lastScanKeyTimestamp;
@@ -3047,12 +3151,31 @@
     renderSearchResults();
     checkDrawerStatus();
     window.setInterval(checkDrawerStatus, 15000);
+    let stockRefreshRunning = false;
+    let stockRefreshFailed = false;
+    async function pollInventoryStock() {
+        if (stockRefreshRunning || document.hidden) return;
+        stockRefreshRunning = true;
+        try {
+            await refreshProductStock();
+            stockRefreshFailed = false;
+        } catch (error) {
+            products.forEach(product => { product.stock = 0; });
+            renderSearchResults(searchInput.value);
+            if (!stockRefreshFailed) window.AppFeedback.notify('Inventory stock could not be verified. Sales require an online stock check.');
+            stockRefreshFailed = true;
+        } finally {
+            stockRefreshRunning = false;
+        }
+    }
+    window.setInterval(pollInventoryStock, 5000);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) pollInventoryStock();
+    });
+    pollInventoryStock();
 </script>
 @endpush
 
-@push('styles')
-<link rel="stylesheet" href="{{ asset('css/pos-reference.css') }}">
-@endpush
 @push('scripts')
 <script src="{{ asset('js/pos-reference.js') }}" defer></script>
 @endpush

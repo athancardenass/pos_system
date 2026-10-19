@@ -69,7 +69,7 @@
                             </td>
                             <td class="actions">
                                 <a class="discount-edit-button" href="{{ route('discounts.edit', $discount) }}">Edit</a>
-                                <form class="inline-form" method="POST" action="{{ route('discounts.destroy', $discount) }}" onsubmit="return confirm('Delete this discount?')">
+                                <form class="inline-form" method="POST" action="{{ route('discounts.destroy', $discount) }}" data-confirm="Delete this discount?" data-confirm-label="Delete">
                                     @csrf
                                     @method('DELETE')
                                     <x-ui.button variant="danger" type="submit" size="compact">Delete</x-ui.button>

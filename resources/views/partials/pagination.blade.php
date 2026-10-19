@@ -7,9 +7,9 @@
 
         <span class="pagination-links">
             @if ($paginator->onFirstPage())
-                <span class="pagination-btn is-disabled" aria-disabled="true">&lsaquo; Prev</span>
+                <span class="pagination-btn is-disabled" aria-disabled="true">Prev</span>
             @else
-                <a class="pagination-btn" href="{{ $paginator->previousPageUrl() }}" rel="prev">&lsaquo; Prev</a>
+                <a class="pagination-btn" href="{{ $paginator->previousPageUrl() }}" rel="prev">Prev</a>
             @endif
 
             @foreach ($elements as $element)
@@ -29,9 +29,9 @@
             @endforeach
 
             @if ($paginator->hasMorePages())
-                <a class="pagination-btn" href="{{ $paginator->nextPageUrl() }}" rel="next">Next &rsaquo;</a>
+                <a class="pagination-btn" href="{{ $paginator->nextPageUrl() }}" rel="next">Next</a>
             @else
-                <span class="pagination-btn is-disabled" aria-disabled="true">Next &rsaquo;</span>
+                <span class="pagination-btn is-disabled" aria-disabled="true">Next</span>
             @endif
         </span>
     </nav>

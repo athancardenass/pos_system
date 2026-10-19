@@ -41,6 +41,7 @@ return [
     'crm' => [
         'base_url' => env('CRM_API_BASE_URL'),
         'token' => env('CRM_API_TOKEN'),
+        'allow_http' => env('CRM_ALLOW_HTTP', false),
     ],
 
     'hrms' => [

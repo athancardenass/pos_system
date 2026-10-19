@@ -38,6 +38,18 @@ Route::middleware('guest')->group(function () {
 Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth')->name('logout');
 
 Route::middleware('auth')->group(function () {
+    Route::middleware('role:Cashier,Manager,Supervisor')->group(function () {
+        Route::get('/incidents', [\App\Http\Controllers\IncidentController::class, 'index'])->name('incidents.index');
+        Route::get('/incidents/create', [\App\Http\Controllers\IncidentController::class, 'create'])->name('incidents.create');
+        Route::post('/incidents/safety', [\App\Http\Controllers\IncidentController::class, 'store'])->name('incidents.store');
+        Route::get('/incidents/{incident}/evidence', [\App\Http\Controllers\IncidentController::class, 'evidence'])->name('incidents.evidence');
+        Route::middleware('role:Manager')->group(function () {
+            Route::post('/incidents/{incident}/review', [\App\Http\Controllers\IncidentController::class, 'review'])->name('incidents.review');
+            Route::post('/incidents/{incident}/acknowledge', [\App\Http\Controllers\IncidentController::class, 'acknowledge'])->name('incidents.acknowledge');
+            Route::get('/incidents/{incident}/export', [\App\Http\Controllers\IncidentController::class, 'export'])->name('incidents.export');
+        });
+        Route::get('/incidents/{incident}', [\App\Http\Controllers\IncidentController::class, 'show'])->name('incidents.show');
+    });
     Route::get('/dashboard', DashboardController::class)->middleware('role:Manager')->name('dashboard');
 
     Route::middleware('role:Cashier,Manager,Supervisor')->group(function () {

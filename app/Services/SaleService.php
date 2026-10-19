@@ -19,7 +19,7 @@ class SaleService
         if ($query === '') {
             return null;
         }
-        $sales = SaleTransaction::with(['receipt', 'employee']);
+        $sales = SaleTransaction::with(['receipt', 'employee', 'saleDetails.product']);
         if (ctype_digit($query) && filter_var($query, FILTER_VALIDATE_INT) !== false) {
             return $sales->find((int) $query);
         }
@@ -35,6 +35,7 @@ class SaleService
      *     categories: Collection,
      *     discounts: Collection,
      *     productsJson: Collection,
+     *     recentReceipts: Collection,
      * }
      */
     public function getPosIndexData(): array
@@ -69,11 +70,30 @@ class SaleService
             'category_name' => $p->category?->category_name ?? 'General',
         ]);
 
+        try {
+            $stocks = $this->getProductStockSnapshot();
+            $productsJson = $productsJson->map(fn (array $product) => array_replace($product, [
+                'stock' => $stocks[$product['id']]['stock'] ?? 0,
+            ]));
+        } catch (ValidationException) {
+            // An offline source must never advertise stale stock as sellable.
+            $productsJson = $productsJson->map(fn (array $product) => array_replace($product, ['stock' => 0]));
+        }
+
+        $recentReceipts = SaleTransaction::query()
+            ->with(['receipt', 'employee'])
+            ->where('status', 'completed')
+            ->whereHas('receipt')
+            ->orderByDesc('transaction_date')
+            ->limit(5)
+            ->get();
+
         return [
             'products' => $products,
             'categories' => $categories,
             'discounts' => $discounts,
             'productsJson' => $productsJson,
+            'recentReceipts' => $recentReceipts,
         ];
     }
 
@@ -120,15 +140,19 @@ class SaleService
         ], array_slice($result['customers'], 0, $limit));
     }
 
-    public function getProductStockSnapshot(): array
+    public function getProductStockSnapshot(bool $includeInactive = false): array
     {
+        $live = app(\App\Services\Integration\Inventory\LiveStockService::class);
+        $snapshot = $live->snapshot();
         return Product::query()
-            ->where('is_active', true)
+            ->when(! $includeInactive, fn ($query) => $query->where('is_active', true))
             ->with('inventory')
             ->get()
             ->mapWithKeys(fn (Product $product) => [
                 (int) $product->product_id => [
-                    'stock' => $product->stockQuantity(),
+                    'stock' => $live->configured()
+                        ? $live->available((int) $product->product_id, $snapshot)
+                        : $product->stockQuantity(),
                     'unit_of_measure' => $product->unit_of_measure ?? 'piece',
                 ],
             ])

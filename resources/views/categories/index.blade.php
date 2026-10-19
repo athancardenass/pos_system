@@ -26,7 +26,7 @@
                             <td class="muted">{{ $category->description }}</td>
                             <td class="actions">
                                 <x-ui.button variant="slate" size="compact" :href="route('categories.edit', $category)">Edit</x-ui.button>
-                                <form class="inline-form" method="POST" action="{{ route('categories.destroy', $category) }}" onsubmit="return confirm('Delete this category?')">
+                                <form class="inline-form" method="POST" action="{{ route('categories.destroy', $category) }}" data-confirm="Delete this category?" data-confirm-label="Delete">
                                     @csrf
                                     @method('DELETE')
                                     <x-ui.button variant="danger" type="submit" size="compact">Delete</x-ui.button>

@@ -93,7 +93,12 @@
                 <tbody>
                     @foreach ($sale->saleDetails as $line)
                         <tr>
-                            <td><strong>{{ $line->product->product_name ?? '—' }}</strong></td>
+                            <td>
+                                <strong>{{ $line->product->product_name ?? '—' }}</strong>
+                                @if (filled($line->product?->barcode))
+                                    <span class="receipt-product-code receipt-mono">EAN-13: {{ $line->product->barcode }}</span>
+                                @endif
+                            </td>
                             <td>{{ $line->quantity }}</td>
                             <td>₱{{ number_format($line->unit_price, 2) }}</td>
                             <td>₱{{ number_format($line->subtotal, 2) }}</td>
@@ -154,7 +159,7 @@
                         @endif
                     </span>
                 @endif
-                <span>{{ $receiptNumber }}</span>
+                <span class="receipt-mono">{{ $receiptNumber }}</span>
             </footer>
         </div>
     </div>
@@ -300,6 +305,7 @@
     .receipt-mono { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
     .receipt-footer { display: grid; gap: 5px; color: #5d6967; font-size: 9px; text-align: center; }
     .receipt-footer strong { color: #203C3D; font-size: 11px; }
+    .receipt-product-code { display: block; margin-top: 3px; color: #5d6967; font-size: 9px; font-weight: 400; overflow-wrap: anywhere; }
     .receipt-policy { margin-top: 2px; font-weight: 700; }
     .receipt-policy.active { color: #2D8A4E; }
     .receipt-policy.expired { color: #C4504A; }
@@ -386,7 +392,7 @@
             if (refundForm.dataset.managerAuthorized === 'true') return;
             event.preventDefault();
             if (!refundForm.reportValidity()) return;
-            if (!window.confirm('Process this refund?')) return;
+            if (!await window.AppFeedback.confirm('Process this refund?')) return;
 
             const items = {};
             refundForm.querySelectorAll('input[name^="items["]').forEach(input => {
@@ -395,7 +401,7 @@
                 if (match && quantity > 0) items[match[1]] = Math.round(quantity * 1000) / 1000;
             });
             if (Object.keys(items).length === 0) {
-                window.alert('Enter a refund quantity for at least one item.');
+                window.AppFeedback.notify('Enter a refund quantity for at least one item.');
                 return;
             }
 

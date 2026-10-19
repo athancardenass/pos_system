@@ -5,7 +5,6 @@
 @section('content')
     <div class="page-head">
         <h1>Employees</h1>
-        <x-ui.button :href="route('employees.create')">New employee</x-ui.button>
     </div>
     <div class="card">
         <x-ui.table class="employee-table">
@@ -34,7 +33,7 @@
                             @if ($employee->hasRole('Supervisor'))
                                 <x-ui.button variant="slate" size="compact" :href="route('employees.supervisor-permissions.edit', $employee)">Set permissions</x-ui.button>
                             @endif
-                            <form class="inline-form" method="POST" action="{{ route('employees.destroy', $employee) }}" onsubmit="return confirm('Delete this employee?')">
+                            <form class="inline-form" method="POST" action="{{ route('employees.destroy', $employee) }}" data-confirm="Delete this employee?" data-confirm-label="Delete">
                                 @csrf
                                 @method('DELETE')
                                 <x-ui.button variant="danger" type="submit" size="compact">Delete</x-ui.button>

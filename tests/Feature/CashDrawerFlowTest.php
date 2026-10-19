@@ -65,4 +65,22 @@ class CashDrawerFlowTest extends TestCase
             ->assertRedirect(route('pos.index'))
             ->assertSessionHasErrors('drawer');
     }
+
+    public function test_shift_closure_does_not_flash_a_success_message(): void
+    {
+        $manager = Employee::query()->where('username', 'manager')->firstOrFail();
+
+        $this->actingAs($manager)
+            ->postJson(route('cash-drawer.open'), [
+                'opening_cash' => '500.00',
+                'register_id' => 'REG 01',
+            ])
+            ->assertOk();
+
+        $this->actingAs($manager)
+            ->from(route('pos.index'))
+            ->post(route('cash-drawer.close'), ['actual_cash' => '500.00'])
+            ->assertRedirect(route('pos.index'))
+            ->assertSessionMissing('status');
+    }
 }

@@ -21,6 +21,7 @@
         <env name="APP_ENV" value="testing"/>
         <env name="CRM_API_BASE_URL" value="" force="true"/>
         <env name="CRM_API_TOKEN" value="" force="true"/>
+        <env name="CRM_ALLOW_HTTP" value="false" force="true"/>
         <env name="HRMS_API_BASE_URL" value="" force="true"/>
         <env name="HRMS_API_TOKEN" value="" force="true"/>
         <env name="HRMS_ALLOW_HTTP" value="false" force="true"/>

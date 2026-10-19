@@ -28,7 +28,7 @@
                             <td class="muted">{{ $supplier->email }}</td>
                             <td class="actions">
                                 <x-ui.button variant="slate" size="compact" :href="route('suppliers.edit', $supplier)">Edit</x-ui.button>
-                                <form class="inline-form" method="POST" action="{{ route('suppliers.destroy', $supplier) }}" onsubmit="return confirm('Delete this supplier?')">
+                                <form class="inline-form" method="POST" action="{{ route('suppliers.destroy', $supplier) }}" data-confirm="Delete this supplier?" data-confirm-label="Delete">
                                     @csrf
                                     @method('DELETE')
                                     <x-ui.button variant="danger" type="submit" size="compact">Delete</x-ui.button>

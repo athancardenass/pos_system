@@ -131,6 +131,7 @@ class CashDrawerService
             $snapshot = app(ShiftReportService::class)->summary($drawer->fresh());
             $snapshot['legacy'] = false;
             $drawer->update(['report_snapshot' => $snapshot]);
+            app(IncidentService::class)->recordVariance($drawer->fresh());
             AuditLogger::record('shift_closed', 'cash_drawers', $drawer->drawer_id, 'Closed shift with difference '.number_format($diff, 2));
 
             return $drawer->fresh();

@@ -31,11 +31,14 @@ class CustomerLoyaltyDispatcherTest extends TestCase
             'role_id' => 1, 'first_name' => 'Test', 'last_name' => 'Cashier', 'username' => 'test',
             'password' => 'test', 'hire_date' => now(), 'status' => 'active',
         ]);
-        return SaleTransaction::create([
+        $sale = SaleTransaction::create([
             'customer_id' => $customer?->customer_id, 'employee_id' => $employee->employee_id,
             'transaction_date' => now(), 'subtotal' => 250, 'total_amount' => 250,
             'payment_method' => 'cash', 'status' => 'completed',
         ]);
+        $product = \App\Models\Product::create(['product_name' => 'Order item', 'barcode' => \App\Models\Product::generateBarcode(), 'unit_price' => 250, 'cost_price' => 100, 'reorder_level' => 1]);
+        \App\Models\SaleDetail::create(['transaction_id' => $sale->transaction_id, 'product_id' => $product->product_id, 'quantity' => 1, 'unit_price' => 250, 'subtotal' => 250]);
+        return $sale;
     }
 
     public function test_registered_customer_event_is_delivered_once_and_walk_in_is_excluded(): void
@@ -47,13 +50,13 @@ class CustomerLoyaltyDispatcherTest extends TestCase
         $walkIn = $this->sale(null);
         $outbox->recordSaleEvent($walkIn->transaction_id, null, 1000);
         $this->assertSame(1, CustomerOutboxEvent::count());
-        Http::fake(['https://crm.test/api/v1/loyalty/events' => Http::response([
+        Http::fake(['https://crm.test/api/v1/orders' => Http::response(['data' => ['event_id' => 'pos:customer:order:'.$sale->transaction_id, 'order_id' => 10]], 201), 'https://crm.test/api/v1/loyalty/events' => Http::response([
             'data' => ['event_id' => 'pos:customer:sale:1', 'points_delta' => 2, 'duplicate' => false],
         ], 201)]);
         $this->assertSame(['sent' => 1, 'failed' => 0], app(CustomerLoyaltyDispatcher::class)->dispatch());
         $this->assertSame(['sent' => 0, 'failed' => 0], app(CustomerLoyaltyDispatcher::class)->dispatch());
-        Http::assertSentCount(1);
-        Http::assertSent(fn ($request) => $request['customer_external_id'] === 'crm:customer:CUS-1' && $request['amount'] === 250.0);
+        Http::assertSentCount(2);
+        Http::assertSent(fn ($request) => str_ends_with($request->url(), '/loyalty/events') && $request['customer_external_id'] === 'crm:customer:CUS-1' && $request['amount'] === 250.0);
         $this->assertNotNull(CustomerOutboxEvent::first()->processed_at);
         // CRM owns the balance; POS must not credit a second local copy.
         $this->assertEquals(0, $customer->fresh()->loyalty_points);
@@ -64,7 +67,7 @@ class CustomerLoyaltyDispatcherTest extends TestCase
         $customer = Customer::create(['first_name' => 'Ana', 'last_name' => 'Santos', 'crm_external_id' => 'crm:customer:CUS-1']);
         $sale = $this->sale($customer);
         app(CustomerOutboxService::class)->recordSaleEvent($sale->transaction_id, $customer->customer_id, 50);
-        Http::fake(['https://crm.test/api/v1/loyalty/events' => Http::sequence()
+        Http::fake(['https://crm.test/api/v1/orders' => Http::response(['data' => ['event_id' => 'pos:customer:order:'.$sale->transaction_id, 'order_id' => 10]], 201), 'https://crm.test/api/v1/loyalty/events' => Http::sequence()
             ->push([], 503)->push(['data' => ['event_id' => 'pos:customer:sale:1', 'points_delta' => 1, 'duplicate' => true]])]);
         $dispatcher = app(CustomerLoyaltyDispatcher::class);
         $this->assertSame(['sent' => 0, 'failed' => 1], $dispatcher->dispatch());

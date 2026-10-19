@@ -15,7 +15,7 @@ class Endpoint
             return true;
         }
 
-        if (in_array($system, ['inventory', 'hrms'], true) && config("services.$system.allow_http", false)
+        if (in_array($system, ['inventory', 'hrms', 'crm'], true) && config("services.$system.allow_http", false)
             && ($parts['scheme'] ?? '') === 'http'
             && rtrim($url, '/') === rtrim((string) config("services.$system.base_url"), '/')) {
             return true;

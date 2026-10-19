@@ -7,6 +7,9 @@
     <div class="shift-actions"><a class="btn btn-secondary" href="{{ route('pos.index') }}">Back to POS</a><button class="btn" type="button" id="print-shift-report">Print report</button></div>
 </div>
 <article class="card shift-report" id="shift-report">
+    @if ($drawer->status === 'closed' && abs((float) $drawer->difference) >= .005)
+        <p class="shift-no-print">This shift has a cash variance. <a href="{{ route('incidents.index') }}">Review the incident register</a> for manager findings and HRMS handoff.</p>
+    @endif
     <section class="shift-print-summary" aria-label="Thermal shift report summary">
         <header class="shift-print-heading">
             <strong>{{ $drawer->isOpen() ? 'SHIFT PREVIEW' : 'CLOSING SHIFT REPORT' }}</strong>

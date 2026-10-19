@@ -1,5 +1,422 @@
 # POS System — Changelog
 
+## 2026-10-19 — Restore the 11:30 PM POS workspace
+
+Restored the POS to its pre-redesign state and clarified the register layout: Products and Live transaction stay in the main workspace, payment controls sit below the transaction, and customer lookup with the discount selector stays in the right rail. Removed the per-system status panel and later POS-only safety display changes while preserving the incident reporting workflow.
+
+Files: `resources/views/pos/index.blade.php`, `tests/Feature/CrudAndPosTest.php`, and `CHANGELOG.md`. Verification: the layout regression passed; `php artisan test` passed 221 tests / 1,344 assertions; all 17 browser tests and `git diff --check` passed.
+
+## 2026-10-18 — Modernize shared error alerts
+
+Refined the app-wide session and validation error alerts with a warmer, clearer error surface, larger rounded corners, stronger text weight, improved line spacing, and responsive wrapping. Multiple validation messages now have more readable spacing. Preserved alert semantics, message content, auto-dismiss behavior, and the existing success/warning/info treatments.
+
+Files: `resources/views/layouts/app.blade.php` and `CHANGELOG.md`.
+
+## 2026-10-18 — Show completed transactions in Reports and align exchange fields
+
+Added a newest-first, paginated Sales report table for completed transactions. By default, the date range starts at the earliest recorded transaction so older completed sales remain available; users can narrow the range with the date filters. Added a Receipt No. column linked to the POS receipt/details page when a receipt exists, and included the number in the optional CSV. Reused the POS's shared pagination component and removed its oversized chevron glyphs. Clarified the empty state and visible row count. Aligned dynamically added exchange product and quantity fields with the POS form styling and added responsive layouts for narrow screens. Replaced the report's nested inline PHP expression with a normal Blade PHP block so the report template compiles reliably.
+
+Files: `app/Http/Controllers/ReportController.php`, `resources/views/reports/index.blade.php`, `resources/views/partials/pagination.blade.php`, `resources/views/pos/exchange-panel.blade.php`, `tests/Feature/SalesReportTest.php`, `tests/Feature/ExchangeFlowTest.php`, and `CHANGELOG.md`. Sales report regressions cover completed-only results, all-time default range, styled pagination without arrow glyphs, and clickable receipt links (2 tests / 22 assertions); the exchange layout regression covers its responsive POS form styling. Final `php artisan test` passed 219 tests / 1,338 assertions; `git diff --check` passed.
+
+## 2026-10-18 — Improve incident report screens
+
+Refined the incident register with clearer case/status labels, distinct safety and cash-variance badges, a manual Inventory/HRMS handoff note, a useful empty state, and mobile case rows. Reworked the safety concern form into grouped sections with a prominent whole-product sales-hold notice, clearer field guidance, responsive spacing, and a mobile-friendly submit action. Preserved the report fields and existing incident workflow.
+
+Files: `resources/views/incidents/index.blade.php`, `resources/views/incidents/create.blade.php`, and `CHANGELOG.md`. Verification: `IncidentReportingTest` passed 9 tests / 67 assertions; full `php artisan test` passed 216 tests / 1,307 assertions with the existing temporary SQLite extension scan directory; `git diff --check` passed. The browser preview route redirects to login, so no POS account or live incident record was used.
+
+## 2026-10-18 — Remove the Senior/PWD grocery discount change
+
+At the user's direction, removed the new BNPC grocery discount workflow and restored the POS's prior Senior/PWD discount calculation, labels and CRM eligibility behavior. Removed product classification, server quote, booklet fields, allowance enforcement and BNPC-specific refund/report display. Rolled back `2026_10_18_000002_add_bnpc_grocery_policy` after verifying the live allowance table had zero rows and every catalog product still had the default `unreviewed` classification. No BNPC allowance or classification data was discarded. Deleted the feature-only service, migration source, tests, plan and preview screenshot. The earlier changelog entry above records the change's brief implementation and this entry records its removal. Other working tree changes were preserved.
+
+Verification: the restored Senior/PWD feature tests passed 7 tests / 88 assertions; all 17 browser JavaScript tests and Blade cache compilation passed. Final `php artisan test` passed 216 tests / 1,311 assertions. Read-only live schema checks confirmed the allowance table and product classification column are absent, and a source search found no BNPC references in live application code. `git diff --check` passed; only Git's existing CRLF normalization notices remain.
+
+## 2026-10-18 — Correct Senior/PWD grocery discounts
+
+Replaced the blanket 20% Senior/PWD discount and extra VAT removal on grocery carts with the 5% discount for eligible basic necessities and prime commodities under JAO 24-02. The discount applies only to manager-classified eligible lines; excluded lines retain full price, and any unreviewed cart item blocks the statutory discount until reviewed. Existing products are unreviewed by default and have not been assigned eligibility automatically. Managers classify each product in its product form after checking its origin and category. LPG and kerosene periodic limits are outside this grocery checkout flow.
+
+Checkout verifies the purchaser's declared Senior/PWD type, name and government ID, confirms the purchase booklet and declared purchases at other stores, and tracks the installation's weekly eligible purchase base and discount under a locked, hashed beneficiary ledger. The policy limits the weekly eligible base to PHP 2,500 and the discount to PHP 125, with no carryover. The implementation uses Monday through Sunday in Manila as an explicitly operational calendar-week convention; JAO 24-02 says calendar week without naming its first weekday. At full allowance, checkout verifies four covered BNPC kinds across recorded local purchases or uses the booklet declaration for outside-store purchases. Other stores and alternate government IDs are reconciled manually from the booklet because no shared API exists. CRM registration is not an eligibility requirement. Normal product/store tax treatment remains in place; this grocery benefit adds no VAT exemption.
+
+The POS obtains a server quote for mixed carts and proof details, requires a current quote before checkout, and rejects a stale or changed total. Card and e-wallet reservations save the expected total and recheck the policy at completion. Sale snapshots retain exact paid cents and covered kinds per line, so returns remain tied to the original eligible items and catalog classification edits do not rewrite past receipts. Report labels use the saved discount snapshot. The former client-side void preview requests a fresh server quote for grocery-policy carts.
+
+Files: new `app/Services/GroceryDiscountService.php`, `database/migrations/2026_10_18_000002_add_bnpc_grocery_policy.php`, `tests/Feature/GroceryDiscountTest.php`, and `docs/superpowers/plans/2026-10-18-grocery-discounts.md`; changes to Product/Discount models, product/discount/POS/report controllers, checkout and payment services, return pricing, routes, POS/product/discount/report/receipt views, the POS reference script, manager PIN modal, browser reference test, and `ReceiptAndSpecialDiscountTest.php`.
+
+The additive migration was applied to the existing MariaDB database after creating `C:\Users\Marc Jan\AppData\Local\Temp\pos-before-bnpc-20261018-195046.sql` (146,342 bytes). Existing catalog products remain unreviewed; the manager must classify them before statutory grocery discounts can be used. No CRM address schema, dependencies, `.env`, or `config/` files were changed for this feature. Existing dirty workspace edits were preserved, and no Git state-changing commands were used.
+
+Verification: focused grocery/receipt tests passed 20 tests / 124 assertions; all 17 browser JavaScript tests, Blade cache compilation, PHP syntax checks, and `git diff --check` passed. An independent review found a split-line rounding case that could exceed the weekly cap; calculation now rounds cumulative allowance use, capped by the remaining PHP125 entitlement, and has a regression test. Final `php artisan test` passed 229 tests / 1,341 assertions. The live migration status confirms the additive grocery-policy migration is applied. A separate seeded SQLite browser preview showed a mixed ₱1,000 eligible / ₱300 excluded cart with ₱50 discount and ₱1,250 due; no sale was completed. Saved the screenshot outside the repository in the conversation visualization folder and stopped only the temporary port-8019 preview server.
+
+## 2026-10-18 — Group incident reporting under Reports
+
+Moved incident reporting access into a dedicated section on the manager Reports page, with links to the incident register and safety concern form. Removed the standalone Incidents navigation item and kept Reports active throughout the incident workflow. Cashiers/supervisors retain their private incident access through a Reports navigation link to their existing scoped register; manager-only financial reports remain protected. Added a Back to reports link for managers. The incident section explicitly states that the sales date filter does not filter the incident register. No configuration, schema, role permissions or business logic changed.
+
+Files: `resources/views/layouts/app.blade.php`, `resources/views/reports/index.blade.php`, `resources/views/incidents/index.blade.php`, `tests/Feature/IncidentReportingTest.php`, and `CHANGELOG.md`. The new navigation regression failed before implementation; all nine incident tests then passed (67 assertions). Blade compilation and whitespace checks passed. Browser verification in the isolated SQLite preview confirmed the Reports section, removed Incidents tab, working incident link/back link and active Reports navigation. Saved a screenshot outside the repository and stopped the temporary preview processes. Full suite verification follows below.
+
+Full verification: `php artisan test` passed 216 tests / 1,313 assertions using the temporary SQLite extension scan directory, with no repository PHP/environment configuration changes.
+
+## 2026-10-18 — Product safety incidents and cash variance review
+
+Added a private incident register, product safety form with optional evidence photo (JPG/PNG/WebP, 5 MB maximum), case detail/history, manager findings/resolution, manager-only JSON export and manually recorded Inventory/HRMS acknowledgement references. Cashiers and supervisors can read only their own reports; managers can review all. Evidence stays on private local storage and requires case access. Product complaints remain suspected concerns rather than confirmed contamination claims. Receipt/batch/expiry references are recorded as supplied; quantity is descriptive, not a second stock ledger.
+
+Every unresolved safety case independently holds the whole product. Checkout, exchanges (through checkout), card/e-wallet reservation and payment completion enforce the hold server-side; reporting/review and sale paths share product locks. The hold query uses a current locking read so MariaDB REPEATABLE READ cannot miss a report committed after an older snapshot. Catalog synchronization cannot clear the hold. Resolution requires manager findings and releases only that case's hold; stock is not silently deducted, restored or disposed of. Inventory remains responsible for physical quarantine, batch tracing and disposition.
+
+Closing a shift with shortage or overage now creates one cash variance case per drawer, preserving original balances, explanation, shift snapshot and HRMS employee number. Balanced closures do not create cases. Manager investigation/acknowledgement never changes the closed shift or initiates payroll actions. Existing closed shifts are not retroactively converted into cases.
+
+The user confirmed no incident receiver APIs exist yet: this delivery is local workflow and exportable reports only. External state remains `not_connected` unless a manager records a receiving team's acknowledgement as `acknowledged_manually`. No automatic external submission, fabricated API endpoints, automatic retries or claims of API delivery were introduced. Actual receiver adapters require agreed contracts later.
+
+Files: new `app/Models/IncidentReport.php`, `app/Services/IncidentService.php`, `app/Http/Controllers/IncidentController.php`, `database/migrations/2026_10_18_000001_create_incident_reports_table.php`, `resources/views/incidents/{index,create,show,errors}.blade.php`, `tests/Feature/IncidentReportingTest.php`, and `docs/superpowers/plans/2026-10-18-incident-reporting.md`; additive integrations in `routes/web.php`, `app/Services/{CashDrawer,Checkout,CardVerification,EwalletVerification}Service.php`, `resources/views/layouts/app.blade.php` and `resources/views/cash-drawers/show.blade.php`. Preserved pre-existing working tree edits; no Git mutations, dependency/config/environment edits or CRM schema changes.
+
+Verification so far: eight incident feature tests pass / 58 assertions with temporary `PHP_INI_SCAN_DIR` enabling SQLite, including private evidence and sanitized report text. Actual IncidentService also passed a two-connection MariaDB snapshot/current-read check in an isolated temporary database, removed afterward. Blade compilation, PHP syntax checks, whitespace checks and the new-view design detector passed. Local MariaDB was stopped; started its existing XAMPP server, backed up `pos_system` to the system temporary folder (`pos-before-incidents-20261018-192047.sql`, 130,739 bytes), then applied only the additive incident migration successfully. Started a loopback preview on port 8018. Live authenticated browser inspection could not proceed because the demo manager password was not accepted; credentials were not modified. Full suite result is recorded below when available.
+
+Final regression result: `php artisan test` passed 214 tests / 1,289 assertions. The additional evidence/privacy test was then verified in the targeted eight-test run above. Authenticated browser inspection used a separate temporary seeded SQLite database on port 8019, verifying the incident register, safety form and successful submission/case detail with preview-only data. Improved header back-link contrast using the existing secondary button style. Actual POS records/accounts were not used for the browser test. Preview fixture database remains in system temporary storage, separate from the live MariaDB backup.
+
+After the contrast adjustment, the incident suite passed again (8 tests / 58 assertions), Blade compilation and whitespace checks passed, and migration status confirmed batch 10 applied. Saved the verified preview screenshot outside the repository in the conversation visualization folder. Stopped the isolated port-8019 preview processes; the actual POS loopback server on port 8018 remains available for the user's normal login.
+
+## 2026-10-17 — Restore running integration sync workers
+
+Investigated coffee stock remaining at 472 after three newer completed sales. Inventory events for sales #27, #28, and #29 were pending with zero attempts; no scheduler or Inventory webhook worker process was running. Ran Inventory delivery and verified that the remote PRD-003 on-hand quantity became 467 after the combined five-unit deduction. Beef event 32 remains pending with HTTP 422 and does not block coffee delivery.
+
+Started the existing `php artisan schedule:work` and `php artisan integrations:webhooks` commands as hidden background processes in this POS workspace. Verified both process command lines; worker logs are outside the repository in the system temporary `pos-sync-workers` folder. These processes must stay running for automatic delivery; Windows restart/termination requires restarting them. No application code or configuration changed; operational verification used the remote catalog and outbox state rather than fabricating a sale.
+
+## 2026-10-17 — Show product EAN-13 numbers as receipt text only
+
+Applied the user's final clarification: each receipt item shows its product name followed immediately by `EAN-13: <saved product barcode>` as text. Removed the generated/scannable product barcode images, their receipt script, and obsolete SVG-generation browser tests. Original receipts and reprints retain the plain receipt number in the footer and show the same saved product codes below their item names. Missing product codes are omitted. No barcode images or barcode-generation scripts are loaded by the receipt page.
+
+Files: `resources/views/pos/show.blade.php`, `tests/Feature/ReceiptBarcodeTest.php`, deleted `public/js/receipt-barcode.js` and `tests/Browser/receipt-barcode.test.cjs`, and `CHANGELOG.md`. Verification: `php artisan test` passed 207 tests / 1,246 assertions using the temporary external PHPRC enabling SQLite; all 17 browser tests and `git diff --check` passed. This entry supersedes the earlier receipt-barcode image implementations below.
+
+## 2026-10-17 — Correct receipt barcode to show each product's barcode
+
+Replaced the receipt-number footer barcode with each sold product's saved barcode below its item line, as clarified by the user. The barcode occupies a full-width row so it is not squeezed into the product-name column on 58/80 mm paper; its human-readable value appears directly below. Kept the footer receipt number as text. Original receipts and reprints use the same product identifiers. Missing product barcodes are omitted. Valid 13-digit product codes render as EAN-13; legacy codes with a different format or invalid EAN checksum render as Code 128 without changing the saved value. SVG colors remain attributes rather than inline styles.
+
+Files: `resources/views/pos/show.blade.php`, `public/js/receipt-barcode.js`, `tests/Feature/ReceiptBarcodeTest.php`, `tests/Browser/receipt-barcode.test.cjs`, and `CHANGELOG.md`. Targeted original/reprint checks and real-library SVG encoding tests passed. Final suite results follow after completion.
+
+## 2026-10-17 — Keep unrelated Inventory events moving after a rejected product
+
+Fixed Inventory delivery stopping at the first rejected stock event, which prevented coffee sales #25 and #26 from ever being attempted behind beef sale #24. The dispatcher now records a rejected/unreachable event, blocks later events only for that SKU during the batch, and continues with other products. It still reports failure when any product remains pending and preserves the original event keys for safe retries. Refunds and later sales for a rejected SKU cannot overtake its failed event. Connection failures now record attempts and an actionable error without marking delivery successful.
+
+Files: `app/Services/Integration/Inventory/StockEventDispatcher.php`, `tests/Feature/Integration/StockEventDispatcherTest.php`, and `CHANGELOG.md`. Targeted dispatcher/master-sync tests passed 6 tests / 34 assertions. Final `php artisan test` passed 207 tests / 1,235 assertions using the temporary external PHPRC enabling SQLite; all 19 browser tests and `git diff --check` passed. Live delivery acknowledged coffee events 33 and 34 (sales #25 and #26) at 08:59:52 and 08:59:54 Asia/Manila; Inventory's catalog confirmed coffee on-hand 472. Beef event 32 remains pending with HTTP 422.
+
+## 2026-10-17 — Add receipt-number barcode to receipt footer
+
+Added a black-on-white Code 128 SVG barcode at the bottom of original and reprinted receipts, encoding the existing receipt number used by receipt lookup. Kept the human-readable number underneath. The barcode scales within the configured 58/80 mm receipt width, includes quiet margins, and stays together when printed. Uses the existing local JsBarcode library and a deferred initialization script that runs before the receipt's load-triggered automatic print. Generated SVG colors use presentation attributes rather than inline styles.
+
+Files: `resources/views/pos/show.blade.php`, `public/js/receipt-barcode.js`, `tests/Feature/ReceiptBarcodeTest.php`, `tests/Browser/receipt-barcode.test.cjs`, and `CHANGELOG.md`. Feature regression verifies original/reprint barcode identity; browser regression compares the rendered SVG bars with the real Code 128 encoding for current, legacy, and long receipt numbers. Final combined verification passed 207 Laravel tests / 1,235 assertions, all 19 browser tests, and `git diff --check`.
+
+Also ran the existing Inventory product catalog synchronization under its normal sync lock at the user's request: 9 source products synchronized; all 3 pending sale events preserved. The combined delivery/catalog command remains blocked by the earlier beef event rejected with HTTP 422.
+
+## 2026-10-17 — Add F6 void-line shortcut
+
+Added `F6 — Void line` to the register shortcut bar. F6 targets the focused cart row (including its quantity or remove controls), falling back to the last cart line when focus is elsewhere. Cart rows are keyboard focusable and labelled. The shortcut uses the existing `cart_item_void` manager-authorization and required-reason flow, preserving cancellation and discounted-total previews. It ignores key repeats, Ctrl/Alt/Meta combinations, active dialogs, and checkout submission, and prevents duplicate authorization prompts while a decision is pending. An empty cart shows an in-app notice.
+
+Files: `resources/views/pos/index.blade.php`, `tests/Browser/pos-void-shortcut.test.cjs`, and `CHANGELOG.md`. Verification: `node --test tests/Browser/*.test.cjs` passed all 17 tests, including five new shortcut regressions; `php artisan test` passed 204 tests / 1,215 assertions using the temporary external PHPRC file enabling SQLite; `git diff --check` passed.
+
+## 2026-10-17 — Use live Inventory availability in POS
+
+Implementation plan: reproduce the stale 95-versus-zero stock discrepancy; add a shared live Inventory availability service; connect register bootstrap, stock polling, product catalog, cash checkout, and card/e-wallet reservations; verify failure, reservation, and restock behavior before running the complete Laravel suite. Working-tree edits only.
+
+Added `LiveStockService` to fetch and validate the authoritative Inventory catalog without depending on successful outbox delivery. Availability subtracts pending sale deductions and card/e-wallet reservations; pending refunds do not increase sellable stock before acknowledgement. Missing/inactive source products have zero availability. Configured but unreachable or invalid Inventory responses reject checkout rather than falling back to stale local stock. Standalone operation with no configured Inventory integration retains local stock behavior.
+
+The register now refreshes availability every five seconds and when returning to the tab, avoids overlapping requests, and clears sellable quantities on refresh failure. Initial register data and the Products page use the same source. Checkout and payment reservations recheck Inventory under the existing product/inventory transaction locks and reconcile the local quantity before deducting or reserving, allowing source restocks to become sellable without waiting for the minute scheduler. Payment verification releases its own reservation inside the same transaction before checking live availability; a failed checkout rolls that release back. Existing pending sale events remain untouched for reconciliation.
+
+Current locking reads account for stock events and reservations committed while another cashier waits for a product lock. Pending deductions captured before the catalog request remain a conservative availability bound if acknowledgement occurs during the request. Checkout and payment submission/verification transactions retry database deadlocks up to three attempts.
+
+Regression coverage reproduces stale local stock, offline verification, pending deductions, competing reservations, source restocks, product stock feed, card/e-wallet submission, verification reservation release, acknowledgement during a catalog fetch, and browser polling behavior. Verification: `php artisan test` passed 204 tests / 1,215 assertions with a temporary PHPRC file outside the repository enabling XAMPP's SQLite extensions; `node --test tests/Browser/*.test.cjs` passed all 12 tests; `git diff --check` passed. Live read-only verification returned zero available beef (MEA-1001) while preserving two pending sale events. Inventory also returned intermittently unavailable responses during live checks; POS now fails closed in that case. Independent review confirmed the acknowledgement and MariaDB consistent-read races were addressed. Remaining limitation: shared database reads held during Inventory HTTP checks can cause contention at higher checkout concurrency; transaction retries are bounded to three attempts.
+
+Files: `app/Services/Integration/Inventory/LiveStockService.php`, `app/Services/SaleService.php`, `app/Services/CheckoutService.php`, `app/Services/CardVerificationService.php`, `app/Services/EwalletVerificationService.php`, `app/Http/Controllers/PosController.php`, `app/Http/Controllers/ProductController.php`, `resources/views/pos/index.blade.php`, `resources/views/products/index.blade.php`, `tests/Feature/Integration/LiveInventoryStockTest.php`, `tests/Browser/live-inventory-stock.test.cjs`, and `CHANGELOG.md`.
+
+## 2026-10-16 — Make existing figure indicators more visible
+
+Replaced the existing 1–4 markers in the sixteen interface screenshots (Figures 5–16 and 20–23) with bold white numerals on high-contrast dark square labels with white outlines. Preserved each original marker's number and center position; enlarged small labels for an approximately 9-point minimum numeral size at the manuscript's printed scale while retaining already-readable larger labels. Composited replacements into the existing screenshot assets so there are no additional floating Word indicators, duplicate marker sets, or new diagram callouts. Preserved login-first figure order, captions, tables, references, image dimensions, and page layout. No new screenshots or production transactions were created.
+
+Verification: only the sixteen intended screenshot media parts changed inside the DOCX; document XML is byte-identical to the pre-edit copy. Confirmed exactly four planned replacement markers per screenshot, all within image bounds and with no overlap between labels. Rendered with Microsoft Word, rasterized and visually reviewed all 36 pages. Document remains 36 pages. `php artisan test` passed all 192 tests and 1,186 assertions with temporary SQLite extension settings. Saved a pre-edit backup outside the repository and verified the final saved manuscript hash.
+
+Files changed: `docs/POS_System_Manuscript_Revised.docx` and `CHANGELOG.md`.
+
+
+## 2026-10-16 — Order manuscript screenshots starting with login
+
+Reordered Figures 5–16 in the Revised manuscript as requested: 5 Login, 6 Dashboard, 7 Register, 8 Product catalog, 9 Customer search, 10 Card payment validation, 11 Receipt lookup, 12 Cash movements, 13 Close shift, 14 Employee roster, 15 Employee account settings, and 16 Reports. Moved each screenshot together with its caption and explanation table and renumbered relevant in-text references, including the customer-search reference and the current-UI capture range. Kept Figures 1–4 and 17–23 in their existing order. Kept System Architecture on its own opening page after the screenshots. No screenshot media or indicator content changed.
+
+Verification: only `word/document.xml` changed inside the DOCX package. Programmatic checks confirmed all 12 screenshot/caption/table associations were preserved and every figure caption is sequential from 1 to 23. Exported with Microsoft Word, rasterized the final document, and reviewed all 36 rendered pages; the document remains 36 pages. Saved a pre-edit backup outside the repository and verified the saved manuscript hash. `php artisan test` passed all 192 tests and 1,186 assertions with temporary SQLite extension settings.
+
+Files changed: `docs/POS_System_Manuscript_Revised.docx` and `CHANGELOG.md`.
+
+
+## 2026-10-16 — Refresh manuscript screenshots for current POS UI
+
+Updated the selected Revised manuscript with fresh app screenshots for Figures 5, 7, 8, 9, and 10. They now show a live cart with its bold barcode, the HRMS-backed employee list without New employee and with retained Edit controls, card approval validation for a long numeric input, current product cards, and customer results with bold names and CRM/POS IDs. Replaced each affected screenshot rather than layering additional indicators. Each replacement contains one set of four dark square labels aligned to its revised explanation rows. No floating indicator shapes were added, and Use Case, ERD, Figma Prototype, and other figure images remain unchanged. Updated the affected captions, descriptions, and UI overview paragraph. Masked customer contact in the capture. Corrected the existing Dashboard inner/outer image dimension mismatch without changing its media or adding markers.
+
+Captures used a temporary local screenshot session that was destroyed afterward; cart additions and invalid reference typing stayed in the browser and no payment, sale, or stock mutation was submitted. Preserved a pre-edit manuscript backup outside the repository. Package validation confirmed that only document XML and the five intended screenshot media parts changed, with no floating Word anchors. Rendered through installed Microsoft Word (the packaged LibreOffice renderer was already diagnosed unavailable), rasterized all 36 pages, and reviewed the page images; the final document remains 36 pages. `php artisan test` passed all 192 tests and 1,186 assertions; all eight JavaScript browser tests passed. No application source or configuration changed.
+
+Files changed: `docs/POS_System_Manuscript_Revised.docx` and `CHANGELOG.md`.
+
+
+## 2026-10-16 — Revert rejected manuscript indicator changes
+
+The user reported excessive and inaccurate yellow circles in the preceding manuscript edit. Restored `docs/POS_System_Manuscript_Revised.docx` byte-for-byte from the pre-edit backup and verified matching SHA-256 hashes. This reverts all 88 added native indicators, the Figure 9 wording change, and the Dashboard dimension change. Preserved the rejected version in the existing temporary audit directory for diagnosis. No replacement indicators were added. The previous entry records a rejected edit and should not be treated as current manuscript state.
+
+Files changed: `docs/POS_System_Manuscript_Revised.docx` and `CHANGELOG.md`.
+
+
+## 2026-10-16 — Restore and clarify manuscript figure number indicators
+
+Updated the user-selected `docs/POS_System_Manuscript_Revised.docx`. Added 88 larger bold amber native Word indicators to 20 figures: 1, 5–23. Excluded Use Case Diagram (2), ERD (3), and Figma Prototype (4), as explicitly requested. Screenshot indicators use 1–4 matched to the existing explanation rows; methodology, architecture, checkout, and return diagrams use 1–6 matched to their stages or components. Corrected Figure 9 row 2 to identify the category filters where its marker is placed. Fixed the Dashboard picture's inconsistent inner/outer DrawingML dimensions, which distorted its image and indicator positions. All 23 original figure images are preserved byte-for-byte. Microsoft Word renamed/reordered media parts and removed four obsolete, unused image parts during save. Saved a pre-edit backup and temporary render artifacts outside the repository.
+
+Verification: packaged renderer was attempted but unavailable because LibreOffice is not installed. Exported through installed Microsoft Word, rendered every PDF page to PNG, and visually reviewed all 36 pages. Checked actual rendered image coordinates to align markers, corrected placements, then re-rendered. Structural validation confirmed 88 unique sequential native indicators on the intended 20 figures, no added indicators on figures 2–4, unchanged figure-image hashes, and valid DOCX ZIP integrity. `php artisan test` passed all 192 tests and 1,186 assertions using temporary SQLite extension settings. Page count remains 36.
+
+Files changed: `docs/POS_System_Manuscript_Revised.docx` and `CHANGELOG.md`.
+
+
+## 2026-10-15 — Prevent clipped customer search results
+
+Fixed customer dropdown clipping reported in the screenshot. The results were absolutely positioned inside a POS panel with overflow hidden, so rows extending beyond the panel were cut off. Kept the result list in normal document flow with relative positioning and a top margin so the customer panel grows around it. Added a viewport-aware maximum height with vertical scrolling for long result lists. Preserved customer search, selection, IDs, and existing keyboard handling. Verification: `php artisan test` passed all 192 tests and 1,186 assertions with temporary SQLite extension settings. Headless Edge checks using the actual POS CSS confirmed result-list containment and scrolling to the last item at 300px and 1280px viewport widths. UI detector reported only the existing unrelated side-border warning.
+
+Files changed: `resources/views/pos/index.blade.php` and `CHANGELOG.md`.
+
+
+## 2026-10-15 — Bold live transaction barcodes
+
+Set the existing live-transaction barcode CSS class to font-weight 700 at the user's request. No barcode content, cart, or checkout behavior changed. `php artisan test` passed all 192 tests and 1,186 assertions using temporary SQLite extension settings. UI detector reported only the existing unrelated side-border warning.
+
+Files changed: `resources/views/pos/index.blade.php` and `CHANGELOG.md`.
+
+
+## 2026-10-15 — Verify and run HRMS synchronization
+
+At the user's request, ran `php artisan integrations:sync hrms` successfully: three records synchronized from the configured Tailscale HRMS endpoint. Fresh queries confirmed EMP-0001 is Manager/active and EMP-0003 and EMP-0006 are Cashier/active in the HRMS snapshot, all refreshed at 23:51:30 Manila time. Confirmed the existing schedule:work process is running. No application code, environment settings, schema, or POS role assignments changed. Runtime verification used successful command output and fresh database reads; no test suite was rerun.
+
+Files changed: `CHANGELOG.md`. Runtime change: employee snapshot synchronization through the existing HRMS integration service.
+
+
+## 2026-10-15 — Reject long numeric card approval codes and show live errors
+
+Fixed a card-specific validation gap: the previous card-number exclusion matched only 13–19 digits, allowing the user's 23-digit example. Extended both server validation and checkout submit checks to reject numeric codes containing 13 or more digits, including dash-separated values. Kept the agreed alphanumeric/dash policy and existing 50-character field maximum for other approval codes. Added a live inline error, aria-invalid state, and custom validity while typing; corrected or cleared values remove the error, including transaction reset. Updated card guidance. E-wallet rules and manager verification are unchanged.
+
+Regression test failed against the original behavior, then passed with the fix (one test, ten assertions); it verifies long numeric values do not create pending payments or deduct stock. Executed the actual input-handler body with long/dashed numeric values, CVV-like input, invalid symbols, valid corrections, and clearing; all checks passed. PHP syntax check passed. UI detector reported only the existing unrelated side-border warning. `php artisan test` passed all 192 tests and 1,186 assertions using temporary SQLite extension settings outside the project.
+
+Files changed: `app/Http/Controllers/PosController.php`, `resources/views/pos/index.blade.php`, `tests/Feature/CheckoutFlowTest.php`, and `CHANGELOG.md`.
+
+
+## 2026-10-15 — Drain Inventory backlog and restore webhook worker
+
+Investigated missing shelf products. The live Inventory feed contained four active products, but POS had only two SKU mappings. Inbound Inventory notifications were stored but unprocessed and no integrations:webhooks worker was running; 21 mapped outbound stock events were also pending. Ran `php artisan integrations:sync inventory`: all 21 existing stock events were acknowledged and four products synchronized. Then `php artisan integrations:webhooks --once` processed 38 queued notifications. Verified all four SKU mappings now exist, including PRD-003 coffee (24) and PRD-004 sardines (12), with zero unprocessed notifications and zero pending mapped stock events. Existing sales adjusted the acknowledged Coke and beef stock to 168 and 18 respectively. Started the existing integrations:webhooks worker as a hidden background process and verified its process; output logs are in the Windows temporary directory. It is not a reboot-persistent service. No application code, configuration, schema, or new sale was created. No test suite was rerun for these existing runtime commands; verification used command results and fresh database queries.
+
+Files changed: `CHANGELOG.md`. Runtime changes: acknowledged existing stock deliveries, catalog refresh, webhook inbox processing, and worker startup.
+
+
+## 2026-10-15 — Point Inventory integration at Tailscale
+
+With the user's explicit exception to the `.env` boundary, set `INVENTORY_API_BASE_URL` to `http://100.111.121.37/inventory-laravel/public` and set `INVENTORY_API_TOKEN` to the supplied receiver token (not reproduced here). Preserved the existing Inventory HTTP opt-in and the working inbound product-updated webhook. Existing catalog and sale/refund stock-event paths and payloads already match the supplied contract, so no application code changed. Cleared Laravel's configuration cache and verified the effective saved settings through DirectoryClient: valid complete product feed with four products. No manual stock event or inventory import was submitted. `php artisan test` passed all 191 tests and 1,176 assertions using temporary SQLite extension settings outside the project.
+
+Files changed: `.env` and `CHANGELOG.md`.
+
+
+## 2026-10-15 — Validate card and e-wallet reference formats
+
+At the user's selected format requirement, restricted card approval codes and e-wallet references to ASCII letters, digits, and dashes with at least one letter or digit. Backend validation rejects internal spaces, symbols, multiline input, and dash-only values before pending payment creation. Kept existing required/provider/length rules, card number and CVV protection, optional four-digit suffix validation, reference uniqueness, and manager verification. Added matching POS submit checks for the selected format and existing length limits, plus the existing full-card-number restriction so it is also explained before submission. Updated the payment field guidance. No money/stock transaction handling or approval flow changed.
+
+Added regression coverage for invalid references on both methods, including checks that rejected attempts do not create sales, pending verification records, reference reservations, or stock changes. The new test failed against the original behavior, then passed after implementation. Focused verification passed 16 payment tests with 248 assertions. PHP syntax check passed. Executed client condition checks for accepted values, forbidden characters, dash-only references, and length boundaries. UI detector reported only the existing unrelated side-border warning. Updated the legacy masked-suffix checkout fixture to submit the approval code and last four digits in their separate form fields, consistent with the selected character policy. Final verification: `php artisan test` passed all 191 tests and 1,176 assertions using temporary SQLite extension settings outside the project.
+
+Files changed: `app/Http/Controllers/PosController.php`, `resources/views/pos/index.blade.php`, `tests/Feature/CheckoutFlowTest.php`, and `CHANGELOG.md`.
+
+
+## 2026-10-15 — Bold the customer ID in POS search results
+
+Rendered the Customer ID label and value inside a strong element while preserving the secondary contact and POS ID text. Dynamic values still use textContent and text nodes. No search or selection behavior changed. Verification: direct DOM rendering check passed; `php artisan test` passed all 190 tests and 1,143 assertions using temporary SQLite extension settings. UI detector reported only the existing side-border warning outside this change.
+
+Files changed: `resources/views/pos/index.blade.php` and `CHANGELOG.md`.
+
+
+## 2026-10-15 — Make POS customer search names and IDs clearer
+
+Increased the customer search input and result-name font size to 1rem and displayed each result name in bold on its own line. Added a secondary Customer ID line showing the CRM customer code from the explicit external identity, plus the local POS ID when a mapping exists; local results fall back to their POS ID. Unsynced CRM customers show their CRM code without a null POS ID. Preserved customer selection, CRM synchronization, and search behavior. All dynamic values use textContent, with class-based CSS and no new raw HTML interpolation or inline styles.
+
+Verification: executed the changed rendering block with lightweight DOM checks covering CRM codes, POS IDs, unsynced customers, and text-only names. Scoped UI detector returned only its pre-existing side-border warning outside the changed lines. `php artisan test` passed all 190 tests and 1,143 assertions using temporary SQLite extension settings outside the project.
+
+Files changed: `resources/views/pos/index.blade.php` and `CHANGELOG.md`.
+
+
+## 2026-10-15 — Show product barcodes in the live transaction
+
+Added a secondary Barcode line under each product name in the POS live transaction, using the existing product catalog data matched by product ID. This also works for restored carts without requiring barcode persistence in held-cart data. Products without a barcode omit the line. Values are rendered using DOM textContent; styling uses a CSS class with no inline styles or raw HTML interpolation introduced. No checkout, price, quantity, or inventory behavior changed.
+
+Verification: confirmed product catalog payload already includes barcode. Scoped UI detector reported one pre-existing side-border warning outside the changed lines. `php artisan test` passed all 190 tests and 1,143 assertions with temporary SQLite extension settings. Executed the changed rendering block in a lightweight DOM check: product ID matching, missing-barcode omission, and text-only rendering all passed.
+
+Files changed: `resources/views/pos/index.blade.php` and `CHANGELOG.md`.
+
+
+## 2026-10-15 — Run requested CRMS synchronization
+
+Ran `php artisan integrations:sync crm` at the user's request. Command completed successfully (exit 0): zero CRM loyalty events sent and one CRM customer record synchronized. No source code or configuration changed. This runtime sync does not backfill orders for already processed events.
+
+Files changed: `CHANGELOG.md`. Runtime change: customer directory synchronization through the existing integration service.
+
+
+## 2026-10-15 — Merge CRMS order delivery into loyalty event client
+
+Merged the supplied Downloads/CustomerLoyaltyEventClient.php into the existing CRM service. After a successful sale loyalty acknowledgement, the client now posts the completed sale and line items to `/api/v1/orders`, with a stable order event ID based on the POS transaction. Requires a matching order acknowledgement before completing the existing outbox delivery; a failed order can retry using the same loyalty and order identifiers. Preserved endpoint restrictions, Bearer authentication, verified TLS, disabled redirects, timeouts, and explicit CRM customer identities. Corrected the supplied version to skip order creation for refund events and send the recorded discount snapshot amount instead of hardcoded zero. Removed its unused method parameter. Existing processed events are not backfilled or reset, and no real remote transaction was manually submitted for this merge.
+
+Updated integration fixtures for order line items and acknowledgements. Added regression coverage for order payloads, discounts and VAT, failed order retries with duplicate loyalty acknowledgement, malformed order acknowledgement, noncompleted sales, and refund delivery without order creation. Before implementation, two new order assertions failed against the original client; all eight focused tests then passed (28 assertions). PHP syntax check passed. `php artisan test` passed all 190 tests and 1,143 assertions using temporary SQLite extension settings outside the project. Live CRMS Orders acceptance remains unverified.
+
+Files changed: `app/Services/Integration/CRM/CustomerLoyaltyEventClient.php`, `tests/Feature/Integration/CrmLoyaltyEventClientTest.php`, `tests/Feature/Integration/CustomerLoyaltyDispatcherTest.php`, and `CHANGELOG.md`.
+
+
+## 2026-10-15 — Set Athan's POS access role to Manager
+
+At the user's explicit request, changed only Athan Cardenas's POS role (employee 2, HRMS EMP-0001) from Supervisor to the existing Manager role (role 1). Identified the employee and role before updating, used a database transaction with an employee row lock, and verified the persisted role through a fresh query. No HRMS role-mapping logic, password, employee status, or other employee was changed. This was a targeted runtime data update; no application code changed and no test suite was rerun.
+
+Files changed: `CHANGELOG.md`. Runtime change: employee 2's `role_id`.
+
+
+## 2026-10-15 — Remove employee creation button from POS list
+
+Removed only the New employee button from the employee list because employees now originate in HRMS. Preserved the existing Edit button, employee edit routes, manager authorization, and other employee actions. No create/store routes were removed; this change is limited to the requested list control. Read-only account check found EMP-0001's HRMS position is Manager and its separate POS access role is Supervisor; neither role assignment was changed. Verification: `php artisan test` passed all 187 tests and 1,133 assertions with temporary SQLite extension settings outside the project; the scoped UI detector returned no findings.
+
+Files changed: `resources/views/employees/index.blade.php` and `CHANGELOG.md`.
+
+
+## 2026-10-15 — Refresh HRMS position and restore automatic sync worker
+
+Diagnosed Athan's stale position: the live HRMS feed for EMP-0001 reported Supervisor while the POS HRMS snapshot still reported Cashier; no schedule:work process was running. Ran `php artisan integrations:sync hrms`, which synchronized two records, then verified EMP-0001's saved `hrms_position` is Supervisor. The separate POS authorization role remains Manager; the existing integration deliberately preserves POS access assignments. Confirmed the employee list renders HRMS position and POS role separately. Started the existing Laravel schedule:work command as a hidden background process for the already-configured every-minute integrations schedule, and verified the worker process exists. Output logs are in the Windows temporary directory. The worker requires the PC to remain running and is not installed as a reboot-persistent service. No source code, environment setting, schema, or role assignment changed; no new automated tests were added or run for these runtime operations.
+
+Files changed: `CHANGELOG.md`. Runtime changes: HRMS synchronization through the existing service and scheduler worker startup.
+
+
+## 2026-10-15 — Use HRMS Tailscale address
+
+With explicit user permission to update the HRMS setting in `.env`, changed `HRMS_API_BASE_URL` from `http://10.36.189.221/harvest-hr-next/public` to `http://100.75.132.78/harvest-hr-next/public`. Preserved the existing XAMPP path, default HTTP port, employee API path, token, and HTTP policy. Cleared Laravel's configuration cache. Verified the effective saved URL through the existing DirectoryClient: the read-only employee feed was valid and returned one employee. No employee records were imported or changed. Verification: `php artisan test` passed all 187 tests and 1,133 assertions with temporary SQLite extension settings outside the project.
+
+Files changed: `.env` and `CHANGELOG.md`.
+
+
+## 2026-10-15 — Diagnose pending CRMS delivery for sale 14
+
+Read-only checks confirmed completed POS sale 14 (275.00) has CRM outbox event 2 mapped to `crm:customer:CUS-0001`. The event was pending with zero attempts and no POS scheduler process was running. Attempted delivery of existing pending CRM events through CustomerLoyaltyDispatcher: zero sent, one failed; event 2 remains pending with attempts 1 and local error `CRM loyalty event not acknowledged; HTTP 504`. A current CRM read-only lookup also returned local status 504. Tailscale lists the CRMS peer `100.75.193.86` as active, but connectivity to its application still needs restoration. Existing outbound integration posts sale/refund loyalty events to `/api/v1/loyalty/events`; it does not submit order line items to an orders endpoint. No new sale, schema, source code, configuration, or customer mapping was created or changed. No remote code change was inspected.
+
+Files changed: `CHANGELOG.md`. Runtime change: delivery attempt metadata on existing CRM outbox event 2.
+
+
+## 2026-10-15 — Connect CRMS on the shared Tailscale network
+
+Updated the authorized `.env` CRM setting to `http://100.75.193.86:8000` after the user supplied the CRMS device's new Tailscale IP. Preserved the API token, port, and HTTP policy. Cleared Laravel's configuration cache and confirmed the effective URL. The existing read-only CRM customer lookup returned status 200 with zero matches for `pos-connection-check`; no customer, sale, stock, or loyalty mutation was sent. Verification: `php artisan test` passed all 187 tests and 1,133 assertions with temporary SQLite extension settings outside the project.
+
+Files changed: `.env` and `CHANGELOG.md`.
+
+
+## 2026-10-15 — Use CRMS Tailscale address
+
+With explicit user authorization to edit `.env` as an exception to the repository boundary, changed only `CRM_API_BASE_URL` from `http://10.87.175.166:8000` to `http://100.103.174.55:8000`. Preserved the existing port, API token, and HTTP policy. Cleared Laravel's configuration cache and confirmed the effective CRM URL. No customer/supplier schema or application logic changed.
+
+Verification: the read-only CRM customer lookup returned local status 504; a separate TCP probe to port 8000 timed out. Remote connectivity remains unverified. `php artisan test` passed all 187 tests and 1,133 assertions using temporary SQLite extension settings outside the project.
+
+Files changed: `.env` and `CHANGELOG.md`.
+
+
+## 2026-10-15 — Repair crashed MariaDB system permission tables
+
+User authorized database backup and targeted repair after transactions failed when MariaDB stopped. Windows Application events confirmed `mysqld.exe` access-violation crashes (`0xc0000005`); offline Aria checks identified damaged `mysql.columns_priv`, `mysql.db`, and `mysql.proxies_priv`. Backed up the entire stopped data directory (546 files, matching file count and byte total) to `C:\xampp\mysql\backups\before-pos-repair-20261015-164440\data` before repair. Sort-based repair failed with a recovery-buffer error; restored the original affected table files from backup and used Aria safe recovery successfully. No application tables, schema, or database-server configuration were replaced.
+
+Recovery limitation: `mysql.db` had an invalid data-page checksum and its three database-level permission rows could not be recovered. Its original files remain in the backup. Four global accounts remain; verified `root@localhost` retains global privileges and POS connectivity. Custom database-level grants may require restoration from a known-good backup.
+
+Verification: all 24 Aria tables in the `mysql` system database passed offline checks after repair. All 39 `pos_system` tables reported OK through `mysqlcheck --check`. A live POS row-lock/update/rollback probe passed without persisting a sale or stock change. `php artisan test` passed all 187 tests and 1,133 assertions using temporary SQLite extension settings. CRM loyalty dispatch found zero events; subsequent remote CRM directory fetch was unavailable (ConnectionException), independent of the repaired local database.
+
+Files changed: targeted MariaDB system table files and recovery metadata under `C:\xampp\mysql\data`, the external offline backup, and `CHANGELOG.md`.
+
+## 2026-10-15 — Connect teammate CRM over LAN
+
+With explicit user permission to update private environment settings and configuration, configured CRM at `http://10.87.175.166:8000` with the supplied Bearer token (kept out of this log). Added `CRM_ALLOW_HTTP` with a false default and an opt-in restricted to the configured CRM URL, including its port. Customer search, exact identity lookup, directory sync, and loyalty delivery now use the CRM-specific endpoint policy. Other receivers retain their own settings; redirects and certificate verification behavior are unchanged.
+
+Started the existing XAMPP MariaDB server and POS scheduler. Live authenticated customer lookup returned HTTP 200 with zero matches. `php artisan integrations:sync crm` completed with zero loyalty events sent and zero customer records synchronized. No fabricated sale or loyalty event was submitted; a real customer and completed sale are still needed for end-to-end loyalty verification.
+
+Files touched: `.env`, `config/services.php`, `app/Services/Integration/Endpoint.php`, `app/Services/Integration/CRM/CustomerService.php`, `app/Services/Integration/CRM/CustomerLoyaltyEventClient.php`, `tests/Unit/IntegrationEndpointTest.php`, `phpunit.xml`, and `CHANGELOG.md`.
+
+Verification: the new endpoint-policy regression failed before the implementation and passed afterward (3 endpoint tests, 17 assertions). The first full-suite attempt encountered the installed CLI's disabled SQLite driver. The SQLite-enabled run then identified environment leakage into `CrmLoyaltyEventClientTest::test_client_refuses_plain_http_and_does_not_send_the_token`; forced `CRM_ALLOW_HTTP=false` in PHPUnit configuration to isolate tests from live settings. The final `php artisan test` run passed all 187 tests and 1,133 assertions with SQLite extensions loaded through a temporary PHP INI scan directory. Scoped diff whitespace checks passed.
+
+Runtime limitation: although the manual CRM synchronization succeeded, a later database check found MariaDB no longer listening on port 3306. Start and keep MySQL running through XAMPP before relying on automatic synchronization or testing checkout. The cause of the database stopping was not established; no database repair or server configuration changes were made.
+
+## 2026-10-15 — Restore the local database connection
+
+Investigated SQLSTATE HY000/2002 while loading employee 2: no MariaDB process or listener was running on port 3306. Started the existing XAMPP MariaDB executable with its existing configuration. Verified the port listener and successful Laravel database connection and employee lookup. No application code, database schema, credentials, environment or integration configuration changed. A concurrent second startup attempt logged an InnoDB file-lock failure; the running server remained accessible.
+
+## 2026-10-15 — Add numbered interface callouts to manuscript
+
+Added numbered amber callouts to the unnumbered interface screenshots in Figures 5, 8–13, 16, and 20–23, matching their interface-element tables. Updated the Figure 12 and Figure 16 captions and fourth table entries to describe controls visible in their screenshots. Preserved diagrams and screenshots that already had callouts.
+
+Files touched: docs/POS_System_Manuscript_Revised.docx and CHANGELOG.md.
+
+Verification: rendered the final manuscript through Microsoft Word as a 36-page PDF and inspected the affected figure pages. DOCX package comparison confirmed only `word/document.xml` and the twelve target screenshot media parts changed. `php artisan test` passed 186 tests and 1,125 assertions using the temporary XAMPP SQLite INI scan directory.
+
+## 2026-10-15 — Refresh case study and defense Q&A
+
+Aligned the case study and possible defense questions with the latest POS manuscript and verified test evidence. Removed an empty opening-section placeholder, retained the concise 30-second introduction, and clarified the eight browser checks (five cashier workflow checks and three app-feedback checks), and updated document dates and evidence boundaries.
+
+Files touched: docs/POS_System_Case_Study.docx, docs/POS_Defense_Questions_and_Answers.docx, and CHANGELOG.md.
+
+Verification: `php artisan test` passed 186 tests and 1,125 assertions with the temporary XAMPP SQLite INI scan directory; all eight JavaScript browser tests passed. No live third-party integration is claimed.
+
+## 2026-10-15 — Correct manuscript figure and end-matter order
+
+Moved Figures 20–23 from beneath Appendix B into the main body immediately after Figure 19 and before REST Integration Design. Renamed their section to Additional POS Interface Screens, corrected the Figure 4 cross-reference, and aligned the end-matter sequence with the supplied SIA reference: APPENDICES followed by References and the POS appendices.
+
+Files touched: docs/POS_System_Manuscript_Revised.docx and CHANGELOG.md.
+
+Verification: checked the revised figure and heading order in DOCX XML, rendered the 36-page document through Microsoft Word, and inspected the rendered pages, including the updated figure sequence and end matter.
+
+## 2026-10-15 — Revise manuscript against SIA reference
+
+Compared the POS manuscript with the supplied 29-page SIA sample. Preserved its PCST page styling and Figures 1–16 screenshot/explanation pattern, while keeping the approved POS-specific architecture, shift, and return diagrams as Figures 17–19 and the additional POS screens as Figures 20–23. Rewrote the Figure 4 description to explain the POS screen flow, tightened shift and testing sections to remove sparse pages, and updated the test evidence with the verified 15 October suite result (186 tests and 1,125 assertions), noting that XAMPP's SQLite extensions were loaded through a temporary PHP INI scan directory. Kept the reference document and prior draft unchanged.
+
+Files touched: docs/POS_System_Manuscript_Revised.docx and CHANGELOG.md.
+
+Verification: preserved every DOCX package part except the intended word/document.xml text edits; rendered the revised manuscript through Microsoft Word and reviewed the final pages. The Laravel suite passed 186 tests and 1,125 assertions with XAMPP's existing SQLite extensions loaded through a temporary INI scan directory; project configuration was unchanged.
+
+## 2026-10-15 — Reuse defense diagrams in manuscript
+
+Replaced the manuscript's Figure 2 Use Case Diagram and Figure 3 ERD with the same migration-verified figures used in the corrected defense PowerPoint. Preserved the existing figure numbers and captions, kept image proportions, updated accessible descriptions, and clarified the ERD's keys, cardinalities, and logical CRM reference.
+
+Files touched: docs/POS_System_Manuscript_Draft.docx and CHANGELOG.md.
+
+Verification: validated DOCX ZIP integrity and embedded image payloads; rendered the final manuscript through Microsoft Word to PDF and inspected the affected pages.
+
+## 2026-10-15 — Remove outdated defense document versions
+
+Removed superseded defense PowerPoint variants, intermediate PPTX candidates and backup, and older PDF exports of the case study and defense questions. Kept the corrected dean-format PowerPoint, the latest case study and defense Q&A DOCX files, the current manuscript draft, and the original manuscript reference.
+
+Files removed:
+docs/POS_System_Defense_Dean_Format_Enhanced_Diagrams.pptx, docs/POS_System_Defense_Dean_Format.pptx, docs/POS_System_Defense_v2.pptx, docs/POS_System_Defense.pptx, docs/.build/POS_System_Defense_candidate_v2.pptx, docs/.build/POS_System_Defense_candidate_v2.pptx.inspect.ndjson, docs/.build/POS_System_Defense_candidate.pptx, docs/.build/POS_System_Defense_candidate.pptx.inspect.ndjson, docs/.build/dean-format-run/candidate.pptx, docs/.build/dean-format-run/candidate.pptx.inspect.ndjson, docs/.build/previous_deck_backup/POS_System_Defense_Dean_Format_Enhanced_Diagrams_Corrected-before-latest-visual-QA.pptx, docs/.build/POS_Defense_Questions_and_Answers.pdf, docs/.build/POS_System_Case_Study.pdf
+.
+
+Verification: confirmed the corrected PowerPoint and latest DOCX deliverables remain in docs/; ran php artisan test.
+## 2026-10-14 — Enhance defense diagrams with migrated database fields
+
+Created `docs/POS_System_Defense_Dean_Format_Enhanced_Diagrams.pptx` with the dean's original eight-slide order. Rebuilt slides 7 and 8 as editable PowerPoint UML use-case and core ERD diagrams. The core ERD shows actual migrated column names, SQL datatypes, key markers, and foreign-key relationships. Added standalone vector figures in `docs/figures/` and a separate full-schema ERD covering all 34 active application tables, with a native-resolution PNG for zooming and print. Kept the prior defense deck unchanged. The use-case diagram shows actor actions; database attributes and types are represented in the ERDs. The schema figures follow Laravel migrations because MariaDB was unavailable for live introspection. Documented that Inventory SKU is stored in `inventory_product_mappings` and that `sale_transaction.customer_id` is a CRM reference without a local foreign key.
+
+Verification: finalized/imported the PPTX as eight 16:9 slides, confirmed Arial and zero layout findings, and rendered all eight final slides for visual inspection. `php artisan test` passed 186 tests with 1,125 assertions using a temporary PHP INI scan directory to load XAMPP's existing SQLite extensions; no project configuration was changed.
+
+## 2026-10-14 — Match the dean's PowerPoint format
+
+Created `docs/POS_System_Defense_Dean_Format.pptx` with the required eight-slide sequence: title and presenter, system background, objectives, scope, significance, methodology, Use Case Diagram, and ERD. Added speaker notes timed to five minutes total and used the PCST header styling from the supplied reference. The cover uses Athan Cardenas, the only proponent named in the manuscript; no additional member names were supplied.
+
+Validated the final 8-slide PPTX package, 16:9 slide size, layout geometry, Arial font policy, and Artifact Tool import. Rendered and reviewed all eight slides, including the two manuscript diagram figures.
+
+## 2026-10-14 — Align the case study and defense reviewer
+
+Updated `docs/POS_System_Case_Study.docx` and `docs/POS_Defense_Questions_and_Answers.docx` against the revised cashier screens and manuscript. Explained manual card/e-wallet review, held carts versus pending payments, receipt and void previews, denomination reconciliation, prototype-arrow scope, and preserved HRMS/Inventory integration boundaries. Kept the original sections, tables and page geometry. Added a test-data demonstration sequence and expanded the reviewer from 27 to 39 Taglish question-and-answer guides. Distinguished the published UI snapshot's test evidence from the broader working tree and avoided claims of live payment APIs, measured usability or production performance.
+
+Saved pre-edit copies outside the repository. Verified valid DOCX packages, unchanged table counts and section geometry, preserved unassigned original paragraphs, and sequential questions 1–39; recorded checks in `docs/.build/defense-docs-check-2026-10-14.json`. `php artisan test` passed 186 tests with 1,125 assertions after enabling the existing temporary PHP CLI SQLite scan directory; the default CLI attempt lacked the SQLite driver. Native page rendering failed because LibreOffice `soffice.exe` is unavailable, so Word pagination remains unverified. No application code, integration credentials or configuration files were edited.
+
+## 2026-10-14 — Restore and update the original arrow prototype
+
+Restored the original manuscript's Figure 4 screen-flow composition and updated six screenshot interiors with the new register, cash movement, shift closing, held transaction, e-wallet review, and receipt lookup designs. Kept the original arrows, frame arrangement, labels, and unchanged administration screens intact. Updated the manuscript's flow explanation and restored its original figure caption. Saved the original manuscript as `docs/reference/POS_System_Manuscript_Original.docx` for future comparisons, added the comparison rules in `docs/reference/README.md`, and produced a comparison report in `docs/.build/manuscript-compare-2026-10-14.json`.
+
+Verification: the pixels outside the six screenshot interiors exactly match the original prototype, preserving the original arrow/frame layer. The comparison found no unexpected changes to original paragraph text, unchanged control tables, page geometry, or eleven technical/admin figures. The DOCX retains 23 figures and 19 tables with valid image data and package integrity. These checks verify content and assets, not Word pagination. The manuscript figure and local PNG/SVG assets are updated; modifying the external Figma file requires its existing file link.
+
+## 2026-10-14 — Update the manuscript after publishing the UI
+
+Published the isolated POS design snapshot to `origin/main` as commit `27490f6`, excluding unrelated working-tree changes. The published snapshot passed 185 Laravel tests / 1,121 assertions and five JavaScript browser smoke tests.
+
+Updated `docs/POS_System_Manuscript_Draft.docx` with refreshed cashier descriptions, eight replaced figures, four additional figures for pending e-wallet/card review, held transactions, and void confirmation, and revised control tables. Clarified that card/e-wallet settlement is checked manually and no payment-processing API is present. Replaced duplicated testing prose with the published commit's evidence and UI validation limits. Kept the original document's section order, integration descriptions, author details, and technical diagrams; preserved a pre-edit copy outside the repository.
+
+Captured figures use an isolated seeded database with external requests disabled. Verified the DOCX package, 23 sequential figure labels, 23 valid embedded images, and 19 tables; inspected the new figure assets. Native DOCX-to-PDF page rendering could not run because `soffice.exe` is unavailable, so Word pagination is not claimed as verified. The updated manuscript and figure assets remain local; only the UI snapshot was pushed. No integration code, keys, tokens, environment, or configuration files were changed.
+
 ## 2026-10-14 — Rebuild the actual screenshot layouts
 
 Replaced the previous color-focused pass with the reference compositions. Pending e-wallet/card screens now have selectable transaction rows on the left, a large selected-payment amount and masked reference on the right, a manual verification checklist, and bottom actions. Existing authorized request collections and review routes remain in use; no QR simulation, payment polling, or terminal API was introduced. Review pages now use continuous two-pane layouts with existing verification and rejection forms intact.
@@ -19,6 +436,60 @@ Added a screen-only, scoped POS reference stylesheet and connected it to the reg
 Kept existing manual merchant-app and terminal verification, manager authorization, checkout forms, routes, scripts, held-cart retention, and stock/money workflows. Did not add QR, automatic payment polling, or terminal integrations. No HRMS/inventory integration code, keys, tokens, environment files, configuration, dependencies, backend files, or CRM schemas were edited. Thermal receipt styles remain independent.
 
 Verification: `php artisan test` passed all 186 tests / 1,125 assertions with SQLite extensions enabled through a temporary PHP CLI scan directory (the default XAMPP CLI did not load SQLite). Browser feedback and shift-timer smoke tests passed 5 / 5. Inspected isolated Laravel-rendered test-data previews on desktop and at 390px; register and receipt lookup have no page-width overflow. Live visual login was unavailable with the seeded default account, so preview rendering used an in-memory test database. The design detector reported no findings on the new stylesheet and receipt-search markup.
+
+## 2026-10-13 — Restore POS presentation baseline
+
+Restored the POS register, payment-review, receipt, cash-movement views, and shift/receipt styles to the last committed presentation at the user's request. Kept the separately requested in-page feedback behavior, backend workflows, integrations, and manuscript files intact.
+
+Restored the committed Market Canopy navigation logo as part of the UI rollback.
+
+## 2026-10-13 — Final POS redesign verification
+
+Completed the approved retail POS presentation while preserving live checkout, customer lookup, stock validation, cash drawer, payment review, refund, exchange, and receipt actions. POS feedback now floats above register dialogs, remains scrollable for long stock-adjustment messages, and has an accessible Dismiss control. Shared POS color tokens now also reach modal panels. No route, schema, CRM, HRMS, Inventory, or service contracts changed.
+
+Verification: full Laravel suite passed (192 tests / 1,192 assertions); focused POS, receipt, refund, and exchange tests passed (25 / 182); browser feedback and shift-timer smoke tests passed (5 / 5). Final read-only review found no remaining actionable issues. Interactive Edge inspection could not be completed because the Windows browser helper could not confidently resolve the active tab URL.
+
+## 2026-10-13 — Redesign the POS register presentation
+
+Applied the approved POS-only retail layout to the register with a labeled barcode search, product area, live cart/payment panel, customer selector, cashier actions, responsive styles, and updated dialogs. Preserved the existing checkout form fields, DOM hooks, route calls, CRM lookup, stock search, held carts, drawer controls, and manager authorization. Replaced the search empty state with safe DOM text and removed inline styles from the rendered register.
+
+Verification: register presentation, checkout flow, and CRM customer-search tests passed (26 tests / 159 assertions); shift-timer browser smoke tests passed (2 / 2). The Windows browser helper could not verify the open Edge tab because it could not confidently resolve the active URL.
+
+## 2026-10-13 — Protect pending-payment review behavior
+
+Added presentation-contract coverage for the existing e-wallet and card review screens, including their current verify/reject endpoints, required manual merchant-app or terminal checks, and the absence of prototype-only QR or terminal-resend claims. The existing responsive review layout already matched the approved payment-review states, so it needed no view rewrite.
+
+Verification: pending-review, manager verification, card verification, idempotency, and presentation tests passed (23 tests / 300 assertions).
+
+## 2026-10-13 — Verify cash movement and shift report screens
+
+Reviewed the existing cash movement workspace and saved shift report against the approved states. They already provide authorized cash-in/out and drawer transfers, movement reasons, the shift report link, a saved server-calculated reconciliation, and a compact 80mm thermal summary. Left the working layout and report contract intact.
+
+Verification: shift UI, cash drawer, transfer, and report snapshot tests passed (16 tests / 73 assertions).
+
+## 2026-10-13 — Surface receipt return and exchange actions
+
+Added a direct Exchange action beside Refund / Return, connected it to the existing exchange panel, and exposed a Reprint link on receipt details. Reworked refund and refund-history markup to use CSS classes instead of inline styles, and aligned the on-screen receipt with the POS palette. Existing refund slip, settlement, manager authorization, and exchange preview/store routes remain in place.
+
+Verification: receipt lookup, refund, cross-shift return, exchange, and presentation tests passed (24 tests / 176 assertions).
+
+## 2026-10-13 — Capture final POS design and integration contract
+
+Added an approval-ready specification for the final eight-state POS prototype, mapped to existing workflows and explicitly preserving HRMS, CRM, and Inventory contracts. Flagged sample payment automation that has no connected gateway API and retained the existing Exchange flow so the redesign cannot promise unsupported behavior or remove return functionality.
+
+Verification: reviewed the supplied HTML bundle statically and compared it with existing POS routes and service contracts. The user confirmed the manual payment-verification approach. No application code or integration configuration was changed; the implementation plan is saved at `docs/superpowers/plans/2026-10-13-final-pos-redesign.md` for review.
+
+## 2026-10-13 — Revise POS manuscript format and content
+
+Revised the manuscript to follow the supplied academic sample more closely while documenting the POS system only. Consolidated the screen overview and screenshots, preserved the POS navigation arrows and Figures 17–19, clarified shift reconciliation and return/exchange behavior, corrected the reference order and citations, repaired the figure callout tables, and removed an outdated test-result paragraph. The appendices now follow the references without blank pages.
+
+Verification: exported the DOCX through Microsoft Word to PDF, rendered and visually checked all 33 pages, and confirmed the current test evidence is stated as 186 tests / 1,125 assertions against the isolated SQLite test database. No source-code changes were made in this manuscript pass.
+
+## 2026-10-12 — Add POS system documentation and defense materials
+
+Added a system guide describing checkout, Inventory/CRM/HRMS synchronization, cashier shifts, returns, exchanges, data design and operating checks; a case study based on repository evidence; a Taglish defense reviewer with 27 likely questions and suggested answers; and a 12-slide defense presentation. The materials exclude live API tokens and distinguish automated contract tests from live partner-system validation.
+
+Verification: all 185 PHPUnit tests passed with 1,121 assertions using XAMPP PHP CLI and explicit SQLite extensions. Rendered and visually inspected all 18 DOCX pages and all 12 PowerPoint slides; the PPTX package and layout validators passed.
 
 ## 2026-10-12 — Match shift note fields to Store Information style
 
@@ -1853,3 +2324,107 @@ him understand and explain the system to groupmates, and to stop seeing Laravel 
 **Files touched:** `resources/views/layouts/app.blade.php`, `CHANGELOG.md`.
 
 **Why:** Ensure shared Edit links in Customer and Employee tables render in Slate Grav with the intended compact button shape.
+
+## 2026-10-12 — Align manuscript Figure 3 with sample
+
+**What:** Reordered the methodology sections so the POS entity-relationship diagram is Figure 3 and the POS/REST architecture diagram is Figure 4. Removed the forced page break so the architecture diagram follows its explanation on the same page; updated in-text references.
+
+**Files touched:** docs/POS_System_Manuscript_Draft.docx, CHANGELOG.md.
+
+**Why:** Match the sample manuscript's Figure 3 placement for the entity-relationship diagram while keeping the diagram specific to the POS database.
+
+
+## 2026-10-13 — Replace manuscript mockups with POS screenshots
+
+**What:** Replaced Figures 4–5 and 7–16 with annotated screenshots supplied from the running POS. Revised captions and callout tables to match visible controls, kept Figure 6 identified as the Figma login prototype, and masked the employee contact number in Figure 14. Adjusted Figure 11 sizing so its callout table stays together on one page.
+
+**Files touched:** `docs/POS_System_Manuscript_Draft.docx`, `CHANGELOG.md`.
+
+**Why:** Show the implemented POS interface and avoid describing controls or data that the supplied screens do not display.
+
+## 2026-10-13 — Restore the POS Figma prototype overview figure
+
+**What:** Restored the one-picture prototype overview as Figure 4, updated its caption, and clarified that the later detailed figures show live POS screens while Figure 6 remains the prototype login.
+
+**Files touched:** `docs/POS_System_Manuscript_Draft.docx`, `CHANGELOG.md`.
+
+**Why:** Preserve the sample manuscript's system-prototyping overview while showing the implemented POS interface in the subsequent figures.
+
+## 2026-10-13 — Remove Market Canopy branding from the prototype overview
+
+**What:** Updated the Figure 4 overview image and caption to identify the Point of Sale System, removed the old Figma reference, and presented the prototype screens without flow connectors.
+
+**Files touched:** `docs/POS_System_Manuscript_Draft.docx`, `docs/images/pos-prototype-overview.png`, `CHANGELOG.md`.
+
+**Why:** Keep the manuscript aligned with the POS-only system identity and the requested unconnected prototype presentation.
+
+
+**Follow-up:** Removed the remaining legacy brand wording from the manuscript title, overview, system description, and reference list so the document consistently names only the Point of Sale System.
+
+
+**Follow-up:** Replaced Figure 6's login image to remove the Market Canopy name and logo while retaining the POS login fields and numbered callouts.
+
+## 2026-10-13 — Complete final POS proposal coverage
+
+**What:** Filled in the missing supermarket register interactions: live quick picks, selected-line actions, manual weighed-item entry, drawer status shortcuts, recent receipts, and bill/coin reconciliation. Added live shift totals and movement history to Cash Movements, and a receipt preview with return, exchange, and reprint actions. Aligned payment-review screens with the brown-and-green POS palette and replaced canopy branding in the shared navigation with the POS cart mark.
+
+**Files touched:** `app/Services/SaleService.php`, `public/css/shift.css`, `resources/views/cash-drawers/workspace.blade.php`, `resources/views/layouts/app.blade.php`, `resources/views/pos/index.blade.php`, `resources/views/pos/pending-card/index.blade.php`, `resources/views/pos/pending-card/show.blade.php`, `resources/views/pos/pending-ewallet/index.blade.php`, `resources/views/pos/pending-ewallet/show.blade.php`, `resources/views/pos/receipt-search.blade.php`, `tests/Feature/PosPresentationContractTest.php`, `CHANGELOG.md`.
+
+**Why:** Match the approved POS proposal more completely using current POS records and existing actions while keeping the checkout, drawer, refund, CRM, HRMS, and Inventory contracts intact.
+
+## 2026-10-13 — Finish POS proposal interaction and viewport details
+
+**What:** Connected the advertised F5 quantity and F6 void shortcuts to the selected cart line, preventing F5 from refreshing and discarding an in-progress cart. Added modal guards, constrained the close-shift count dialog to the viewport with internal scrolling, fixed the active sidebar color token scope, and aligned receipt lookup with the proposal's full-width search layout. Added a wrapping register toolbar for laptop-width screens.
+
+**Files touched:** `public/css/shift.css`, `resources/views/pos/index.blade.php`, `resources/views/pos/receipt-search.blade.php`, `tests/Feature/PosPresentationContractTest.php`, `CHANGELOG.md`.
+
+**Why:** Keep the added proposal controls usable on laptop screens and ensure keyboard labels perform the stated action without bypassing existing manager authorization.
+
+## 2026-10-14 — Correct use-case links and add editable Draw.io ERD
+
+**What:** Corrected Slide 7 role and integration associations to match POS route permissions and connected system flows. The diagram groups shared cashier, supervisor, and manager operations while showing supervisor approvals and manager-only review/administration separately. CRM lookup/loyalty, Inventory product/stock plus sale/refund events, and HRMS employee sync are identified. Rebuilt Slide 8 as a Draw.io-editable core ERD with migration-verified fields, SQL types, keys, cardinalities, and the dashed logical CRM customer reference. The full-schema figure retains secondary relationships omitted from the core slide. Added the .drawio source and matching SVG/PNG figures.
+
+**Files touched:** docs/POS_System_Defense_Dean_Format_Enhanced_Diagrams_Corrected.pptx, docs/figures/POS_Use_Case_Diagram.svg, docs/figures/POS_Use_Case_Diagram.png, docs/figures/POS_Core_ERD.drawio, docs/figures/POS_Core_ERD.svg, docs/figures/POS_Core_ERD.png, build scripts under docs/.build/, and CHANGELOG.md.
+
+**Why:** Make the defense diagrams reflect actual role access, API direction, and database relationships, with an editable ERD source for future review.
+
+## 2026-10-15 — Package POS source for CRM team
+
+Created a source-only ZIP in Downloads for CRM integration review. Included application source, configuration templates, dependency manifests, migrations, seeders, tests and public assets. Excluded private environment files, databases/backups, runtime storage/cache, dependencies, Git metadata and internal documents. No application source or configuration edited. Initial php artisan test run failed because CLI SQLite driver was disabled; rerun uses temporary external SQLite INI settings.
+
+
+## 2026-10-16 — Automatically refresh stock on the Products page
+
+Added a manager-authorized JSON response to the existing paginated Products index and background polling every five seconds. The visible stock cells and low-stock warnings update without reloading the page or changing pagination. Returning to the tab triggers a refresh; hidden tabs pause polling, overlapping requests are prevented, network errors retain the last displayed values, and authentication failures stop polling. Responses bypass caching. Inventory synchronization timing remains unchanged.
+
+Added regression coverage for current quantities, fractional stock, low-stock warnings, pagination, manager-only access, browser refresh, hidden tabs, and recovery after connection failures. Changed only ProductController, the Products index view, the related PHP and JavaScript tests, and this changelog.
+
+Verification: php artisan test passed 193 tests with 1,194 assertions using a temporary external PHP INI scan directory to enable XAMPP's bundled SQLite driver. All 9 JavaScript tests passed. PHP syntax checks and scoped diff whitespace checks passed. No application configuration files were modified.
+
+## 2026-10-16 — Show product categories in the POS catalog
+
+Displayed the existing category name below each POS product name, using General when no category is assigned. Category labels wrap for long names and use textContent to keep product data safe from HTML execution. Existing category filters remain available. Added a browser regression test for category text, missing-category fallback, and HTML-like category names.
+
+Files changed: resources/views/pos/index.blade.php, tests/Browser/pos-product-category.test.cjs, and CHANGELOG.md. All 10 JavaScript tests passed. The design detector reported only an existing accent-border warning elsewhere in the view; this small category-label change does not alter that styling.
+
+Enabled the existing cashier category buttons by creating six actual catalog categories and assigning the eight previously uncategorized active products: Beverages (Coke and coffee), Meat (beef), Canned Goods (sardines), Snacks (chocolate), Appliances (both rice cookers), and Bakery (bread). Applied in one database transaction and only filled missing category assignments. Verified category/product counts. Added a click-handler regression test proving category selection filters products and All restores them; all 11 JavaScript tests passed.
+
+Final verification: php artisan test passed 193 tests with 1,194 assertions using temporary external SQLite extension settings. All six category buttons were confirmed in the server-rendered POS view under a real Cashier account. All 11 JavaScript tests passed.
+
+## 2026-10-16 — Restore pending CRM and Inventory sales delivery
+
+Investigated sales missing from connected CRM and Inventory. Found two pending Inventory sale events and one pending CRM sale event, with no running POS scheduler. Ran the existing `php artisan integrations:sync`: Inventory acknowledged two stock events, CRM acknowledged one customer sale event (including the existing order delivery path), and master synchronization completed successfully. Confirmed both outbox queues have zero pending events. Restarted `artisan schedule:work` as a hidden background process; its next scheduled integration run completed successfully. This restores the current runtime; the process must be started again after a machine restart unless an existing startup mechanism launches it.
+
+No application code or configuration changed. Verification: integration command exited 0, scheduler log recorded DONE, and both queues were empty. `php artisan test` could not pass because the CLI test subprocess lacks the SQLite driver (188 errors, 5 passed); retrying with command-line SQLite extension flags produced the same subprocess limitation. Changed only `CHANGELOG.md`.
+
+## 2026-10-16 — Sync manuscript employee figures with Supervisor permissions
+
+Updated `docs/POS_System_Manuscript_Revised.docx` Figure 14 with the current authenticated HRMS-backed employee roster, including the Supervisor role and Set permissions action. Added Figure 15 for the actual Supervisor permissions screen and its six tasks, per-task maximum amounts, disabled blank limits, and Manager authority. Each new screenshot has exactly four numbered indicators matched to its explanation table. Renumbered subsequent figures through Figure 24 and updated prose references. Clarified the existing entity summary: supervisor_action_permission stores employee, action, and maximum amount; HRMS directory details remain separate from locally assigned POS access and permissions. Did not save or change any employee permissions.
+
+Verification: backed up the original outside the repository; validated sequential figure captions, a unique ID for the new drawing, no floating indicators, and exactly four changed/new DOCX package parts. Existing drawing IDs were preserved. The bundled render_docx.py could not run because bundled LibreOffice is unavailable; rendered with installed Microsoft Word and rasterized all 37 pages with bundled Poppler, reviewed the page images and inspected updated figure/table pages at full size. The new screenshot, caption, and complete table fit together on page 22. Confirmed saved document hash matches the reviewed artifact. `php artisan test` passed all 193 tests with 1,194 assertions using a temporary PHP_INI_SCAN_DIR enabling bundled SQLite extensions. Changed only the assigned manuscript and CHANGELOG.md.
+
+## 2026-10-19 — Publish current application changes to GitHub
+
+With the user's explicit override of the working-tree-only Git rule, prepared the current application, migration, UI and test changes for publication to the existing GitHub repository. Excluded local build/finalizer artifacts, generated documents, screenshots and test runtime files. Existing configuration changes are included without further edits.
+
+Verification: php artisan test passed 221 tests / 1,340 assertions using the existing temporary SQLite extension scan directory after the default CLI run reported the missing SQLite driver. All 17 browser JavaScript tests passed.

@@ -7,6 +7,21 @@ use Tests\TestCase;
 
 class IntegrationEndpointTest extends TestCase
 {
+    public function test_crm_http_opt_in_is_restricted_to_its_configured_server(): void
+    {
+        $url = 'http://10.87.175.166:8000';
+        config(['services.crm.base_url' => $url, 'services.crm.allow_http' => false]);
+        $this->assertFalse(Endpoint::allowed($url, 'crm'));
+        config(['services.crm.allow_http' => true]);
+        $this->assertTrue(Endpoint::allowed($url, 'crm'));
+        $this->assertFalse(Endpoint::allowed($url));
+        $this->assertFalse(Endpoint::allowed($url, 'inventory'));
+        $this->assertFalse(Endpoint::allowed($url, 'hrms'));
+        $this->assertFalse(Endpoint::allowed('http://another-host.test', 'crm'));
+        $this->assertFalse(Endpoint::allowed('http://10.87.175.166:8001', 'crm'));
+        $this->assertFalse(Endpoint::allowed('http://user:secret@10.87.175.166:8000', 'crm'));
+    }
+
     public function test_http_inventory_opt_in_applies_only_to_the_configured_inventory_url(): void
     {
         $url = 'http://10.36.189.247/inventory-laravel/public';

@@ -35,7 +35,7 @@
                 barcodeInput.value = data.barcode;
                 generateBtn.disabled = true;
             })
-            .catch(() => alert('Could not generate a barcode. Try again.'));
+            .catch(() => window.AppFeedback.notify('Could not generate a barcode. Try again.'));
     });
 </script>
 @endpush

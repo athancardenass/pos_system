@@ -63,8 +63,11 @@ class CardVerificationService
                 }
 
                 $itemSnapshots = [];
+                $liveStock = app(\App\Services\Integration\Inventory\LiveStockService::class);
+                $stockSnapshot = $liveStock->snapshot();
                 foreach ($quantities as $productId => $quantity) {
                     $product = Product::query()->lockForUpdate()->findOrFail($productId);
+                    app(IncidentService::class)->assertSellable($productId);
                     $inventory = Inventory::query()->where('product_id', $productId)->lockForUpdate()->first();
                     if ($idempotencyKey !== null && ($existing = $this->findPendingByIdempotencyKey($idempotencyKey))) {
                         $this->ensureSameCashier($existing, $employeeId);
@@ -73,12 +76,18 @@ class CardVerificationService
                     }
 
                     $available = (float) ($inventory?->stock_quantity ?? 0);
+                    if ($liveStock->configured()) {
+                        $available = $liveStock->available((int) $productId, $stockSnapshot);
+                    }
                     if ($quantity > $available) {
                         throw ValidationException::withMessages([
                             'items' => "Not enough stock for {$product->product_name} (available: {$available}, requested: {$quantity}).",
                         ]);
                     }
 
+                    if ($liveStock->configured()) {
+                        Inventory::updateOrCreate(['product_id' => $productId], ['stock_quantity' => $available, 'updated_at' => now()]);
+                    }
                     $itemSnapshots[] = [
                         'product_id' => (int) $product->product_id,
                         'product_name' => (string) $product->product_name,
@@ -132,7 +141,7 @@ class CardVerificationService
                 );
 
                 return $pending;
-            });
+            }, 3);
         } catch (QueryException $exception) {
             if ($idempotencyKey !== null && $this->isUniqueConstraintViolation($exception)) {
                 $existing = $this->findPendingByIdempotencyKey($idempotencyKey);
@@ -222,6 +231,10 @@ class CardVerificationService
 
             Product::whereIn('product_id', array_keys($this->aggregateQuantities($locked->checkout_payload['items'] ?? [])))->orderBy('product_id')->lockForUpdate()->get();
             $this->releaseReservations($locked, 'Released reservation before completing verified Card sale');
+            // Stop counting this reservation during the live checkout check.
+            // The surrounding transaction restores it if checkout fails.
+            $locked->status = PendingCardVerification::STATUS_VERIFIED;
+            $locked->save();
             $checkoutPayload = $locked->checkout_payload;
             $checkoutPayload['reference_number'] = $locked->revealedReference();
             $checkoutPayload['payment_provider'] = $locked->payment_provider;
@@ -250,7 +263,7 @@ class CardVerificationService
             );
 
             return $sale;
-        });
+        }, 3);
     }
 
     public function reject(PendingCardVerification $pending, int $managerId, string $reason): void

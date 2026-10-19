@@ -3,6 +3,7 @@
 namespace App\Services\Integration\CRM;
 
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
 class CustomerLoyaltyEventClient
@@ -35,7 +36,7 @@ class CustomerLoyaltyEventClient
 
         $baseUrl = rtrim(trim((string) config('services.crm.base_url')), '/');
         $token = trim((string) config('services.crm.token'));
-        if ($baseUrl === '' || $token === '' || ! \App\Services\Integration\Endpoint::allowed($baseUrl)) {
+        if ($baseUrl === '' || $token === '' || ! \App\Services\Integration\Endpoint::allowed($baseUrl, 'crm')) {
             return ['status' => 503, 'accepted' => false, 'duplicate' => false];
         }
 
@@ -77,10 +78,74 @@ class CustomerLoyaltyEventClient
             return ['status' => 502, 'accepted' => false, 'duplicate' => false];
         }
 
+        // Keep the existing loyalty event flow, then synchronize the matching
+        // completed sale into the CMS Orders module. Reuse the same order
+        // identity on retries so the receiver can deduplicate delivery.
+        if ($isSale && ! $this->sendOrderToCrm($baseUrl, $token, $posTransactionId, $crmCustomerExternalId)) {
+            return ['status' => 502, 'accepted' => false, 'duplicate' => false];
+        }
+
         return [
             'status' => $response->status(),
             'accepted' => true,
             'duplicate' => $data['duplicate'],
         ];
+    }
+
+    private function sendOrderToCrm(string $baseUrl, string $token, int $transactionId, string $externalId): bool
+    {
+        $sale = DB::table('sale_transaction')->where('transaction_id', $transactionId)->first();
+        if (! $sale || strtolower((string) $sale->status) !== 'completed' || $sale->customer_id === null) {
+            return false;
+        }
+
+        $items = DB::table('sale_details as sd')
+            ->join('product as p', 'p.product_id', '=', 'sd.product_id')
+            ->where('sd.transaction_id', $transactionId)
+            ->orderBy('sd.sale_detail_id')
+            ->get(['p.barcode', 'p.product_name', 'sd.quantity', 'sd.unit_price', 'sd.subtotal']);
+        if ($items->isEmpty()) {
+            return false;
+        }
+
+        $taxSnapshot = json_decode((string) ($sale->tax_snapshot ?? ''), true);
+        $discountSnapshot = json_decode((string) ($sale->discount_snapshot ?? ''), true);
+        $tax = is_array($taxSnapshot) ? (float) ($taxSnapshot['vat_amount'] ?? 0) : 0.0;
+        $payload = [
+            'event_id' => 'pos:customer:order:'.$transactionId,
+            'customer_external_id' => $externalId,
+            'pos_transaction_id' => $transactionId,
+            'transaction_date' => (string) $sale->transaction_date,
+            'subtotal' => round((float) $sale->subtotal, 2),
+            'discount' => round((float) ($discountSnapshot['amount'] ?? 0), 2),
+            'tax' => round($tax, 2),
+            'total_amount' => round((float) $sale->total_amount, 2),
+            'payment_method' => (string) $sale->payment_method,
+            'payment_status' => 'Paid',
+            'items' => $items->map(static fn (object $item): array => [
+                'barcode' => (string) $item->barcode,
+                'name' => (string) $item->product_name,
+                'quantity' => (float) $item->quantity,
+                'unit_price' => round((float) $item->unit_price, 2),
+                'total_price' => round((float) $item->subtotal, 2),
+            ])->values()->all(),
+        ];
+
+        try {
+            $orderResponse = Http::acceptJson()->withToken($token)
+                ->connectTimeout(2)->timeout(5)
+                ->withOptions(['verify' => true, 'allow_redirects' => false])
+                ->post($baseUrl.'/api/v1/orders', $payload);
+        } catch (ConnectionException) {
+            return false;
+        }
+
+        if (! $orderResponse->successful()) {
+            return false;
+        }
+        $orderData = $orderResponse->json('data');
+        return is_array($orderData)
+            && ($orderData['event_id'] ?? null) === $payload['event_id']
+            && is_numeric($orderData['order_id'] ?? null);
     }
 }

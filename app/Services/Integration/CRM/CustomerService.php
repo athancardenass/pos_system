@@ -56,7 +56,7 @@ class CustomerService implements ExternalSystemInterface
         $baseUrl = rtrim(trim((string) config('services.crm.base_url')), '/');
         $token = trim((string) config('services.crm.token'));
 
-        if ($baseUrl === '' || $token === '' || !\App\Services\Integration\Endpoint::allowed($baseUrl)) {
+        if ($baseUrl === '' || $token === '' || !\App\Services\Integration\Endpoint::allowed($baseUrl, 'crm')) {
             return ['status' => 503, 'customers' => [], 'total' => 0];
         }
 
@@ -153,7 +153,7 @@ class CustomerService implements ExternalSystemInterface
 
         $baseUrl = rtrim(trim((string) config('services.crm.base_url')), '/');
         $token = trim((string) config('services.crm.token'));
-        if ($baseUrl === '' || $token === '' || !\App\Services\Integration\Endpoint::allowed($baseUrl)) {
+        if ($baseUrl === '' || $token === '' || !\App\Services\Integration\Endpoint::allowed($baseUrl, 'crm')) {
             return ['status' => 503, 'customer' => null];
         }
 

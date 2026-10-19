@@ -80,6 +80,8 @@ class CheckoutService
 
                 $lockedProducts = Product::whereIn('product_id', array_keys($requested))->orderBy('product_id')->lockForUpdate()->get()->keyBy('product_id');
                 $lockedInventory = Inventory::whereIn('product_id', array_keys($requested))->orderBy('product_id')->lockForUpdate()->get()->keyBy('product_id');
+                $liveStock = app(\App\Services\Integration\Inventory\LiveStockService::class);
+                $stockSnapshot = $liveStock->snapshot();
                 foreach ($data['items'] as $item) {
                     $pId = (int) $item['product_id'];
                     $qty = (float) $item['quantity'];
@@ -89,10 +91,14 @@ class CheckoutService
                         throw ValidationException::withMessages(['items' => 'A product is no longer available.']);
                     }
                     $product->setRelation('inventory', $lockedInventory->get($pId));
+                    app(IncidentService::class)->assertSellable($pId);
                     if ($idempotencyKey !== null && ($existing = $this->findExistingSale($idempotencyKey, $employeeId))) {
                         return $existing;
                     }
                     $stock = $product->stockQuantity();
+                    if ($liveStock->configured()) {
+                        $stock = $liveStock->available($pId, $stockSnapshot);
+                    }
 
                     if ($requested[$pId] > $stock) {
                         throw ValidationException::withMessages([
@@ -101,6 +107,10 @@ class CheckoutService
                     }
 
                     $lineSubtotal = round((float) $product->unit_price * $qty, 2);
+                    if ($liveStock->configured()) {
+                        // Product and inventory rows are locked by this transaction.
+                        Inventory::updateOrCreate(['product_id' => $pId], ['stock_quantity' => $stock, 'updated_at' => now()]);
+                    }
                     $subtotal += $lineSubtotal;
 
                     $lines[] = [
@@ -325,7 +335,7 @@ class CheckoutService
                 }
 
                 return $sale;
-            });
+            }, 3);
         } catch (QueryException $exception) {
             if ($idempotencyKey !== null && $this->isUniqueConstraintViolation($exception)) {
                 $existing = $this->findExistingSale($idempotencyKey, $employeeId);

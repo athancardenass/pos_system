@@ -183,7 +183,7 @@
                     }
                     message.textContent = failureMessage;
                     if (managerRole && !pending.requiresReason) {
-                        window.alert(failureMessage);
+                        window.AppFeedback.notify(failureMessage);
                         finish(null);
                         return;
                     }

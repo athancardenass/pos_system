@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\SaleDetail;
 use App\Models\SaleRefund;
 use App\Models\SaleTransaction;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -29,8 +30,8 @@ class ReportController extends Controller
             'types' => self::TYPES,
             'from' => $from,
             'to' => $to,
+            'transactions' => $this->salesPage($from, $to),
             'previews' => [
-                'sales' => $this->salesRows($from, $to),
                 'products' => $this->productRows($from, $to),
                 'inventory' => $this->inventoryRows(),
                 'refunds' => $this->refundRows($from, $to),
@@ -47,7 +48,7 @@ class ReportController extends Controller
 
         [$headers, $rows, $filename] = match ($type) {
             'sales' => [
-                ['Transaction ID', 'Date', 'Cashier', 'Customer', 'Payment', 'Subtotal', 'Discount', 'Total', 'Status'],
+                ['Transaction ID', 'Receipt No.', 'Date', 'Cashier', 'Customer', 'Payment', 'Subtotal', 'Discount', 'Total', 'Status'],
                 $this->salesRows($from, $to),
                 "sales_{$from->format('Ymd')}_{$to->format('Ymd')}.csv",
             ],
@@ -88,29 +89,62 @@ class ReportController extends Controller
         ]);
 
         $to = isset($data['to']) ? Carbon::parse($data['to'])->endOfDay() : Carbon::today()->endOfDay();
-        $from = isset($data['from']) ? Carbon::parse($data['from'])->startOfDay() : $to->copy()->subDays(29)->startOfDay();
+        if (isset($data['from'])) {
+            $from = Carbon::parse($data['from'])->startOfDay();
+        } else {
+            $firstTransaction = SaleTransaction::query()->min('transaction_date');
+            $from = $firstTransaction
+                ? Carbon::parse($firstTransaction)->startOfDay()
+                : $to->copy()->subDays(29)->startOfDay();
+            if ($from->greaterThan($to)) {
+                $from = $to->copy()->startOfDay();
+            }
+        }
 
         return [$from, $to];
     }
 
     private function salesRows(Carbon $from, Carbon $to): array
     {
-        return SaleTransaction::query()
-            ->with(['employee', 'discount'])
-            ->whereBetween('transaction_date', [$from, $to])
-            ->orderBy('transaction_date')
+        return $this->salesQuery($from, $to)
             ->get()
-            ->map(fn (SaleTransaction $s) => [
-                $s->transaction_id,
-                $s->transaction_date?->format('Y-m-d H:i'),
-                $s->employee?->username ?? '—',
-                $s->customer_id ? 'CRM #'.$s->customer_id : 'Walk-in',
-                $s->payment_method,
-                number_format((float) $s->subtotal, 2, '.', ''),
-                $s->discount ? $s->discount->discount_name : '—',
-                number_format((float) $s->total_amount, 2, '.', ''),
-                $s->status,
-            ])->all();
+            ->map(fn (SaleTransaction $sale) => $this->salesRow($sale))
+            ->all();
+    }
+
+    private function salesPage(Carbon $from, Carbon $to)
+    {
+        return $this->salesQuery($from, $to)
+            ->paginate(15)
+            ->withQueryString()
+            ->through(fn (SaleTransaction $sale) => $this->salesRow($sale));
+    }
+
+    private function salesQuery(Carbon $from, Carbon $to): Builder
+    {
+        return SaleTransaction::query()
+            ->with(['employee', 'discount', 'receipt'])
+            ->where('status', 'completed')
+            ->whereBetween('transaction_date', [$from, $to])
+            ->orderByDesc('transaction_date')
+            ->orderByDesc('transaction_id');
+    }
+
+    /** @return array<int, string|int> */
+    private function salesRow(SaleTransaction $sale): array
+    {
+        return [
+            $sale->transaction_id,
+            $sale->receipt?->receipt_number ?? '—',
+            $sale->transaction_date?->format('Y-m-d H:i'),
+            $sale->employee?->username ?? '—',
+            $sale->customer_id ? 'CRM #'.$sale->customer_id : 'Walk-in',
+            $sale->payment_method,
+            number_format((float) $sale->subtotal, 2, '.', ''),
+            $sale->discount ? $sale->discount->discount_name : '—',
+            number_format((float) $sale->total_amount, 2, '.', ''),
+            'Completed',
+        ];
     }
 
     private function productRows(Carbon $from, Carbon $to): array
